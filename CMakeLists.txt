@@ -6,6 +6,8 @@ endif()
 
 cmake_policy(SET CMP0074 NEW)
 
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
 project(FleCSibleLUA VERSION 1.0)
 
 set(CMAKE_CXX_STANDARD 20)
