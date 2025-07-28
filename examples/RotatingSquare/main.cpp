@@ -2,6 +2,10 @@
 
 #include <SFML/Graphics.hpp>
 #include <cmath>
+#include <flecs.h>
+
+#include "components.h"
+#include "systems.h"
 
 int main()
 {
@@ -17,7 +21,12 @@ int main()
     box.setOutlineColor(sf::Color(230, 107, 18));
     box.setOutlineThickness(10);
 
-    box.setRotation(sf::degrees(12.3f));
+    flecs::world world;
+    register_rendering_system(world, window, box);
+
+    world.entity()
+        .set<Position>({ 400.0f, 300.0f })
+        .set<Rotation>({ 12.3f });
 
     sf::Clock clock;
 
@@ -33,9 +42,7 @@ int main()
 
         window.clear(sf::Color(36, 45, 51));
 
-        // TODO: Implement similar behavior with FleCS and LUA
-        box.rotate(sf::degrees(90.0f * dt));
-        window.draw(box);
+        world.progress();
 
         window.display();
     }
