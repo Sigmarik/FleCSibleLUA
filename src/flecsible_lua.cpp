@@ -1,6 +1,13 @@
+#include "flecsible_lua.h"
+
 #include <iostream>
 
-int main()
+namespace flua
+{
+
+void do_something()
 {
     std::cout << "Hello, world!" << std::endl;
+}
+
 }

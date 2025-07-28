@@ -8,7 +8,7 @@ set_target_properties(RotatingSquare PROPERTIES FOLDER "Examples")
 
 SET(SFML_LIBRARIES)
 
-if (MSVC)
+if (WINDOWS)
 	unset(FLECS_DEBUG CACHE)
 	find_library(FLECS_DEBUG NAMES flecs_static
 		PATHS ${CMAKE_LIBRARY_PATH}/flecs/lib/Windows/Debug
@@ -41,6 +41,7 @@ target_sources(RotatingSquare
 target_include_directories(RotatingSquare
 	PRIVATE ${CMAKE_LIBRARY_PATH}/sfml/include
 	PRIVATE ${CMAKE_LIBRARY_PATH}/flecs/include
+	PRIVATE ${CMAKE_INCLUDE_PATH}
 )
 
 target_compile_definitions(RotatingSquare PRIVATE SFML_STATIC)
@@ -49,4 +50,6 @@ target_link_libraries(RotatingSquare PRIVATE
 	opengl32 winmm gdi32
 	${SFML_LIBRARIES}
 	${FLECS_LIBRARIES}
+
+	FlecsibleLua
 )

@@ -3,6 +3,7 @@
 #include <SFML/Graphics.hpp>
 #include <cmath>
 #include <flecs.h>
+#include <flecsible_lua.h>
 
 #include "components.h"
 #include "systems.h"
@@ -20,6 +21,8 @@ int main()
     box.setFillColor(sf::Color(255, 151, 30));
     box.setOutlineColor(sf::Color(230, 107, 18));
     box.setOutlineThickness(10);
+
+    flua::do_something();
 
     flecs::world world;
     register_rendering_system(world, window, box);
