@@ -1,13 +1,11 @@
 #include "flecsible_lua.h"
 
-#include <iostream>
-
 namespace flua
 {
 
-void do_something()
+void Script::deploy(flecs::world& world)
 {
-    std::cout << "Hello, world!" << std::endl;
+    
 }
 
 }

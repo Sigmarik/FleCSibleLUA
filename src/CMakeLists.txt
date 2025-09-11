@@ -25,3 +25,23 @@ target_sources(FlecsibleLua PRIVATE
 )
 
 target_include_directories(FlecsibleLua PRIVATE ${CMAKE_INCLUDE_PATH})
+
+if (WINDOWS)
+	unset(FLECS_DEBUG CACHE)
+	find_library(FLECS_DEBUG NAMES flecs_static
+		PATHS ${CMAKE_LIBRARY_PATH}/flecs/lib/Windows/Debug
+		NO_DEFAULT_PATH)
+	unset(FLECS_RELEASE CACHE)
+	find_library(FLECS_RELEASE NAMES flecs_static
+		PATHS ${CMAKE_LIBRARY_PATH}/flecs/lib/Windows/Release
+		NO_DEFAULT_PATH)
+	set(FLECS_LIBRARIES ${FLECS_DEBUG})
+endif()
+
+target_include_directories(FlecsibleLua
+	PRIVATE ${CMAKE_LIBRARY_PATH}/flecs/include
+)
+
+target_link_libraries(FlecsibleLua PRIVATE
+	${FLECS_LIBRARIES}
+)
