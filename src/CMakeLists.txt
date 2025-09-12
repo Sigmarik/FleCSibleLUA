@@ -22,8 +22,12 @@ add_library(FlecsibleLua)
 
 target_sources(FlecsibleLua PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/flecsible_lua.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/syntax/ast_nodes.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/syntax/visitor.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/syntax/identification.cpp
 )
 
+target_include_directories(FlecsibleLua PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories(FlecsibleLua PRIVATE ${CMAKE_INCLUDE_PATH})
 
 if (WINDOWS)

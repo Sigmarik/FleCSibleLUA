@@ -10,7 +10,7 @@ namespace flua
 
 namespace syntax
 {
-    class AST;
+    class Ast;
 }
 
 class Script
@@ -28,6 +28,8 @@ public:
     static Script Load(const std::string& path);
     static Script Load(const std::string& path, std::string& root);
 
+    // TODO: Add the ability to define custom c++ functions
+
     void deploy(flecs::world& world);
 
     void reload();
@@ -38,7 +40,7 @@ private:
 private:
     std::set<flecs::system> m_dependentSystems;
 
-    syntax::AST* m_ast = nullptr;
+    syntax::Ast* m_ast = nullptr;
 
     std::string m_sourcePath = "";
 };
