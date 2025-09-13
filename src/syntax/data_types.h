@@ -32,4 +32,6 @@ using GenericValue = std::variant<Nil, bool, double, std::string, List, Dict, En
 struct List : public std::vector<GenericValue> {};
 struct Dict : public std::unordered_map<std::string, GenericValue> {};
 
+std::string to_string(const flua::data::GenericValue& value);
+
 }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <map>
 #include <variant>
 #include <vector>
 #include <string>
@@ -86,7 +87,7 @@ struct System
 
 struct Loop
 {
-    Loop(NodePtr&& condition) : condition(std::move(condition)) {}
+    explicit Loop(NodePtr&& condition) : condition(std::move(condition)) {}
 
     NodePtr condition{};
     std::vector<NodePtr> body{};
@@ -95,12 +96,13 @@ struct Loop
 struct Query
 {
     std::string query = "!UNRESOLVED_QUERY!";
+    ids::ResolvableName entityName{"!UNDEFINED_QUERY_ENTITY_NAME!"};
     std::vector<NodePtr> body{};
 };
 
 struct Branch
 {
-    Branch(NodePtr&& condition) : condition(std::move(condition)) {}
+    explicit Branch(NodePtr&& condition) : condition(std::move(condition)) {}
 
     NodePtr condition{};
     std::vector<NodePtr> ifTrue{};
@@ -153,6 +155,8 @@ struct BinaryOperator
         Index,
     };
 
+    static const std::map<Type, std::string> kTypeNames;
+
     BinaryOperator(Type type, NodePtr&& left, NodePtr&& right)
         : type(type), left(std::move(left)), right(std::move(right))
     {}
@@ -183,8 +187,8 @@ struct IndexRequest
 
 struct Constant
 {
-    Constant(const data::GenericValue& value)
-        : value(value)
+    explicit Constant(data::GenericValue value)
+        : value(std::move(value))
     {}
 
     data::GenericValue value;
@@ -192,7 +196,7 @@ struct Constant
 
 struct Variable
 {
-    Variable(const std::string& name) : name(name) {}
+    explicit Variable(const std::string& name) : name(name) {}
 
     ids::ResolvableName name;
 };

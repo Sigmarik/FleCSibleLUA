@@ -10,7 +10,12 @@ class Visitor
 public:
     void process(Ast& ast);
 
+    virtual ~Visitor() = default;
+
 protected:
+    void visit(AstNode& node);
+    void visit(NodePtr& ptr);
+
     virtual void visit(Program& node) = 0;
     virtual void visit(Function& node) = 0;
     virtual void visit(System& node) = 0;
@@ -28,10 +33,6 @@ protected:
     virtual void visit(Return& node) = 0;
     virtual void visit(Break& node) = 0;
     virtual void visit(Continue& node) = 0;
-
-private:
-    void visit(AstNode& node);
-    void visit(NodePtr& ptr);
 };
 
 }
