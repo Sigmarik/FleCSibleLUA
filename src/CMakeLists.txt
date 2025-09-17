@@ -26,6 +26,7 @@ target_sources(FlecsibleLua PRIVATE
 		${CMAKE_CURRENT_SOURCE_DIR}/syntax/visitor.cpp
 		${CMAKE_CURRENT_SOURCE_DIR}/syntax/identification.cpp
 		${CMAKE_CURRENT_SOURCE_DIR}/syntax/data_types.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/visitors/dbg.cpp
 )
 
 target_include_directories(FlecsibleLua PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
