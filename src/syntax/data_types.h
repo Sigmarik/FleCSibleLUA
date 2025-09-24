@@ -1,11 +1,10 @@
 #pragma once
 
-#include "flecs.h"
-#include <inttypes.h>
-#include <variant>
 #include <string>
-#include <vector>
 #include <unordered_map>
+#include <variant>
+#include <vector>
+#include "flecs.h"
 
 namespace flua::data
 {

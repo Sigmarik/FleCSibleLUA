@@ -1,15 +1,15 @@
 #pragma once
 
 #include <map>
+#include <optional>
+#include <string>
 #include <utility>
 #include <variant>
 #include <vector>
-#include <string>
-#include <optional>
 
-#include "mem_utils/copyable_ptr.h"
-#include "identification.h"
 #include "data_types.h"
+#include "identification.h"
+#include "mem_utils/copyable_ptr.h"
 
 namespace flua::syntax
 {
