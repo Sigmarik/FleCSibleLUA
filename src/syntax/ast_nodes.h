@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+#include <utility>
 #include <variant>
 #include <vector>
 #include <string>
@@ -87,9 +88,9 @@ struct System
 
 struct Loop
 {
-    explicit Loop(NodePtr&& condition) : condition(std::move(condition)) {}
+    explicit Loop(NodePtr&& condition);
 
-    NodePtr condition{};
+    NodePtr condition;
     std::vector<NodePtr> body{};
 };
 
@@ -102,9 +103,9 @@ struct Query
 
 struct Branch
 {
-    explicit Branch(NodePtr&& condition) : condition(std::move(condition)) {}
+    explicit Branch(NodePtr&& condition);
 
-    NodePtr condition{};
+    NodePtr condition;
     std::vector<NodePtr> ifTrue{};
     std::vector<NodePtr> ifFalse{};
 };
@@ -118,7 +119,7 @@ struct UnaryOperator
         Length,
     };
 
-    UnaryOperator(Type type, NodePtr&& node) : type(type), node(std::move(node)) {}
+    UnaryOperator(Type type, NodePtr&& node);
 
     Type type;
     NodePtr node;
@@ -157,9 +158,7 @@ struct BinaryOperator
 
     static const std::map<Type, std::string> kTypeNames;
 
-    BinaryOperator(Type type, NodePtr&& left, NodePtr&& right)
-        : type(type), left(std::move(left)), right(std::move(right))
-    {}
+    BinaryOperator(Type type, NodePtr&& left, NodePtr&& right);
 
     Type type;
     NodePtr left, right;
@@ -167,9 +166,7 @@ struct BinaryOperator
 
 struct FieldRequest
 {
-    FieldRequest(NodePtr&& body, std::string field)
-        : body(std::move(body)), field(field)
-    {}
+    FieldRequest(NodePtr&& body, std::string field);
 
     NodePtr body;
     std::string field;
@@ -177,9 +174,7 @@ struct FieldRequest
 
 struct IndexRequest
 {
-    IndexRequest(NodePtr&& body, NodePtr&& index)
-        : body(std::move(body)), index(std::move(index))
-    {}
+    IndexRequest(NodePtr&& body, NodePtr&& index);
 
     NodePtr body;
     NodePtr index;
@@ -209,7 +204,7 @@ struct FunctionCall
 
 struct Assignment
 {
-    Assignment(NodePtr&& subject, NodePtr&& data) : subject(std::move(subject)), data(std::move(data)) {}
+    Assignment(NodePtr&& subject, NodePtr&& data);
 
     NodePtr subject;
     NodePtr data;

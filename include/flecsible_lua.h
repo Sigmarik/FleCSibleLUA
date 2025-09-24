@@ -4,6 +4,7 @@
 #include <set>
 
 #include <flecs.h>
+#include <vector>
 
 namespace flua
 {
@@ -18,31 +19,26 @@ class Script
 public:
     Script(const Script&);
     Script& operator=(const Script&);
-    Script(Script&&);
-    Script& operator=(Script&&);
+    Script(Script&&) noexcept;
+    Script& operator=(Script&&) noexcept;
 
     ~Script();
 
     static Script Parse(const std::string_view& view);
 
     static Script Load(const std::string& path);
-    static Script Load(const std::string& path, std::string& root);
 
-    // TODO: Add the ability to define custom c++ functions
+    // TODO: Add the ability to define custom functions
 
-    void deploy(flecs::world& world);
-
-    void reload();
+    std::vector<flecs::system> deploy(flecs::world& world);
 
 private:
     Script() = default;
 
 private:
-    std::set<flecs::system> m_dependentSystems;
-
     syntax::Ast* m_ast = nullptr;
 
-    std::string m_sourcePath = "";
+    std::string m_sourcePath{};
 };
 
 }

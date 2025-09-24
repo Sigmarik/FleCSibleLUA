@@ -24,6 +24,9 @@ int main()
     flecs::world world;
     register_rendering_system(world, window, box);
 
+    flua::Script script = flua::Script::Load("examples/RotatingSquare/script.lua");
+    script.deploy(world);
+
     world.entity()
         .set<Position>({ 400.0f, 300.0f })
         .set<Rotation>({ 12.3f });
