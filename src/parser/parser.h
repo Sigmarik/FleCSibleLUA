@@ -7,16 +7,11 @@
 #include <string>
 
 #include "char_pos.h"
+#include "error.h"
 
 namespace flua::parser
 {
 using namespace flua;
-
-struct ParsingError
-{
-    std::string what{};
-    CharacterPos where{};
-};
 
 template <class ThisType, class ReturnType, class... Variants>
 struct Grammar
@@ -75,9 +70,8 @@ struct Lex final
             return result;
         }
 
-        std::string what = std::string("Expected ") + Lexeme::kName.value + ", got ";
+        std::string what = std::string("Expected ") + Lexeme::kName.value + ", but found a ";
         std::visit([&](const auto& specificLexeme){ what += specificLexeme.kName.value; }, *start);
-        what += " instead";
         return std::unexpected(ParsingError{.what = what, .where = posFromVariant(*start)});
     }
 };

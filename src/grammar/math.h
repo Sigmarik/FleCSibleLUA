@@ -1,16 +1,10 @@
 #pragma once
 
-#include "parser/parser.h"
-#include "parser/lexer.h"
-#include "parser/lexer.h"
+#include "parser/complete.h"
 
 namespace flua::grammar
 {
 using namespace flua;
-
-struct Expression;
-struct MulFragment;
-struct Constant;
 
 using Add = parser::DefiniteLexeme<"+", "binary operator">;
 using Subtract = parser::DefiniteLexeme<"-", "binary operator">;
@@ -51,6 +45,13 @@ using ExpressionLexer = parser::Lexer
     BracketL, BracketR,
     Whitespace, Number
 >;
+
+struct CompleteExpression;
+struct Expression;
+struct MulFragment;
+struct Constant;
+
+using ExpressionParser = parser::Parser<CompleteExpression, ExpressionLexer, parser::IgnoreLexemes<Whitespace>>;
 
 struct CompleteExpression : parser::Grammar
 <

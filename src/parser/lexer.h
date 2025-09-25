@@ -2,11 +2,12 @@
 
 #include <string>
 #include <vector>
+#include <expected>
 
 #include "char_pos.h"
 #include "meta/string.h"
 
-#include "parser.h"
+#include "error.h"
 
 namespace flua::parser
 {
