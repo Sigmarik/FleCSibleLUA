@@ -1,6 +1,9 @@
 #include "flecsible_lua.h"
 
+#include <iostream>
+
 #include "syntax/ast_nodes.h"
+#include "grammar/math.h"
 
 namespace flua
 {
@@ -60,6 +63,8 @@ Script Script::Load(const std::string& path)
 std::vector<flecs::system> Script::deploy(flecs::world& world)
 {
     // TODO: Implement
+
+    std::cout << "Parsing result: " << grammar::solve_something();
 
     return {};
 }
