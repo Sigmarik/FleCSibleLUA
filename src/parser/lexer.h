@@ -89,7 +89,11 @@ struct Lexer
 
             if (!lexeme.has_value())
             {
-                return std::unexpected(ParsingError{.what = "Could not recognize lexeme", .where = pos});
+                return std::unexpected(ParsingError
+                    {
+                        .what = "Unexpected input that doesn't match any valid token pattern",
+                        .where = pos
+                    });
             }
 
             std::visit([&](auto& specificLexeme)
