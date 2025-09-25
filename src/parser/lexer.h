@@ -3,7 +3,10 @@
 #include <string>
 #include <vector>
 
+#include "char_pos.h"
 #include "meta/string.h"
+
+#include "parser.h"
 
 namespace flua::parser
 {
@@ -11,16 +14,18 @@ using namespace flua;
 
 struct Lexeme
 {
-    // TODO: Add position info
+    CharacterPos startingPos{};
 };
 
-template <meta::StringLiteral Value>
-class DefiniteLexeme
+template<meta::StringLiteral Value, meta::StringLiteral Name>
+class DefiniteLexeme : public Lexeme
 {
 public:
+    static constexpr meta::StringLiteral kName = Name;
+
     static std::optional<DefiniteLexeme> tryConstruct(std::string_view& view)
     {
-        if (view.size() < sizeof(Value))
+        if (view.size() + 1 < sizeof(Value))
         {
             return std::nullopt;
         }
@@ -39,18 +44,28 @@ public:
     }
 };
 
-template <class ...Lexemes>
+struct Eof : Lexeme
+{
+    static constexpr meta::StringLiteral kName = "EOF";
+
+    static std::optional<Eof> tryConstruct(std::string_view& view)
+    {
+        return std::nullopt;
+    }
+};
+
+template<class... Lexemes>
 struct Lexer
 {
-    using LexemeVariant = std::variant<Lexemes...>;
+    using LexemeVariant = std::variant<Lexemes..., Eof>;
 
-    static std::vector<LexemeVariant> lex(const std::string& text)
+    static std::expected<std::vector<LexemeVariant>, ParsingError> lex(const std::string& text)
     {
         return lex(text, [&](const LexemeVariant& argument) { return true; });
     }
 
-    template <class ...IgnoredLexemes>
-    static std::vector<LexemeVariant> lexAllBut(const std::string& text)
+    template<class... IgnoredLexemes>
+    static std::expected<std::vector<LexemeVariant>, ParsingError> lexAllBut(const std::string& text)
     {
         return lex(text, [&](const LexemeVariant& argument)
         {
@@ -58,18 +73,32 @@ struct Lexer
         });
     }
 
-    template <class FilterT>
-    static std::vector<LexemeVariant> lex(const std::string& text, FilterT&& filter)
+    template<class FilterT>
+    static std::expected<std::vector<LexemeVariant>, ParsingError> lex(const std::string& text, FilterT&& filter)
     {
         std::vector<LexemeVariant> result;
+
+        CharacterPos pos;
 
         std::string_view view = text;
         while (!view.empty())
         {
+            std::string_view start = view;
             std::optional<LexemeVariant> lexeme = tryFetchLexeme<0>(view);
+
             if (!lexeme.has_value())
             {
-                return {};
+                return std::unexpected(ParsingError{.what = "Could not recognize lexeme", .where = pos});
+            }
+
+            std::visit([&](auto& specificLexeme)
+            {
+                specificLexeme.startingPos = pos;
+            }, *lexeme);
+            while (start.size() > view.size())
+            {
+                pos.considerChar(start[0]);
+                start.remove_prefix(1);
             }
 
             if (filter(*lexeme))
@@ -78,11 +107,15 @@ struct Lexer
             }
         }
 
+        Eof eof;
+        eof.startingPos = pos;
+        result.push_back(eof);
+
         return result;
     }
 
 private:
-    template <unsigned Index>
+    template<unsigned Index>
     static std::optional<LexemeVariant> tryFetchLexeme(std::string_view& view)
     {
         std::string_view anchor = view;
@@ -106,5 +139,4 @@ private:
         return std::nullopt;
     }
 };
-
 }

@@ -12,16 +12,18 @@ struct Expression;
 struct MulFragment;
 struct Constant;
 
-using Add = parser::DefiniteLexeme<"+">;
-using Subtract = parser::DefiniteLexeme<"-">;
-using Multiply = parser::DefiniteLexeme<"*">;
-using Divide = parser::DefiniteLexeme<"/">;
-using BracketL = parser::DefiniteLexeme<"(">;
-using BracketR = parser::DefiniteLexeme<")">;
-using Whitespace = parser::DefiniteLexeme<" ">;
+using Add = parser::DefiniteLexeme<"+", "binary operator">;
+using Subtract = parser::DefiniteLexeme<"-", "binary operator">;
+using Multiply = parser::DefiniteLexeme<"*", "binary operator">;
+using Divide = parser::DefiniteLexeme<"/", "binary operator">;
+using BracketL = parser::DefiniteLexeme<"(", "'('">;
+using BracketR = parser::DefiniteLexeme<")", "')'">;
+using Whitespace = parser::DefiniteLexeme<" ", "space">;
 
-struct Number
+struct Number : parser::Lexeme
 {
+    static constexpr meta::StringLiteral kName = "number";
+
     static std::optional<Number> tryConstruct(std::string_view& view)
     {
         if (view.empty())
@@ -42,13 +44,26 @@ struct Number
     int value;
 };
 
-using ExpressionParser = parser::Lexer
+using ExpressionLexer = parser::Lexer
 <
     Add, Subtract,
     Multiply, Divide,
     BracketL, BracketR,
     Whitespace, Number
 >;
+
+struct CompleteExpression : parser::Grammar
+<
+    CompleteExpression, int,
+
+    parser::Sequence<Expression, parser::Lex<parser::Eof>>
+>
+{
+    static int visit(int result, parser::Eof)
+    {
+        return result;
+    }
+};
 
 struct Expression : parser::Grammar
 <
