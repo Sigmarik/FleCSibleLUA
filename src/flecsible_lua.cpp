@@ -2,14 +2,15 @@
 
 #include <iostream>
 
-#include "syntax/ast_nodes.h"
+#include "ast/ast_nodes.h"
 #include "grammar/math.h"
+#include "grammar/lua_parser.h"
 
 namespace flua
 {
 Script::Script(const Script& other)
 {
-    m_ast = other.m_ast ? new syntax::Ast(*other.m_ast) : nullptr;
+    m_ast = other.m_ast ? new ast::Ast(*other.m_ast) : nullptr;
     m_sourcePath = other.m_sourcePath;
 }
 
@@ -17,7 +18,7 @@ Script& Script::operator=(const Script& other)
 {
     if (&other == this) return *this;
 
-    m_ast = other.m_ast ? new syntax::Ast(*other.m_ast) : nullptr;
+    m_ast = other.m_ast ? new ast::Ast(*other.m_ast) : nullptr;
     m_sourcePath = other.m_sourcePath;
     return *this;
 }
@@ -64,7 +65,12 @@ std::vector<flecs::system> Script::deploy(flecs::world& world)
 {
     // TODO: Implement
 
-    std::cout << "Parsing result: " << grammar::solve_something();
+    auto parsingResult = luagrmr::Parser::parse("5");
+
+    if (!parsingResult.has_value())
+    {
+        std::cerr << parsingResult.error().what;
+    }
 
     return {};
 }

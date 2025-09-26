@@ -8,7 +8,7 @@
 namespace flua
 {
 
-namespace syntax
+namespace ast
 {
     class Ast;
 }
@@ -35,7 +35,7 @@ private:
     Script() = default;
 
 private:
-    syntax::Ast* m_ast = nullptr;
+    ast::Ast* m_ast = nullptr;
 
     std::string m_sourcePath{};
 };

@@ -118,12 +118,12 @@ private:
     }
 
     template<class Grammar, class Tuple, std::size_t... I>
-    static auto callWithTuple(const Tuple& tuple, std::index_sequence<I...>) {
+    static auto callWithTuple(Tuple& tuple, std::index_sequence<I...>) {
         return Grammar::visit(std::get<I>(tuple).value()...);
     }
 
     template<class Grammar, class Tuple>
-    static auto callWithTuple(const Tuple& tuple) {
+    static auto callWithTuple(Tuple& tuple) {
         return callWithTuple<Grammar>(tuple, std::make_index_sequence<std::tuple_size_v<std::decay_t<Tuple>>>{});
     }
 };

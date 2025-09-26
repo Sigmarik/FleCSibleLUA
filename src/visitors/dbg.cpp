@@ -3,14 +3,14 @@
 namespace flua::vst
 {
 
-void AstDebugger::visit(syntax::Program& node)
+void AstDebugger::visit(ast::Program& node)
 {
     m_stream << m_indent << "Program {\n";
     visitList(node.components);
     m_stream << m_indent << "}\n";
 }
 
-void AstDebugger::visit(syntax::Function& node)
+void AstDebugger::visit(ast::Function& node)
 {
     m_stream << m_indent << "Function " << node.name.string << "( ";
     for (ids::ResolvableName& param : node.parameters)
@@ -22,7 +22,7 @@ void AstDebugger::visit(syntax::Function& node)
     m_stream << m_indent << "}\n";
 }
 
-void AstDebugger::visit(syntax::System& node)
+void AstDebugger::visit(ast::System& node)
 {
     m_stream << m_indent << "System (" << node.query << ") " << node.name.string << "( ";
     for (ids::ResolvableName& param : node.parameters)
@@ -34,7 +34,7 @@ void AstDebugger::visit(syntax::System& node)
     m_stream << m_indent << "}\n";
 }
 
-void AstDebugger::visit(syntax::Loop& node)
+void AstDebugger::visit(ast::Loop& node)
 {
     m_stream << m_indent << "Loop (\n";
     increaseIndent();
@@ -45,7 +45,7 @@ void AstDebugger::visit(syntax::Loop& node)
     m_stream << m_indent << "}\n";
 }
 
-void AstDebugger::visit(syntax::Query& node)
+void AstDebugger::visit(ast::Query& node)
 {
     m_stream << m_indent << "Query (\n";
     increaseIndent();
@@ -57,7 +57,7 @@ void AstDebugger::visit(syntax::Query& node)
     m_stream << m_indent << "}\n";
 }
 
-void AstDebugger::visit(syntax::Branch& node)
+void AstDebugger::visit(ast::Branch& node)
 {
     m_stream << m_indent << "If (\n";
     increaseIndent();
@@ -70,25 +70,25 @@ void AstDebugger::visit(syntax::Branch& node)
     m_stream << m_indent << "}\n";
 }
 
-void AstDebugger::visit(syntax::FunctionCall& node)
+void AstDebugger::visit(ast::FunctionCall& node)
 {
     m_stream << m_indent << "FunctionCall " << node.name.string << "(\n";
     visitList(node.args);
     m_stream << m_indent << ")\n";
 }
 
-void AstDebugger::visit(syntax::UnaryOperator& node)
+void AstDebugger::visit(ast::UnaryOperator& node)
 {
     m_stream << m_indent << "Unary ";
     switch (node.type)
     {
-        case syntax::UnaryOperator::Type::Length:
+        case ast::UnaryOperator::Type::Length:
             m_stream << "len";
             break;
-        case syntax::UnaryOperator::Type::Negate:
+        case ast::UnaryOperator::Type::Negate:
             m_stream << "negation";
             break;
-        case syntax::UnaryOperator::Type::Not:
+        case ast::UnaryOperator::Type::Not:
             m_stream << "not";
             break;
     }
@@ -99,9 +99,9 @@ void AstDebugger::visit(syntax::UnaryOperator& node)
     m_stream << ")\n";
 }
 
-void AstDebugger::visit(syntax::BinaryOperator& node)
+void AstDebugger::visit(ast::BinaryOperator& node)
 {
-    m_stream << m_indent << "Binary " << syntax::BinaryOperator::kTypeNames.at(node.type) << "(\n";
+    m_stream << m_indent << "Binary " << ast::BinaryOperator::kTypeNames.at(node.type) << "(\n";
     increaseIndent();
     Visitor::visit(node.left);
     decreaseIndent();
@@ -112,7 +112,7 @@ void AstDebugger::visit(syntax::BinaryOperator& node)
     m_stream << ")\n";
 }
 
-void AstDebugger::visit(syntax::FieldRequest& node)
+void AstDebugger::visit(ast::FieldRequest& node)
 {
     m_stream << m_indent << " FieldRequest (\n";
     increaseIndent();
@@ -121,7 +121,7 @@ void AstDebugger::visit(syntax::FieldRequest& node)
     m_stream << ")." << node.field << "\n";
 }
 
-void AstDebugger::visit(syntax::IndexRequest& node)
+void AstDebugger::visit(ast::IndexRequest& node)
 {
     m_stream << m_indent << "IndexRequest (\n";
     increaseIndent();
@@ -134,17 +134,17 @@ void AstDebugger::visit(syntax::IndexRequest& node)
     m_stream << "]\n";
 }
 
-void AstDebugger::visit(syntax::Constant& node)
+void AstDebugger::visit(ast::Constant& node)
 {
     m_stream << m_indent << "Constant " << data::to_string(node.value);
 }
 
-void AstDebugger::visit(syntax::Variable& node)
+void AstDebugger::visit(ast::Variable& node)
 {
     m_stream << m_indent << "Variable " << node.name.string << "\n";
 }
 
-void AstDebugger::visit(syntax::Assignment& node)
+void AstDebugger::visit(ast::Assignment& node)
 {
     m_stream << m_indent << "Assignment to (\n";
     increaseIndent();
@@ -157,7 +157,7 @@ void AstDebugger::visit(syntax::Assignment& node)
     m_stream << ")\n";
 }
 
-void AstDebugger::visit(syntax::Return& node)
+void AstDebugger::visit(ast::Return& node)
 {
     m_stream << m_indent << "Return";
     if (node.value)
@@ -172,12 +172,12 @@ void AstDebugger::visit(syntax::Return& node)
         m_stream << "\n";
     }
 }
-void AstDebugger::visit(syntax::Break& node)
+void AstDebugger::visit(ast::Break& node)
 {
     m_stream << m_indent << "Break\n";
 }
 
-void AstDebugger::visit(syntax::Continue& node)
+void AstDebugger::visit(ast::Continue& node)
 {
     m_stream << m_indent << "Continue\n";
 }
@@ -194,10 +194,10 @@ void AstDebugger::decreaseIndent()
     m_indent.pop_back();
 }
 
-void AstDebugger::visitList(std::vector<syntax::NodePtr>& nodes)
+void AstDebugger::visitList(std::vector<ast::NodePtr>& nodes)
 {
     increaseIndent();
-    for (syntax::NodePtr& ptr : nodes)
+    for (ast::NodePtr& ptr : nodes)
     {
         Visitor::visit(ptr);
     }
