@@ -194,7 +194,7 @@ void AstDebugger::decreaseIndent()
     m_indent.pop_back();
 }
 
-void AstDebugger::visitList(std::vector<ast::NodePtr>& nodes)
+void AstDebugger::visitList(std::deque<ast::NodePtr>& nodes)
 {
     increaseIndent();
     for (ast::NodePtr& ptr : nodes)

@@ -13,10 +13,50 @@ namespace flua::parser
 {
 using namespace flua;
 
+namespace
+{
+    struct EmptyType {};
+
+    template <class Tuple>
+    struct get_first_type
+    {
+        using type = std::tuple_element_t<0, Tuple>;
+    };
+
+    template <>
+    struct get_first_type<std::tuple<>>
+    {
+        using type = EmptyType;
+    };
+
+    template <class Tuple>
+    using get_first_type_t = get_first_type<Tuple>::type;
+
+    template <class Sequence, class... CallStack>
+    class has_head_recursion
+    {
+        using CallTuple = std::tuple<CallStack...>;
+
+        static constexpr bool hasImmediateRecursion =
+            (... || std::is_same_v<get_first_type_t<typename Sequence::SequenceTuple>, CallStack>);
+
+    public:
+        static constexpr bool value = hasImmediateRecursion;
+        // TODO: Recursive check for head recursion
+    };
+
+    template <class Sequence, class... CallStack>
+    constexpr bool has_head_recursion_v = has_head_recursion<Sequence, CallStack...>::value;
+}
+
 template <class ThisType, class ReturnType, class... Variants>
 struct Grammar
 {
     using RetType = ReturnType;
+
+    template <class ...TypeStack>
+    static constexpr bool kRecursiveDescentParsable = (... && !has_head_recursion_v<Variants, ThisType, TypeStack...>);
+    static_assert(kRecursiveDescentParsable<>);
 
     template <class LexemeVariantPtr>
     static std::expected<ReturnType, ParsingError> tryParse(LexemeVariantPtr& start, const LexemeVariantPtr& end)

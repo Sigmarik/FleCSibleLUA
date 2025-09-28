@@ -39,7 +39,7 @@ private:
     void increaseIndent();
     void decreaseIndent();
 
-    void visitList(std::vector<ast::NodePtr>& nodes);
+    void visitList(std::deque<ast::NodePtr>& nodes);
 
     std::string m_indent;
 

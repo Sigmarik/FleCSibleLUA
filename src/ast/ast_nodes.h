@@ -5,7 +5,7 @@
 #include <string>
 #include <utility>
 #include <variant>
-#include <vector>
+#include <deque>
 
 #include "data_types.h"
 #include "identification.h"
@@ -37,31 +37,13 @@ struct Return;
 struct Break;
 struct Continue;
 
-using AstNode = std::variant<
-    Program,
-    Function,
-    System,
-    Loop,
-    Query,
-    Branch,
-    UnaryOperator,
-    BinaryOperator,
-    FieldRequest,
-    IndexRequest,
-    Constant,
-    Variable,
-    FunctionCall,
-    Assignment,
-    Return,
-    Break,
-    Continue
->;
+struct AstNode;
 
 using NodePtr = mem_utils::CopyMovePtr<AstNode>;
 
 struct Program
 {
-    std::vector<NodePtr> components{};
+    std::deque<NodePtr> components{};
 };
 
 class Ast
@@ -73,17 +55,17 @@ public:
 struct Function
 {
     ids::ResolvableName name{"!UNNAMED_FUNCTION!"};
-    std::vector<ids::ResolvableName> parameters{};
-    std::vector<NodePtr> body{};
+    std::deque<ids::ResolvableName> parameters{};
+    std::deque<NodePtr> body{};
 };
 
 struct System
 {
     ids::ResolvableName name{"!UNNAMED_SYSTEM!"};
-    std::vector<ids::ResolvableName> parameters{};
+    std::deque<ids::ResolvableName> parameters{};
 
     std::string query = "!UNRESOLVED_QUERY!";
-    std::vector<NodePtr> body{};
+    std::deque<NodePtr> body{};
 };
 
 struct Loop
@@ -91,14 +73,14 @@ struct Loop
     explicit Loop(NodePtr&& condition);
 
     NodePtr condition;
-    std::vector<NodePtr> body{};
+    std::deque<NodePtr> body{};
 };
 
 struct Query
 {
     std::string query = "!UNRESOLVED_QUERY!";
     ids::ResolvableName entityName{"!UNDEFINED_QUERY_ENTITY_NAME!"};
-    std::vector<NodePtr> body{};
+    std::deque<NodePtr> body{};
 };
 
 struct Branch
@@ -106,8 +88,8 @@ struct Branch
     explicit Branch(NodePtr&& condition);
 
     NodePtr condition;
-    std::vector<NodePtr> ifTrue{};
-    std::vector<NodePtr> ifFalse{};
+    std::deque<NodePtr> ifTrue{};
+    std::deque<NodePtr> ifFalse{};
 };
 
 struct UnaryOperator
@@ -199,7 +181,7 @@ struct Variable
 struct FunctionCall
 {
     ids::ResolvableName name{"!UNNAMED_FUNCTION_CALL!"};
-    std::vector<NodePtr> args;
+    std::deque<NodePtr> args;
 };
 
 struct Assignment
@@ -217,5 +199,33 @@ struct Return
 
 struct Break {};
 struct Continue {};
+
+namespace
+{
+    using NodeVariant = std::variant<
+        Program,
+        Function,
+        System,
+        Loop,
+        Query,
+        Branch,
+        UnaryOperator,
+        BinaryOperator,
+        FieldRequest,
+        IndexRequest,
+        Constant,
+        Variable,
+        FunctionCall,
+        Assignment,
+        Return,
+        Break,
+        Continue
+    >;
+}
+
+struct AstNode : NodeVariant
+{
+    using NodeVariant::variant;
+};
 
 }
