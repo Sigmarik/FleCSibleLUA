@@ -22,7 +22,7 @@ using CmpNeq = parser::DefiniteLexeme<"!=", "'!='">;  // TODO: Add ~=
 using CmpGe = parser::DefiniteLexeme<">=", "'>='">;
 using CmpLe = parser::DefiniteLexeme<"<=", "'<='">;
 using CmpGt = parser::DefiniteLexeme<">", "'>'">;
-using CmpLs = parser::DefiniteLexeme<"<", "'<'">;
+using CmpLt = parser::DefiniteLexeme<"<", "'<'">;
 
 using Assignment = parser::DefiniteLexeme<"=", "=">;
 
@@ -35,6 +35,9 @@ using Pow = parser::DefiniteLexeme<"^", "'^'">;
 using Concat = parser::DefiniteLexeme<"..", "'..'">;
 using Length = parser::DefiniteLexeme<"#", "'#'">;
 using Not = parser::DefiniteLexeme<"!", "'!'">;  // TODO: Add unary ~
+
+using And = parser::DefiniteLexeme<"and", "'and'">;
+using Or = parser::DefiniteLexeme<"or", "'or'">;
 
 using Dot = parser::DefiniteLexeme<".", "'.'">;
 using Method = parser::DefiniteLexeme<":", "':'">;
@@ -124,7 +127,7 @@ using LuaLexer = parser::Lexer<
     CmpGe,
     CmpLe,
     CmpGt,
-    CmpLs,
+    CmpLt,
     Assignment,
     Plus,
     Minus,
@@ -134,6 +137,10 @@ using LuaLexer = parser::Lexer<
     Pow,
     Length,
     Not,
+
+    And,
+    Or,
+
     Method,
     Local,
     If,

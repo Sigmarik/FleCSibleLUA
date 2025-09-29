@@ -22,6 +22,7 @@ const std::map<BinaryOperator::Type, std::string> BinaryOperator::kTypeNames = {
     {Type::CmpLe, "CmpLe"},
     {Type::CmpGt, "CmpGt"},
     {Type::CmpGe, "CmpGe"},
+    {Type::CmpNeq, "CmpNeq"},
     {Type::Index, "Index"},
 };
 

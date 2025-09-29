@@ -105,11 +105,11 @@ void AstDebugger::visit(ast::BinaryOperator& node)
     increaseIndent();
     Visitor::visit(node.left);
     decreaseIndent();
-    m_stream << ") and (\n";
+    m_stream << m_indent << ") and (\n";
     increaseIndent();
     Visitor::visit(node.right);
     decreaseIndent();
-    m_stream << ")\n";
+    m_stream << m_indent << ")\n";
 }
 
 void AstDebugger::visit(ast::FieldRequest& node)
@@ -136,7 +136,7 @@ void AstDebugger::visit(ast::IndexRequest& node)
 
 void AstDebugger::visit(ast::Constant& node)
 {
-    m_stream << m_indent << "Constant " << data::to_string(node.value);
+    m_stream << m_indent << "Constant " << data::to_string(node.value) << "\n";
 }
 
 void AstDebugger::visit(ast::Variable& node)

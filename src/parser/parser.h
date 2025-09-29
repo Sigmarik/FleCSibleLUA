@@ -5,6 +5,7 @@
 #include <variant>
 #include <expected>
 #include <string>
+#include <deque>
 
 #include "char_pos.h"
 #include "error.h"
@@ -116,6 +117,19 @@ struct Lex final
     }
 };
 
+namespace
+{
+    template<class Grammar, class Tuple, std::size_t... I>
+    auto call_with_tuple(Tuple& tuple, std::index_sequence<I...>) {
+        return Grammar::visit(std::get<I>(tuple).value()...);
+    }
+
+    template<class Grammar, class Tuple>
+    auto call_with_tuple(Tuple& tuple) {
+        return call_with_tuple<Grammar>(tuple, std::make_index_sequence<std::tuple_size_v<std::decay_t<Tuple>>>{});
+    }
+}
+
 template <class... Elements>
 struct Sequence
 {
@@ -133,7 +147,7 @@ struct Sequence
             return std::unexpected(*error);
         }
 
-        return callWithTuple<Lexeme, ArgumentTypeTuple>(args);
+        return call_with_tuple<Lexeme, ArgumentTypeTuple>(args);
     }
 
 private:
@@ -156,15 +170,58 @@ private:
 
         return std::nullopt;
     }
+};
 
-    template<class Grammar, class Tuple, std::size_t... I>
-    static auto callWithTuple(Tuple& tuple, std::index_sequence<I...>) {
-        return Grammar::visit(std::get<I>(tuple).value()...);
+template <class Part, class ...OpTypes>
+struct Alternating
+{
+    std::deque<Part> parts{};
+    std::deque<std::variant<OpTypes...>> ops{};
+};
+
+template <class PartRt, class Part, class ...OpLexemes>
+struct Repeating : Grammar
+<
+    Repeating<PartRt, Part, OpLexemes...>, Alternating<PartRt, OpLexemes...>,
+
+    Sequence<Part, Lex<OpLexemes>, Repeating<PartRt, Part, OpLexemes...>>...,
+    Sequence<Part>
+>
+{
+    using AltSequence = Alternating<PartRt, OpLexemes...>;
+
+    static AltSequence visit(PartRt& part)
+    {
+        return {.parts = {std::move(part)}, .ops = {}};
     }
 
-    template<class Grammar, class Tuple>
-    static auto callWithTuple(Tuple& tuple) {
-        return callWithTuple<Grammar>(tuple, std::make_index_sequence<std::tuple_size_v<std::decay_t<Tuple>>>{});
+    template <class OpLexeme>
+    static AltSequence visit(PartRt& part, OpLexeme& op, AltSequence& sequence)
+    {
+        sequence.parts.emplace_front(std::move(part));
+        sequence.ops.emplace_front(std::move(op));
+        return std::move(sequence);
+    }
+};
+
+template <class PartRt, class Part>
+struct Repeating<PartRt, Part> : Grammar
+<
+    Repeating<PartRt, Part>, std::deque<PartRt>,
+
+    Sequence<Part, Repeating<PartRt, Part>>,
+    Sequence<>
+>
+{
+    static std::deque<PartRt> visit()
+    {
+        return {};
+    }
+
+    static std::deque<PartRt> visit(PartRt& part, std::deque<PartRt>& sequence)
+    {
+        sequence.emplace_front(std::move(part));
+        return std::move(sequence);
     }
 };
 

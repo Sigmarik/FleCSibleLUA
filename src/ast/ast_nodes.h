@@ -134,6 +134,7 @@ struct BinaryOperator
         CmpLe,
         CmpGt,
         CmpGe,
+        CmpNeq,
 
         Index,
     };
