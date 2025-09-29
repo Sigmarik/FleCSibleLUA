@@ -280,28 +280,26 @@ struct ExprComputation : parser::Grammar
 <
     ExprComputation, ast::NodePtr,
 
-    parser::Sequence<parser::Repeating<ast::NodePtr, ExprMultiplication, lualex::Plus, lualex::Minus>>
+    parser::Sequence<ExprComputation, parser::Lex<lualex::Plus>, ExprMultiplication>,
+    parser::Sequence<ExprComputation, parser::Lex<lualex::Minus>, ExprMultiplication>,
+    parser::Sequence<ExprMultiplication>
 >
 {
-    static ast::NodePtr visit(parser::Alternating<ast::NodePtr, lualex::Plus, lualex::Minus>& alternating)
+    static ast::NodePtr visit(ast::NodePtr& value)
     {
-        ast::NodePtr result = std::move(alternating.parts.front());
-        for (size_t id = 1; id < alternating.parts.size(); ++id)
-        {
-            ast::BinaryOperator::Type type = ast::BinaryOperator::Type::Add;
-            auto lexeme = alternating.ops[id - 1];
-            if (std::holds_alternative<lualex::Plus>(lexeme))
-            {
-                type = ast::BinaryOperator::Type::Add;
-            } else if (std::holds_alternative<lualex::Minus>(lexeme))
-            {
-                type = ast::BinaryOperator::Type::Subtract;
-            }
+        return std::move(value);
+    }
 
-            ast::NodePtr ptr = std::move(alternating.parts.at(id));
-            result = ast::NodePtr(ast::BinaryOperator(type, std::move(result), std::move(ptr)));
-        }
-        return result;
+    static ast::NodePtr visit(ast::NodePtr& left, lualex::Plus, ast::NodePtr& right)
+    {
+        return ast::NodePtr{ast::BinaryOperator(ast::BinaryOperator::Type::Add,
+            std::move(left), std::move(right))};
+    }
+
+    static ast::NodePtr visit(ast::NodePtr& left, lualex::Minus, ast::NodePtr& right)
+    {
+        return ast::NodePtr{ast::BinaryOperator(ast::BinaryOperator::Type::Subtract,
+            std::move(left), std::move(right))};
     }
 };
 struct ExprMultiplication : parser::Grammar
@@ -332,7 +330,7 @@ struct ExprMultiplication : parser::Grammar
             }
 
             ast::NodePtr ptr = std::move(alternating.parts.at(id));
-            result = ast::NodePtr(ast::BinaryOperator(type, std::move(result), std::move(ptr)));
+            result = ast::NodePtr{ast::BinaryOperator(type, std::move(result), std::move(ptr))};
         }
         return result;
     }

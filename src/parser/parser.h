@@ -55,14 +55,18 @@ struct Grammar
 {
     using RetType = ReturnType;
 
-    template <class ...TypeStack>
-    static constexpr bool kRecursiveDescentParsable = (... && !has_head_recursion_v<Variants, ThisType, TypeStack...>);
-    static_assert(kRecursiveDescentParsable<>);
-
     template <class LexemeVariantPtr>
     static std::expected<ReturnType, ParsingError> tryParse(LexemeVariantPtr& start, const LexemeVariantPtr& end)
     {
-        return tryParseVariant<0, LexemeVariantPtr>(start, end);
+        std::expected<ReturnType, ParsingError> head = tryParseVariant<0, LexemeVariantPtr>(start, end);
+        if (!head.has_value())
+        {
+            return head;
+        }
+
+        while (tryGrowHead<0, LexemeVariantPtr>(head.value(), start, end)) {}
+
+        return head;
     }
 
 private:
@@ -93,6 +97,34 @@ private:
 
         auto what = "All options failed";
         return std::unexpected(ParsingError{.what = what, .where = posFromVariant(*start)});
+    }
+
+    template <unsigned VariantIndex, class LexemeVariantPtr>
+    static bool tryGrowHead(ReturnType& head, LexemeVariantPtr& start, const LexemeVariantPtr& end)
+    {
+        if (start == end)
+        {
+            return false;
+        }
+
+        if constexpr (VariantIndex < std::tuple_size_v<VariantTuple>)
+        {
+            LexemeVariantPtr formerStart = start;
+            bool result =
+                std::tuple_element_t<VariantIndex, VariantTuple>::template tryExtend<
+                    ReturnType, ThisType, LexemeVariantPtr
+                >(head, start, end);
+            if (result)
+            {
+                return true;
+            }
+
+            start = formerStart;
+
+            return tryGrowHead<VariantIndex + 1, LexemeVariantPtr>(head, start, end);
+        }
+
+        return false;
     }
 };
 
@@ -138,16 +170,51 @@ struct Sequence
     template <class ReturnType, class Lexeme, class LexemeVariantPtr>
     static std::expected<ReturnType, ParsingError> tryParse(LexemeVariantPtr& start, const LexemeVariantPtr& end)
     {
-        using ArgumentTypeTuple = std::tuple<std::optional<typename Elements::RetType>...>;
-
-        ArgumentTypeTuple args;
-        std::optional<ParsingError> error = fillArgumentTuple<0, ArgumentTypeTuple, LexemeVariantPtr>(args, start, end);
-        if (error)
+        if constexpr (std::is_same_v<get_first_type_t<SequenceTuple>, Lexeme>)
         {
-            return std::unexpected(*error);
+            std::string what = "[INTERNAL PARSER ERROR] Parser fell into infinite recursion while processing rule ";
+            what += typeid(Lexeme).name();
+            return std::unexpected(ParsingError{.what = what, .where = posFromVariant(*start)});
         }
+        else
+        {
+            using ArgumentTypeTuple = std::tuple<std::optional<typename Elements::RetType>...>;
 
-        return call_with_tuple<Lexeme, ArgumentTypeTuple>(args);
+            ArgumentTypeTuple args;
+            std::optional<ParsingError> error = fillArgumentTuple<0, ArgumentTypeTuple, LexemeVariantPtr>(args, start, end);
+            if (error)
+            {
+                return std::unexpected(*error);
+            }
+
+            return call_with_tuple<Lexeme, ArgumentTypeTuple>(args);
+        }
+    }
+
+    template <class ReturnType, class Lexeme, class LexemeVariantPtr>
+    static bool tryExtend(ReturnType& head, LexemeVariantPtr& start,
+        const LexemeVariantPtr& end)
+    {
+        if constexpr (!std::is_same_v<get_first_type_t<SequenceTuple>, Lexeme>)
+        {
+            return false;
+        }
+        else
+        {
+            using ArgumentTypeTuple = std::tuple<std::optional<typename Elements::RetType>...>;
+
+            ArgumentTypeTuple args;
+            std::get<0>(args) = std::move(head);
+            std::optional<ParsingError> error = fillArgumentTuple<1, ArgumentTypeTuple, LexemeVariantPtr>(args, start, end);
+            if (error)
+            {
+                head = std::move(*std::get<0>(args));
+                return false;
+            }
+
+            head = call_with_tuple<Lexeme, ArgumentTypeTuple>(args);
+            return true;
+        }
     }
 
 private:

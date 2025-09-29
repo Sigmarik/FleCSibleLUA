@@ -1,5 +1,5 @@
 function RotateBoxes(entity, alpha, beta, gama)
-    print(alpha - beta != 3)
+    print(1 + 2 + 3)
 end
 
 
