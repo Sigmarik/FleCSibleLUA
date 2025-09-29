@@ -1,10 +1,13 @@
 #include "flecsible_lua.h"
 
+#include <fstream>
 #include <iostream>
+#include <sstream>
 
 #include "ast/ast_nodes.h"
 #include "grammar/math.h"
 #include "grammar/lua_parser.h"
+#include "visitors/dbg.h"
 
 namespace flua
 {
@@ -47,30 +50,75 @@ Script::~Script()
     m_ast = nullptr;
 }
 
-Script Script::Parse(const std::string_view& view)
+Script Script::Parse(const std::string& program)
 {
-    // TODO: Implement
+    Script script;
 
-    return Script();
+    auto parsingResult = luagrmr::Parser::parse(program);
+
+    if (parsingResult.has_value())
+    {
+        script.m_ast = new ast::Ast{.program = parsingResult.value()};
+    }
+    else
+    {
+        // TODO: Somehow return the error to the user?
+        const auto& [what, where] = parsingResult.error();
+        std::cerr << "FLua ERROR at line " << where.line << " column " << where.column << ":\n\t" << what << std::endl;
+    }
+
+    return script;
+}
+
+static std::expected<std::string, std::string> read_file_to_string(const std::string& filePath) {
+    std::ifstream file(filePath);
+    if (!file) {
+        return std::unexpected("Could not open the file: " + filePath);
+    }
+
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    return buffer.str();
 }
 
 Script Script::Load(const std::string& path)
 {
-    // TODO: Implement
+    Script script;
 
-    return Script();
+    auto content = read_file_to_string(path);
+
+    if (!content.has_value())
+    {
+        std::cerr << content.error() << std::endl;
+        return script;
+    }
+
+    auto parsingResult = luagrmr::Parser::parse(*content);
+
+    if (parsingResult.has_value())
+    {
+        script.m_ast = new ast::Ast{.program = parsingResult.value()};
+    }
+    else
+    {
+        // TODO: Somehow return the error to the user?
+        const auto& [what, where] = parsingResult.error();
+        std::cerr << "FLua ERROR in file " << path << " at line " << where.line << " column " << where.column << ":\n\t" << what << std::endl;
+    }
+
+    return script;
 }
 
 std::vector<flecs::system> Script::deploy(flecs::world& world)
 {
-    // TODO: Implement
-
-    auto parsingResult = luagrmr::Parser::parse("5");
-
-    if (!parsingResult.has_value())
+    if (m_ast == nullptr)
     {
-        std::cerr << parsingResult.error().what;
+        return {};
     }
+
+    vst::AstDebugger dbg(std::cout);
+
+    dbg.process(*m_ast);
 
     return {};
 }

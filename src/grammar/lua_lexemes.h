@@ -8,6 +8,8 @@ using namespace flua;
 
 using Semicolon = parser::DefiniteLexeme<";", ";">;
 
+using Comma = parser::DefiniteLexeme<",", ",">;
+
 using BracketRoundOp = parser::DefiniteLexeme<"(", "'('">;
 using BracketRoundCl = parser::DefiniteLexeme<")", "')'">;
 using BracketSquareOp = parser::DefiniteLexeme<"[", "'['">;
@@ -55,6 +57,7 @@ using Query = parser::DefiniteLexeme<"query", "query">;
 using Nil = parser::DefiniteLexeme<"nil", "'nil'">;
 using True = parser::DefiniteLexeme<"true", "'true'">;
 using False = parser::DefiniteLexeme<"false", "'false'">;
+using Return = parser::DefiniteLexeme<"return", "return">;
 
 struct Number : parser::Lexeme
 {
@@ -106,6 +109,7 @@ struct Whitespace : parser::Lexeme
 
 using LuaLexer = parser::Lexer<
     SingleLineComment,
+    Comma,
     MultiLineComment,
     Whitespace,
     Semicolon,
@@ -144,6 +148,7 @@ using LuaLexer = parser::Lexer<
     Nil,
     True,
     False,
+    Return,
     Number,
     Concat,
     Dot,

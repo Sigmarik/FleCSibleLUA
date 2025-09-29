@@ -28,9 +28,9 @@ struct Nil {};
 
 using GenericValue = std::variant<Nil, bool, double, std::string, List, Dict, Entity, GenericClass>;
 
-struct List : public std::vector<GenericValue> {};
-struct Dict : public std::unordered_map<std::string, GenericValue> {};
+struct List : std::vector<GenericValue> {};
+struct Dict : std::unordered_map<std::string, GenericValue> {};
 
-std::string to_string(const flua::data::GenericValue& value);
+std::string to_string(const GenericValue& value);
 
 }

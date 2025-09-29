@@ -8,15 +8,15 @@ struct CharacterPos
 {
     static constexpr unsigned kTabSize = 4;
 
-    unsigned line = 0;
-    unsigned column = 0;
+    unsigned line = 1;
+    unsigned column = 1;
 
     void considerChar(char chr)
     {
         if (chr == '\n')
         {
             ++line;
-            column = 0;
+            column = 1;
         }
         else if (chr == '\t')
         {
