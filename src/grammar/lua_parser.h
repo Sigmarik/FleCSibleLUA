@@ -140,7 +140,9 @@ struct Action : parser::Grammar
     Action, ast::NodePtr,
 
     parser::Sequence<Assignment>,
-    parser::Sequence<ExprUnary>
+    parser::Sequence<ExprUnary>,
+    parser::Sequence<Branch>,
+    parser::Sequence<WhileLoop>
     // TODO: Add assignments, branches, for/while loops and other stuff
 >
 {
@@ -418,7 +420,66 @@ struct Assignment : parser::Grammar
     }
 };
 
-struct Branch;
-struct WhileLoop;
+struct BranchBgn;
+
+struct Branch : parser::Grammar
+<
+    Branch, ast::Branch,
+
+    parser::Sequence<BranchBgn, parser::Lex<lualex::End>>,
+    parser::Sequence<BranchBgn, parser::Lex<lualex::Else>, Block, parser::Lex<lualex::End>>
+>
+{
+    static ast::Branch visit(ast::Branch& branch, lualex::End)
+    {
+        return ast::Branch{std::move(branch)};
+    }
+
+    static ast::Branch visit(ast::Branch& branch, lualex::Else, std::deque<ast::NodePtr>& block, lualex::End)
+    {
+        branch.ifFalse = std::move(block);
+        return ast::Branch{std::move(branch)};
+    }
+};
+
+struct BranchBgn : parser::Grammar
+<
+    BranchBgn, ast::Branch,
+
+    parser::Sequence<parser::Lex<lualex::If>, LValueExpression, parser::Lex<lualex::Then>, Block>,
+    parser::Sequence<BranchBgn, parser::Lex<lualex::ElseIf>, LValueExpression, parser::Lex<lualex::Then>, Block>
+>
+{
+    static ast::Branch visit(ast::Branch& branch, lualex::ElseIf, ast::NodePtr& condition,
+        lualex::Then, std::deque<ast::NodePtr>& block)
+    {
+        branch.cases.emplace_back(std::move(condition), std::move(block));
+        return std::move(branch);
+    }
+
+    static ast::Branch visit(lualex::If, ast::NodePtr& condition, lualex::Then, std::deque<ast::NodePtr>& block)
+    {
+        ast::Branch branch;
+        branch.cases.emplace_back(std::move(condition), std::move(block));
+        return branch;
+    }
+};
+
+struct WhileLoop : parser::Grammar
+<
+    WhileLoop, ast::Loop,
+
+    parser::Sequence<parser::Lex<lualex::While>, LValueExpression, parser::Lex<lualex::Do>, Block,
+        parser::Lex<lualex::End>>
+>
+{
+    static ast::Loop visit(lualex::While, ast::NodePtr& condition, lualex::Do,
+        std::deque<ast::NodePtr>& body, lualex::End)
+    {
+        ast::Loop loop(std::move(condition));
+        loop.body = std::move(body);
+        return loop;
+    }
+};
 
 }

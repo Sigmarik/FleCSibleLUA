@@ -24,7 +24,7 @@ using CmpLe = parser::DefiniteLexeme<"<=", "'<='">;
 using CmpGt = parser::DefiniteLexeme<">", "'>'">;
 using CmpLt = parser::DefiniteLexeme<"<", "'<'">;
 
-using Assignment = parser::DefiniteLexeme<"=", "=">;
+using Assignment = parser::DefiniteLexeme<"=", "'='">;
 
 using Plus = parser::DefiniteLexeme<"+", "'+'">;
 using Minus = parser::DefiniteLexeme<"-", "'-'">;
@@ -45,7 +45,9 @@ using Method = parser::DefiniteLexeme<":", "':'">;
 using Local = parser::DefiniteLexeme<"local", "'local'">;
 
 using If = parser::DefiniteLexeme<"if", "'if'">;
+using ElseIf = parser::DefiniteLexeme<"elseif", "'elseif'">;
 using Else = parser::DefiniteLexeme<"else", "'else'">;
+using Then = parser::DefiniteLexeme<"then", "'then'">;
 using While = parser::DefiniteLexeme<"while", "'while'">;
 using For = parser::DefiniteLexeme<"for", "'for'">;
 
@@ -144,6 +146,8 @@ using LuaLexer = parser::Lexer<
     Method,
     Local,
     If,
+    ElseIf,
+    Then,
     Else,
     While,
     For,

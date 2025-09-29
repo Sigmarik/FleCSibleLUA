@@ -31,8 +31,14 @@ public:
             return std::nullopt;
         }
 
+        bool canBeInName = true;
+
         for (unsigned id = 0; id < sizeof(Value) - 1; id++)
         {
+            if (!std::isalnum(view[id]) && view[id] != '_')
+            {
+                canBeInName = false;
+            }
             if (Value.value[id] != view[id])
             {
                 return std::nullopt;
@@ -40,6 +46,11 @@ public:
         }
 
         view.remove_prefix(sizeof(Value) - 1);
+
+        if (canBeInName && !view.empty() && (std::isalnum(view.front()) || view.front() == '_'))
+        {
+            return std::nullopt;
+        }
 
         return DefiniteLexeme{};
     }

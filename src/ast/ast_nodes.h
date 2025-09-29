@@ -6,6 +6,7 @@
 #include <utility>
 #include <variant>
 #include <deque>
+#include <vector>
 
 #include "data_types.h"
 #include "identification.h"
@@ -85,10 +86,17 @@ struct Query
 
 struct Branch
 {
-    explicit Branch(NodePtr&& condition);
+    struct Case
+    {
+        Case(NodePtr&& condition, std::deque<NodePtr>&& block)
+            : condition(std::move(condition)), block(std::move(block))
+        {}
 
-    NodePtr condition;
-    std::deque<NodePtr> ifTrue{};
+        NodePtr condition;
+        std::deque<NodePtr> block{};
+    };
+
+    std::vector<Case> cases{};
     std::deque<NodePtr> ifFalse{};
 };
 

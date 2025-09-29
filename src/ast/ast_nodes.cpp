@@ -28,8 +28,6 @@ const std::map<BinaryOperator::Type, std::string> BinaryOperator::kTypeNames = {
 
 Loop::Loop(NodePtr&& condition) : condition(std::move(condition)) {}
 
-Branch::Branch(NodePtr&& condition) : condition(std::move(condition)) {}
-
 UnaryOperator::UnaryOperator(Type type, NodePtr&& node) : type(type), node(std::move(node)) {}
 
 BinaryOperator::BinaryOperator(Type type, NodePtr&& left, NodePtr&& right)

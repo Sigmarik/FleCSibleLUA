@@ -40,7 +40,7 @@ void AstDebugger::visit(ast::Loop& node)
     increaseIndent();
     Visitor::visit(node.condition);
     decreaseIndent();
-    m_stream << ") {\n";
+    m_stream << m_indent << ") {\n";
     visitList(node.body);
     m_stream << m_indent << "}\n";
 }
@@ -59,12 +59,16 @@ void AstDebugger::visit(ast::Query& node)
 
 void AstDebugger::visit(ast::Branch& node)
 {
-    m_stream << m_indent << "If (\n";
-    increaseIndent();
-    Visitor::visit(node.condition);
-    decreaseIndent();
-    m_stream << ") {\n";
-    visitList(node.ifTrue);
+    for (size_t id = 0; id < node.cases.size(); ++id)
+    {
+        ast::Branch::Case& cs = node.cases[id];
+        m_stream << m_indent << (id == 0 ? "If (\n" : "ElseIf (\n");
+        increaseIndent();
+        Visitor::visit(cs.condition);
+        decreaseIndent();
+        m_stream << m_indent << ") {\n";
+        visitList(cs.block);
+    }
     m_stream << m_indent << "} else {\n";
     visitList(node.ifFalse);
     m_stream << m_indent << "}\n";
@@ -157,7 +161,7 @@ void AstDebugger::visit(ast::Assignment& node)
     increaseIndent();
     Visitor::visit(node.data);
     decreaseIndent();
-    m_stream << ")\n";
+    m_stream << m_indent << ")\n";
 }
 
 void AstDebugger::visit(ast::Return& node)

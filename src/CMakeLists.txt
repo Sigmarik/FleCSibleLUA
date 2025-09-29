@@ -11,6 +11,10 @@ target_sources(FlecsibleLua PRIVATE
 		${CMAKE_CURRENT_SOURCE_DIR}/grammar/lua_lexemes.cpp
 )
 
+if (WINDOWS)
+	target_compile_options(FlecsibleLua PRIVATE "/bigobj")
+endif ()
+
 target_include_directories(FlecsibleLua PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories(FlecsibleLua PRIVATE ${CMAKE_INCLUDE_PATH})
 
