@@ -1,5 +1,5 @@
 function RotateBoxes(entity, alpha, beta, gama)
-    print(1 + 2 + 3)
+    print(1 + 2 + 3 + gama.value)
 end
 
 

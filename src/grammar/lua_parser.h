@@ -196,28 +196,24 @@ struct LValueExpression : parser::Grammar
 <
     LValueExpression, ast::NodePtr,
 
-    parser::Sequence<parser::Repeating<ast::NodePtr, ExprComparison, lualex::And, lualex::Or>>
+    parser::Sequence<ExprComparison>,
+    parser::Sequence<LValueExpression, parser::Lex<lualex::And>, ExprComparison>,
+    parser::Sequence<LValueExpression, parser::Lex<lualex::Or>, ExprComparison>
 >
 {
-    static ast::NodePtr visit(parser::Alternating<ast::NodePtr, lualex::And, lualex::Or>& alternating)
+    static ast::NodePtr visit(ast::NodePtr& node)
     {
-        ast::NodePtr result = std::move(alternating.parts.front());
-        for (size_t id = 1; id < alternating.parts.size(); ++id)
-        {
-            ast::BinaryOperator::Type type = ast::BinaryOperator::Type::And;
-            auto lexeme = alternating.ops[id - 1];
-            if (std::holds_alternative<lualex::And>(lexeme))
-            {
-                type = ast::BinaryOperator::Type::And;
-            } else if (std::holds_alternative<lualex::Or>(lexeme))
-            {
-                type = ast::BinaryOperator::Type::Or;
-            }
+        return std::move(node);
+    }
 
-            ast::NodePtr ptr = std::move(alternating.parts.at(id));
-            result = ast::NodePtr(ast::BinaryOperator(type, std::move(result), std::move(ptr)));
-        }
-        return result;
+    static ast::NodePtr visit(ast::NodePtr& left, lualex::And, ast::NodePtr& right)
+    {
+        return ast::NodePtr{ast::BinaryOperator(ast::BinaryOperator::Type::And, std::move(left), std::move(right))};
+    }
+
+    static ast::NodePtr visit(ast::NodePtr& left, lualex::Or, ast::NodePtr& right)
+    {
+        return ast::NodePtr{ast::BinaryOperator(ast::BinaryOperator::Type::Or, std::move(left), std::move(right))};
     }
 };
 
@@ -241,38 +237,32 @@ struct ExprComparison : parser::Grammar
 
     static ast::NodePtr visit(ast::NodePtr& left, lualex::CmpEq, ast::NodePtr& right)
     {
-        ast::BinaryOperator result(ast::BinaryOperator::Type::CmpEq, std::move(left), std::move(right));
-        return ast::NodePtr{std::move(result)};
+        return ast::NodePtr{ast::BinaryOperator(ast::BinaryOperator::Type::CmpEq, std::move(left), std::move(right))};
     }
 
     static ast::NodePtr visit(ast::NodePtr& left, lualex::CmpGe, ast::NodePtr& right)
     {
-        ast::BinaryOperator result(ast::BinaryOperator::Type::CmpGe, std::move(left), std::move(right));
-        return ast::NodePtr{std::move(result)};
+        return ast::NodePtr{ast::BinaryOperator(ast::BinaryOperator::Type::CmpGe, std::move(left), std::move(right))};
     }
 
     static ast::NodePtr visit(ast::NodePtr& left, lualex::CmpGt, ast::NodePtr& right)
     {
-        ast::BinaryOperator result(ast::BinaryOperator::Type::CmpGt, std::move(left), std::move(right));
-        return ast::NodePtr{std::move(result)};
+        return ast::NodePtr{ast::BinaryOperator(ast::BinaryOperator::Type::CmpGt, std::move(left), std::move(right))};
     }
 
     static ast::NodePtr visit(ast::NodePtr& left, lualex::CmpLe, ast::NodePtr& right)
     {
-        ast::BinaryOperator result(ast::BinaryOperator::Type::CmpLe, std::move(left), std::move(right));
-        return ast::NodePtr{std::move(result)};
+        return ast::NodePtr{ast::BinaryOperator(ast::BinaryOperator::Type::CmpLe, std::move(left), std::move(right))};
     }
 
     static ast::NodePtr visit(ast::NodePtr& left, lualex::CmpLt, ast::NodePtr& right)
     {
-        ast::BinaryOperator result(ast::BinaryOperator::Type::CmpLt, std::move(left), std::move(right));
-        return ast::NodePtr{std::move(result)};
+        return ast::NodePtr{ast::BinaryOperator(ast::BinaryOperator::Type::CmpLt, std::move(left), std::move(right))};
     }
 
     static ast::NodePtr visit(ast::NodePtr& left, lualex::CmpNeq, ast::NodePtr& right)
     {
-        ast::BinaryOperator result(ast::BinaryOperator::Type::CmpNeq, std::move(left), std::move(right));
-        return ast::NodePtr{std::move(result)};
+        return ast::NodePtr{ast::BinaryOperator(ast::BinaryOperator::Type::CmpNeq, std::move(left), std::move(right))};
     }
 };
 
@@ -306,33 +296,33 @@ struct ExprMultiplication : parser::Grammar
 <
     ExprMultiplication, ast::NodePtr,
 
-    parser::Sequence<parser::Repeating<ast::NodePtr, ExprUnary, lualex::Multiply, lualex::Divide, lualex::Mod>>
+    parser::Sequence<ExprUnary>,
+    parser::Sequence<ExprMultiplication, parser::Lex<lualex::Multiply>, ExprUnary>,
+    parser::Sequence<ExprMultiplication, parser::Lex<lualex::Divide>, ExprUnary>,
+    parser::Sequence<ExprMultiplication, parser::Lex<lualex::Mod>, ExprUnary>
 >
 {
-    static ast::NodePtr visit(parser::Alternating<ast::NodePtr, lualex::Multiply, lualex::Divide, lualex::Mod>& alternating)
+    static ast::NodePtr visit(ast::NodePtr& node)
     {
-        ast::NodePtr result = std::move(alternating.parts.front());
-        for (size_t id = 1; id < alternating.parts.size(); ++id)
-        {
-            ast::BinaryOperator::Type type = ast::BinaryOperator::Type::Multiply;
-            auto lexeme = alternating.ops[id - 1];
-            if (std::holds_alternative<lualex::Multiply>(lexeme))
-            {
-                type = ast::BinaryOperator::Type::Multiply;
-            }
-            else if (std::holds_alternative<lualex::Divide>(lexeme))
-            {
-                type = ast::BinaryOperator::Type::Divide;
-            }
-            else if (std::holds_alternative<lualex::Mod>(lexeme))
-            {
-                type = ast::BinaryOperator::Type::Mod;
-            }
+        return std::move(node);
+    }
 
-            ast::NodePtr ptr = std::move(alternating.parts.at(id));
-            result = ast::NodePtr{ast::BinaryOperator(type, std::move(result), std::move(ptr))};
-        }
-        return result;
+    static ast::NodePtr visit(ast::NodePtr& left, lualex::Multiply, ast::NodePtr& right)
+    {
+        return ast::NodePtr{ast::BinaryOperator(ast::BinaryOperator::Type::Multiply,
+            std::move(left), std::move(right))};
+    }
+
+    static ast::NodePtr visit(ast::NodePtr& left, lualex::Divide, ast::NodePtr& right)
+    {
+        return ast::NodePtr{ast::BinaryOperator(ast::BinaryOperator::Type::Divide,
+            std::move(left), std::move(right))};
+    }
+
+    static ast::NodePtr visit(ast::NodePtr& left, lualex::Mod, ast::NodePtr& right)
+    {
+        return ast::NodePtr{ast::BinaryOperator(ast::BinaryOperator::Type::Mod,
+            std::move(left), std::move(right))};
     }
 };
 
@@ -372,14 +362,26 @@ struct ExprSingleton : parser::Grammar
     ExprSingleton, ast::NodePtr,
 
     parser::Sequence<parser::Lex<lualex::BracketRoundOp>, LValueExpression, parser::Lex<lualex::BracketRoundCl>>,
-    // TODO: Add access by index (`[]` and `.`)
-    // TODO: Add in-place dictionary parsing
+    parser::Sequence<ExprSingleton,
+        parser::Lex<lualex::BracketSquareOp>, LValueExpression, parser::Lex<lualex::BracketSquareCl>>,
+    parser::Sequence<ExprSingleton, parser::Lex<lualex::Dot>, parser::Lex<lualex::Name>>,
     parser::Sequence<FunctionCall>,
     parser::Sequence<parser::Lex<lualex::Name>>,
     parser::Sequence<parser::Lex<lualex::Number>>,
     parser::Sequence<parser::Lex<lualex::String>>
 >
 {
+    static ast::NodePtr visit(ast::NodePtr& body, lualex::BracketSquareOp, ast::NodePtr& index, lualex::BracketSquareCl)
+    {
+        return ast::NodePtr{ast::IndexRequest(std::move(body), std::move(index))};
+    }
+
+    static ast::NodePtr visit(ast::NodePtr& body, lualex::Dot, const lualex::Name& field)
+    {
+        ast::NodePtr index = ast::NodePtr{ast::Constant(field.name)};
+        return ast::NodePtr{ast::IndexRequest(std::move(body), std::move(index))};
+    }
+
     static ast::NodePtr visit(lualex::BracketRoundOp, ast::NodePtr& value, lualex::BracketRoundCl)
     {
         return std::move(value);

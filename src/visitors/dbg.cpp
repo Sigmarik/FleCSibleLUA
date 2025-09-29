@@ -131,7 +131,7 @@ void AstDebugger::visit(ast::IndexRequest& node)
     increaseIndent();
     Visitor::visit(node.index);
     decreaseIndent();
-    m_stream << "]\n";
+    m_stream << m_indent << "]\n";
 }
 
 void AstDebugger::visit(ast::Constant& node)
