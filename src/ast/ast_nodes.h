@@ -181,7 +181,9 @@ struct Variable
 
 struct FunctionCall
 {
-    ids::ResolvableName name{"!UNNAMED_FUNCTION_CALL!"};
+    explicit FunctionCall(NodePtr&& what) : function(std::move(what)) {}
+
+    NodePtr function;
     std::deque<NodePtr> args;
 };
 

@@ -72,7 +72,10 @@ void AstDebugger::visit(ast::Branch& node)
 
 void AstDebugger::visit(ast::FunctionCall& node)
 {
-    m_stream << m_indent << "FunctionCall " << node.name.string << "(\n";
+    m_stream << m_indent << "FunctionCall of\n";
+    increaseIndent();
+    visit(node.function);
+    decreaseIndent();
     visitList(node.args);
     m_stream << m_indent << ")\n";
 }

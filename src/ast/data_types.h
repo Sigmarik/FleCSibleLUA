@@ -26,6 +26,7 @@ struct Entity
 
 struct Nil {};
 
+// TODO: Add function pointers
 using GenericValue = std::variant<Nil, bool, double, std::string, List, Dict, Entity, GenericClass>;
 
 struct List : std::vector<GenericValue> {};
