@@ -5,7 +5,6 @@
 #include <sstream>
 
 #include "ast/ast_nodes.h"
-#include "grammar/math.h"
 #include "grammar/lua_parser.h"
 #include "visitors/dbg.h"
 

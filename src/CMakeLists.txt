@@ -8,7 +8,6 @@ target_sources(FlecsibleLua PRIVATE
 		${CMAKE_CURRENT_SOURCE_DIR}/ast/data_types.cpp
 		${CMAKE_CURRENT_SOURCE_DIR}/visitors/dbg.cpp
 
-		${CMAKE_CURRENT_SOURCE_DIR}/grammar/math.cpp
 		${CMAKE_CURRENT_SOURCE_DIR}/grammar/lua_lexemes.cpp
 )
 
