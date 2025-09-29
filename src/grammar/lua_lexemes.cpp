@@ -88,9 +88,11 @@ std::optional<String> String::tryConstruct(std::string_view& view)
         return std::nullopt;
     }
 
+    view.remove_prefix(1);
+
     while (!view.empty() && view.front() != bgnQuote)
     {
-        if (view.front() == '\'')
+        if (view.front() == '\\')
         {
             view.remove_prefix(1);
             if (view.empty())

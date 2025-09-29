@@ -28,6 +28,9 @@ struct ExprSingleton;
 
 struct RValueExpression;
 
+struct Branch;
+struct WhileLoop;
+
 struct Program : parser::Grammar
 <
     Program, ast::Program,
@@ -58,7 +61,7 @@ struct Function : parser::Grammar
         parser::Lex<lualex::BracketRoundOp>,
         parser::Repeating<lualex::Name, parser::Lex<lualex::Name>, lualex::Comma>,
         parser::Lex<lualex::BracketRoundCl>,
-        parser::Repeating<ast::NodePtr, Action>,
+        Block,
         parser::Lex<lualex::End>
     >
 >
@@ -136,7 +139,8 @@ struct Action : parser::Grammar
 <
     Action, ast::NodePtr,
 
-    parser::Sequence<LValueExpression>
+    parser::Sequence<Assignment>,
+    parser::Sequence<ExprUnary>
     // TODO: Add assignments, branches, for/while loops and other stuff
 >
 {
@@ -151,6 +155,7 @@ struct Return : parser::Grammar
 <
     Return, ast::Return,
 
+    parser::Sequence<parser::Lex<lualex::Return>, LValueExpression>,
     parser::Sequence<parser::Lex<lualex::Return>>
     // TODO: Add return with an argument
 >
@@ -158,6 +163,11 @@ struct Return : parser::Grammar
     static ast::Return visit(lualex::Return)
     {
         return {};
+    }
+
+    static ast::Return visit(lualex::Return, ast::NodePtr& value)
+    {
+        return {std::move(value)};
     }
 };
 
@@ -392,5 +402,23 @@ struct ExprSingleton : parser::Grammar
         return ast::NodePtr{std::move(function)};
     }
 };
+
+struct Assignment : parser::Grammar
+<
+    Assignment, ast::Assignment,
+
+    // TODO: Implement batch assignment
+    // TODO: Implement op= assignment
+    parser::Sequence<ExprSingleton, parser::Lex<lualex::Assignment>, LValueExpression>
+>
+{
+    static ast::Assignment visit(ast::NodePtr& subject, lualex::Assignment, ast::NodePtr& value)
+    {
+        return ast::Assignment{std::move(subject), std::move(value)};
+    }
+};
+
+struct Branch;
+struct WhileLoop;
 
 }
