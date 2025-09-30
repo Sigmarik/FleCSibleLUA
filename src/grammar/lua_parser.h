@@ -19,7 +19,7 @@ struct Return;
 
 struct Assignment;
 
-struct LValueExpression;
+struct HighLevelExpression;
 struct ExprComparison;
 struct ExprComputation;
 struct ExprMultiplication;
@@ -157,7 +157,7 @@ struct Return : parser::Grammar
 <
     Return, ast::Return,
 
-    parser::Sequence<parser::Lex<lualex::Return>, LValueExpression>,
+    parser::Sequence<parser::Lex<lualex::Return>, HighLevelExpression>,
     parser::Sequence<parser::Lex<lualex::Return>>
     // TODO: Add return with an argument
 >
@@ -173,13 +173,35 @@ struct Return : parser::Grammar
     }
 };
 
-struct LValueExpression : parser::Grammar
+struct ExprLogical;
+
+struct HighLevelExpression : parser::Grammar
 <
-    LValueExpression, ast::NodePtr,
+    HighLevelExpression, ast::NodePtr,
+
+    parser::Sequence<ExprLogical>,
+    parser::Sequence<HighLevelExpression, parser::Lex<lualex::Concat>, ExprLogical>
+>
+{
+    static ast::NodePtr visit(ast::NodePtr& node)
+    {
+        return std::move(node);
+    }
+
+    static ast::NodePtr visit(ast::NodePtr& left, lualex::Concat, ast::NodePtr& right)
+    {
+        return ast::NodePtr{ast::BinaryOperator(ast::BinaryOperator::Type::Concatenate,
+            std::move(left), std::move(right))};
+    }
+};
+
+struct ExprLogical : parser::Grammar
+<
+    ExprLogical, ast::NodePtr,
 
     parser::Sequence<ExprComparison>,
-    parser::Sequence<LValueExpression, parser::Lex<lualex::And>, ExprComparison>,
-    parser::Sequence<LValueExpression, parser::Lex<lualex::Or>, ExprComparison>
+    parser::Sequence<ExprLogical, parser::Lex<lualex::And>, ExprComparison>,
+    parser::Sequence<ExprLogical, parser::Lex<lualex::Or>, ExprComparison>
 >
 {
     static ast::NodePtr visit(ast::NodePtr& node)
@@ -273,14 +295,17 @@ struct ExprComputation : parser::Grammar
             std::move(left), std::move(right))};
     }
 };
+
+struct ExprPower;
+
 struct ExprMultiplication : parser::Grammar
 <
     ExprMultiplication, ast::NodePtr,
 
-    parser::Sequence<ExprUnary>,
-    parser::Sequence<ExprMultiplication, parser::Lex<lualex::Multiply>, ExprUnary>,
-    parser::Sequence<ExprMultiplication, parser::Lex<lualex::Divide>, ExprUnary>,
-    parser::Sequence<ExprMultiplication, parser::Lex<lualex::Mod>, ExprUnary>
+    parser::Sequence<ExprPower>,
+    parser::Sequence<ExprMultiplication, parser::Lex<lualex::Multiply>, ExprPower>,
+    parser::Sequence<ExprMultiplication, parser::Lex<lualex::Divide>, ExprPower>,
+    parser::Sequence<ExprMultiplication, parser::Lex<lualex::Mod>, ExprPower>
 >
 {
     static ast::NodePtr visit(ast::NodePtr& node)
@@ -303,6 +328,26 @@ struct ExprMultiplication : parser::Grammar
     static ast::NodePtr visit(ast::NodePtr& left, lualex::Mod, ast::NodePtr& right)
     {
         return ast::NodePtr{ast::BinaryOperator(ast::BinaryOperator::Type::Mod,
+            std::move(left), std::move(right))};
+    }
+};
+
+struct ExprPower : parser::Grammar
+<
+    ExprPower, ast::NodePtr,
+
+    parser::Sequence<ExprUnary, parser::Lex<lualex::Pow>, ExprPower>,
+    parser::Sequence<ExprUnary>
+>
+{
+    static ast::NodePtr visit(ast::NodePtr& node)
+    {
+        return std::move(node);
+    }
+
+    static ast::NodePtr visit(ast::NodePtr& left, lualex::Pow, ast::NodePtr& right)
+    {
+        return ast::NodePtr{ast::BinaryOperator(ast::BinaryOperator::Type::Pow,
             std::move(left), std::move(right))};
     }
 };
@@ -342,9 +387,9 @@ struct ExprSingleton : parser::Grammar
 <
     ExprSingleton, ast::NodePtr,
 
-    parser::Sequence<parser::Lex<lualex::BracketRoundOp>, LValueExpression, parser::Lex<lualex::BracketRoundCl>>,
+    parser::Sequence<parser::Lex<lualex::BracketRoundOp>, HighLevelExpression, parser::Lex<lualex::BracketRoundCl>>,
     parser::Sequence<ExprSingleton,
-        parser::Lex<lualex::BracketSquareOp>, LValueExpression, parser::Lex<lualex::BracketSquareCl>>,
+        parser::Lex<lualex::BracketSquareOp>, HighLevelExpression, parser::Lex<lualex::BracketSquareCl>>,
     parser::Sequence<ExprSingleton, parser::Lex<lualex::Dot>, parser::Lex<lualex::Name>>,
     parser::Sequence<parser::Lex<lualex::Name>>,
     parser::Sequence<parser::Lex<lualex::Number>>,
@@ -352,7 +397,7 @@ struct ExprSingleton : parser::Grammar
     parser::Sequence<ExprSingleton, parser::Lex<lualex::BracketRoundOp>,
         parser::Lex<lualex::BracketRoundCl>>,
     parser::Sequence<ExprSingleton, parser::Lex<lualex::BracketRoundOp>,
-        parser::Repeating<ast::NodePtr, LValueExpression, lualex::Comma>,
+        parser::Repeating<ast::NodePtr, HighLevelExpression, lualex::Comma>,
         parser::Lex<lualex::BracketRoundCl>>
 >
 {
@@ -411,7 +456,7 @@ struct Assignment : parser::Grammar
 
     // TODO: Implement batch assignment
     // TODO: Implement op= assignment
-    parser::Sequence<ExprSingleton, parser::Lex<lualex::Assignment>, LValueExpression>
+    parser::Sequence<ExprSingleton, parser::Lex<lualex::Assignment>, HighLevelExpression>
 >
 {
     static ast::Assignment visit(ast::NodePtr& subject, lualex::Assignment, ast::NodePtr& value)
@@ -446,8 +491,8 @@ struct BranchBgn : parser::Grammar
 <
     BranchBgn, ast::Branch,
 
-    parser::Sequence<parser::Lex<lualex::If>, LValueExpression, parser::Lex<lualex::Then>, Block>,
-    parser::Sequence<BranchBgn, parser::Lex<lualex::ElseIf>, LValueExpression, parser::Lex<lualex::Then>, Block>
+    parser::Sequence<parser::Lex<lualex::If>, HighLevelExpression, parser::Lex<lualex::Then>, Block>,
+    parser::Sequence<BranchBgn, parser::Lex<lualex::ElseIf>, HighLevelExpression, parser::Lex<lualex::Then>, Block>
 >
 {
     static ast::Branch visit(ast::Branch& branch, lualex::ElseIf, ast::NodePtr& condition,
@@ -469,7 +514,7 @@ struct WhileLoop : parser::Grammar
 <
     WhileLoop, ast::Loop,
 
-    parser::Sequence<parser::Lex<lualex::While>, LValueExpression, parser::Lex<lualex::Do>, Block,
+    parser::Sequence<parser::Lex<lualex::While>, HighLevelExpression, parser::Lex<lualex::Do>, Block,
         parser::Lex<lualex::End>>
 >
 {
