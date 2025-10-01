@@ -1,5 +1,7 @@
 function RotateBoxes(entity, alpha, beta, gama)
-    return 7 .. 10 ^ 3 ^ 4;
+    for i = 1, 10 do
+        something()
+    end
 end
 
 

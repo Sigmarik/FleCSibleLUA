@@ -49,6 +49,8 @@ using ElseIf = parser::DefiniteLexeme<"elseif", "'elseif'">;
 using Else = parser::DefiniteLexeme<"else", "'else'">;
 using Then = parser::DefiniteLexeme<"then", "'then'">;
 using While = parser::DefiniteLexeme<"while", "'while'">;
+using Repeat = parser::DefiniteLexeme<"repeat", "'repeat'">;
+using Until = parser::DefiniteLexeme<"until", "'until'">;
 using For = parser::DefiniteLexeme<"for", "'for'">;
 
 using Do = parser::DefiniteLexeme<"do", "'do'">;
@@ -139,10 +141,8 @@ using LuaLexer = parser::Lexer<
     Pow,
     Length,
     Not,
-
     And,
     Or,
-
     Method,
     Local,
     If,
@@ -150,6 +150,8 @@ using LuaLexer = parser::Lexer<
     Then,
     Else,
     While,
+    Repeat,
+    Until,
     For,
     Do,
     End,

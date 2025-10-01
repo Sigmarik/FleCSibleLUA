@@ -30,6 +30,8 @@ struct RValueExpression;
 
 struct Branch;
 struct WhileLoop;
+struct RepeatUntil;
+struct NumericFor;
 
 struct Program : parser::Grammar
 <
@@ -142,7 +144,9 @@ struct Action : parser::Grammar
     parser::Sequence<Assignment>,
     parser::Sequence<ExprUnary>,
     parser::Sequence<Branch>,
-    parser::Sequence<WhileLoop>
+    parser::Sequence<WhileLoop>,
+    parser::Sequence<RepeatUntil>,
+    parser::Sequence<NumericFor>
     // TODO: Add assignments, branches, for/while loops and other stuff
 >
 {
@@ -391,6 +395,8 @@ struct ExprSingleton : parser::Grammar
     parser::Sequence<ExprSingleton,
         parser::Lex<lualex::BracketSquareOp>, HighLevelExpression, parser::Lex<lualex::BracketSquareCl>>,
     parser::Sequence<ExprSingleton, parser::Lex<lualex::Dot>, parser::Lex<lualex::Name>>,
+    parser::Sequence<parser::Lex<lualex::True>>,
+    parser::Sequence<parser::Lex<lualex::False>>,
     parser::Sequence<parser::Lex<lualex::Name>>,
     parser::Sequence<parser::Lex<lualex::Number>>,
     parser::Sequence<parser::Lex<lualex::String>>,
@@ -415,6 +421,16 @@ struct ExprSingleton : parser::Grammar
     static ast::NodePtr visit(lualex::BracketRoundOp, ast::NodePtr& value, lualex::BracketRoundCl)
     {
         return std::move(value);
+    }
+
+    static ast::NodePtr visit(lualex::True)
+    {
+        return ast::NodePtr{ast::Constant(true)};
+    }
+
+    static ast::NodePtr visit(lualex::False)
+    {
+        return ast::NodePtr{ast::Constant(false)};
     }
 
     static ast::NodePtr visit(const lualex::Name& varName)
@@ -512,16 +528,82 @@ struct BranchBgn : parser::Grammar
 
 struct WhileLoop : parser::Grammar
 <
-    WhileLoop, ast::Loop,
+    WhileLoop, ast::WhileLoop,
 
     parser::Sequence<parser::Lex<lualex::While>, HighLevelExpression, parser::Lex<lualex::Do>, Block,
         parser::Lex<lualex::End>>
 >
 {
-    static ast::Loop visit(lualex::While, ast::NodePtr& condition, lualex::Do,
+    static ast::WhileLoop visit(lualex::While, ast::NodePtr& condition, lualex::Do,
         std::deque<ast::NodePtr>& body, lualex::End)
     {
-        ast::Loop loop(std::move(condition));
+        ast::WhileLoop loop(std::move(condition));
+        loop.body = std::move(body);
+        return loop;
+    }
+};
+
+struct RepeatUntil : parser::Grammar
+<
+    RepeatUntil, ast::RepeatUntil,
+
+    parser::Sequence<parser::Lex<lualex::Repeat>, Block, parser::Lex<lualex::Until>, HighLevelExpression>
+>
+{
+    static ast::RepeatUntil visit(lualex::Repeat, std::deque<ast::NodePtr>& body, lualex::Until, ast::NodePtr& condition)
+    {
+        ast::RepeatUntil loop(std::move(condition));
+        loop.body = std::move(body);
+        return loop;
+    }
+};
+
+struct NumericFor : parser::Grammar
+<
+    NumericFor, ast::ForLoopNumeric,
+
+    parser::Sequence<
+        parser::Lex<lualex::For>,
+        parser::Lex<lualex::Name>,
+        parser::Lex<lualex::Assignment>,
+        HighLevelExpression,
+        parser::Lex<lualex::Comma>,
+        HighLevelExpression,
+        parser::Lex<lualex::Do>,
+        Block,
+        parser::Lex<lualex::End>
+    >,
+
+    parser::Sequence<
+        parser::Lex<lualex::For>,
+        parser::Lex<lualex::Name>,
+        parser::Lex<lualex::Assignment>,
+        HighLevelExpression,
+        parser::Lex<lualex::Comma>,
+        HighLevelExpression,
+        parser::Lex<lualex::Comma>,
+        HighLevelExpression,
+        parser::Lex<lualex::Do>,
+        Block,
+        parser::Lex<lualex::End>
+    >
+>
+{
+    static ast::ForLoopNumeric visit(lualex::For, const lualex::Name& name, lualex::Assignment,
+        ast::NodePtr& start, lualex::Comma, ast::NodePtr& limit,
+        lualex::Do, std::deque<ast::NodePtr>& body, lualex::End)
+    {
+        ast::NodePtr step = ast::NodePtr{ast::Constant(1.0)};
+        ast::ForLoopNumeric loop(name.name, std::move(start), std::move(limit), std::move(step));
+        loop.body = std::move(body);
+        return loop;
+    }
+
+    static ast::ForLoopNumeric visit(lualex::For, const lualex::Name& name, lualex::Assignment,
+        ast::NodePtr& start, lualex::Comma, ast::NodePtr& limit, lualex::Comma, ast::NodePtr& step,
+        lualex::Do, std::deque<ast::NodePtr>& body, lualex::End)
+    {
+        ast::ForLoopNumeric loop(name.name, std::move(start), std::move(limit), std::move(step));
         loop.body = std::move(body);
         return loop;
     }

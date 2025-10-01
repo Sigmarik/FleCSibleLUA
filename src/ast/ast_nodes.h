@@ -20,7 +20,10 @@ struct Program;
 struct Function;
 struct System;
 
-struct Loop;
+struct WhileLoop;
+struct ForLoopNumeric;
+// TODO: Implement genric for loop (requires "lambdas")
+struct RepeatUntil;
 struct Query;
 struct Branch;
 
@@ -69,9 +72,30 @@ struct System
     std::deque<NodePtr> body{};
 };
 
-struct Loop
+struct WhileLoop
 {
-    explicit Loop(NodePtr&& condition);
+    explicit WhileLoop(NodePtr&& condition);
+
+    NodePtr condition;
+    std::deque<NodePtr> body{};
+};
+
+struct ForLoopNumeric
+{
+    explicit ForLoopNumeric(const std::string& name, NodePtr&& base, NodePtr&& limit, NodePtr&& step)
+        : name(name), base(std::move(base)), limit(std::move(limit)), step(std::move(step)) {}
+
+    ids::ResolvableName name;
+    NodePtr base;
+    NodePtr limit;
+    NodePtr step;
+
+    std::deque<NodePtr> body{};
+};
+
+struct RepeatUntil
+{
+    explicit RepeatUntil(NodePtr&& condition) : condition(std::move(condition)) {}
 
     NodePtr condition;
     std::deque<NodePtr> body{};
@@ -217,7 +241,9 @@ namespace
         Program,
         Function,
         System,
-        Loop,
+        WhileLoop,
+        ForLoopNumeric,
+        RepeatUntil,
         Query,
         Branch,
         UnaryOperator,

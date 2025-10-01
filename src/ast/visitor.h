@@ -19,7 +19,9 @@ protected:
     virtual void visit(Program& node) = 0;
     virtual void visit(Function& node) = 0;
     virtual void visit(System& node) = 0;
-    virtual void visit(Loop& node) = 0;
+    virtual void visit(WhileLoop& node) = 0;
+    virtual void visit(ForLoopNumeric& node) = 0;
+    virtual void visit(RepeatUntil& node) = 0;
     virtual void visit(Query& node) = 0;
     virtual void visit(Branch& node) = 0;
     virtual void visit(FunctionCall& node) = 0;

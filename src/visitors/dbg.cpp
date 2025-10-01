@@ -34,15 +34,45 @@ void AstDebugger::visit(ast::System& node)
     m_stream << m_indent << "}\n";
 }
 
-void AstDebugger::visit(ast::Loop& node)
+void AstDebugger::visit(ast::WhileLoop& node)
 {
-    m_stream << m_indent << "Loop (\n";
+    m_stream << m_indent << "While (\n";
     increaseIndent();
     Visitor::visit(node.condition);
     decreaseIndent();
     m_stream << m_indent << ") {\n";
     visitList(node.body);
     m_stream << m_indent << "}\n";
+}
+
+void AstDebugger::visit(ast::ForLoopNumeric& node)
+{
+    m_stream << m_indent << "For " << node.name.string << "  from\n";
+    increaseIndent();
+    Visitor::visit(node.base);
+    decreaseIndent();
+    m_stream << m_indent << "to\n";
+    increaseIndent();
+    Visitor::visit(node.limit);
+    decreaseIndent();
+    m_stream << m_indent << "step\n";
+    increaseIndent();
+    Visitor::visit(node.step);
+    decreaseIndent();
+    m_stream << m_indent << "{\n";
+    visitList(node.body);
+    m_stream << m_indent << "}\n";
+}
+
+void AstDebugger::visit(ast::RepeatUntil& node)
+{
+    m_stream << m_indent << "Repeat {\n";
+    visitList(node.body);
+    m_stream << m_indent << "} until (\n";
+    increaseIndent();
+    Visitor::visit(node.condition);
+    decreaseIndent();
+    m_stream << m_indent << ")\n";
 }
 
 void AstDebugger::visit(ast::Query& node)

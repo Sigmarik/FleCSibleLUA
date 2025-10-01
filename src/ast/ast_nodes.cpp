@@ -26,7 +26,7 @@ const std::map<BinaryOperator::Type, std::string> BinaryOperator::kTypeNames = {
     {Type::Index, "Index"},
 };
 
-Loop::Loop(NodePtr&& condition) : condition(std::move(condition)) {}
+WhileLoop::WhileLoop(NodePtr&& condition) : condition(std::move(condition)) {}
 
 UnaryOperator::UnaryOperator(Type type, NodePtr&& node) : type(type), node(std::move(node)) {}
 
