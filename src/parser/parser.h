@@ -8,8 +8,6 @@
 #include <string>
 #include <deque>
 
-#include <iostream>
-
 #include "char_pos.h"
 #include "error.h"
 
