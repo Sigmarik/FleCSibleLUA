@@ -47,7 +47,7 @@ void AstDebugger::visit(ast::WhileLoop& node)
 
 void AstDebugger::visit(ast::ForLoopNumeric& node)
 {
-    m_stream << m_indent << "For " << node.name.string << "  from\n";
+    m_stream << m_indent << "For " << node.name.string << " from\n";
     increaseIndent();
     Visitor::visit(node.base);
     decreaseIndent();

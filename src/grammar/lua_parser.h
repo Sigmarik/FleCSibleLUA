@@ -28,6 +28,8 @@ struct ExprMultiplication;
 struct ExprUnary;
 struct ExprSingleton;
 
+struct InlineFunction;
+
 struct RValueExpression;
 
 struct Branch;
@@ -76,6 +78,34 @@ struct Function : parser::Grammar
         ast::Function function;
         function.body = std::move(body);
         function.name = name.name;
+        for (lualex::Name& paramName : params.parts)
+        {
+            function.parameters.emplace_back(paramName.name);
+        }
+        return function;
+    }
+};
+
+struct InlineFunction : parser::Grammar
+<
+    InlineFunction, ast::Function,
+
+    parser::Sequence<
+        parser::Lex<lualex::Function>,
+        parser::Lex<lualex::BracketRoundOp>,
+        parser::Repeating<lualex::Name, parser::Lex<lualex::Name>, lualex::Comma>,
+        parser::Lex<lualex::BracketRoundCl>,
+        Block,
+        parser::Lex<lualex::End>
+    >
+>
+{
+    static ast::Function visit(lualex::Function, lualex::BracketRoundOp,
+        auto& params, lualex::BracketRoundCl, std::deque<ast::NodePtr>& body, lualex::End)
+    {
+        ast::Function function;
+        function.body = std::move(body);
+        function.name = ids::ResolvableName("");
         for (lualex::Name& paramName : params.parts)
         {
             function.parameters.emplace_back(paramName.name);
@@ -160,7 +190,8 @@ struct Action : parser::Grammar
     parser::Sequence<Branch>,
     parser::Sequence<WhileLoop>,
     parser::Sequence<RepeatUntil>,
-    parser::Sequence<NumericFor>
+    parser::Sequence<NumericFor>,
+    parser::Sequence<Function>
     // TODO: Add assignments, branches, for/while loops and other stuff
 >
 {
@@ -414,6 +445,7 @@ struct ExprSingleton : parser::Grammar
     parser::Sequence<parser::Lex<lualex::Name>>,
     parser::Sequence<parser::Lex<lualex::Number>>,
     parser::Sequence<parser::Lex<lualex::String>>,
+    parser::Sequence<InlineFunction>,
     parser::Sequence<ExprSingleton, parser::Lex<lualex::BracketRoundOp>,
         parser::Lex<lualex::BracketRoundCl>>,
     parser::Sequence<ExprSingleton, parser::Lex<lualex::BracketRoundOp>,
@@ -460,6 +492,11 @@ struct ExprSingleton : parser::Grammar
     static ast::NodePtr visit(const lualex::String& constString)
     {
         return ast::NodePtr{ast::Constant(constString.string)};
+    }
+
+    static ast::NodePtr visit(ast::Function& lambda)
+    {
+        return ast::NodePtr{std::move(lambda)};
     }
 
     static ast::NodePtr visit(ast::NodePtr& func, lualex::BracketRoundOp, lualex::BracketRoundCl)

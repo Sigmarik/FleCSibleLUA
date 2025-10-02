@@ -1,12 +1,9 @@
+function overAndOver(alpha, beta)
+    return function(x) return x + 1 end
+end
+
 function RotateBoxes(entity, alpha, beta, gama)
-    for i = 1, 10 do
-        something()
-        if 5 == 10 then
-            break
-        else
-            continue
-        end
-    end
+    overAndOver()
 end
 
 
