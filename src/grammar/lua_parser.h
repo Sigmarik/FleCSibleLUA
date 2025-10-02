@@ -16,6 +16,8 @@ struct ParamNames;
 struct Block;
 struct Action;
 struct Return;
+struct Break;
+struct Continue;
 
 struct Assignment;
 
@@ -116,6 +118,8 @@ struct Block : parser::Grammar
 
     parser::Sequence<Action, Block>,
     parser::Sequence<Return>,
+    parser::Sequence<Break>,
+    parser::Sequence<Continue>,
     parser::Sequence<>
 >
 {
@@ -129,6 +133,16 @@ struct Block : parser::Grammar
     static std::deque<ast::NodePtr> visit(ast::Return& ret)
     {
         return {ast::NodePtr(std::move(ret))};
+    }
+
+    static std::deque<ast::NodePtr> visit(ast::Break& brk)
+    {
+        return {ast::NodePtr(std::move(brk))};
+    }
+
+    static std::deque<ast::NodePtr> visit(ast::Continue& cnt)
+    {
+        return {ast::NodePtr(std::move(cnt))};
     }
 
     static std::deque<ast::NodePtr> visit()
@@ -606,6 +620,32 @@ struct NumericFor : parser::Grammar
         ast::ForLoopNumeric loop(name.name, std::move(start), std::move(limit), std::move(step));
         loop.body = std::move(body);
         return loop;
+    }
+};
+
+struct Break : parser::Grammar
+<
+    Break, ast::Break,
+
+    parser::Sequence<parser::Lex<lualex::Break>>
+>
+{
+    static ast::Break visit(lualex::Break)
+    {
+        return {};
+    }
+};
+
+struct Continue : parser::Grammar
+<
+    Continue, ast::Continue,
+
+    parser::Sequence<parser::Lex<lualex::Continue>>
+>
+{
+    static ast::Continue visit(lualex::Continue)
+    {
+        return {};
     }
 };
 
