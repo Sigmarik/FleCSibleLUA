@@ -22,7 +22,7 @@ struct System;
 
 struct WhileLoop;
 struct ForLoopNumeric;
-// TODO: Implement genric for loop (requires "lambdas")
+struct ForLoopGeneric;
 struct RepeatUntil;
 struct Query;
 struct Branch;
@@ -89,6 +89,16 @@ struct ForLoopNumeric
     NodePtr base;
     NodePtr limit;
     NodePtr step;
+
+    std::deque<NodePtr> body{};
+};
+
+struct ForLoopGeneric
+{
+    explicit ForLoopGeneric(NodePtr&& iterator) : iterator(std::move(iterator)) {}
+
+    std::vector<ids::ResolvableName> names{};
+    NodePtr iterator;
 
     std::deque<NodePtr> body{};
 };
@@ -243,6 +253,7 @@ namespace
         System,
         WhileLoop,
         ForLoopNumeric,
+        ForLoopGeneric,
         RepeatUntil,
         Query,
         Branch,

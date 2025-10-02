@@ -3,7 +3,9 @@ function overAndOver(alpha, beta)
 end
 
 function RotateBoxes(entity, alpha, beta, gama)
-    overAndOver()
+    for x, y, z in overAndOver(1, 10) do
+        something()
+    end
 end
 
 

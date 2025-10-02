@@ -36,6 +36,7 @@ struct Branch;
 struct WhileLoop;
 struct RepeatUntil;
 struct NumericFor;
+struct GenericFor;
 
 struct Program : parser::Grammar
 <
@@ -191,6 +192,7 @@ struct Action : parser::Grammar
     parser::Sequence<WhileLoop>,
     parser::Sequence<RepeatUntil>,
     parser::Sequence<NumericFor>,
+    parser::Sequence<GenericFor>,
     parser::Sequence<Function>
     // TODO: Add assignments, branches, for/while loops and other stuff
 >
@@ -511,7 +513,7 @@ struct ExprSingleton : parser::Grammar
         ast::FunctionCall function(std::move(func));
         for (ast::NodePtr& arg : args.parts)
         {
-            function.args.emplace_front(std::move(arg));
+            function.args.emplace_back(std::move(arg));
         }
         return ast::NodePtr{std::move(function)};
     }
@@ -646,6 +648,43 @@ struct NumericFor : parser::Grammar
     {
         ast::NodePtr step = ast::NodePtr{ast::Constant(1.0)};
         ast::ForLoopNumeric loop(name.name, std::move(start), std::move(limit), std::move(step));
+        loop.body = std::move(body);
+        return loop;
+    }
+
+    static ast::ForLoopNumeric visit(lualex::For, const lualex::Name& name, lualex::Assignment,
+        ast::NodePtr& start, lualex::Comma, ast::NodePtr& limit, lualex::Comma, ast::NodePtr& step,
+        lualex::Do, std::deque<ast::NodePtr>& body, lualex::End)
+    {
+        ast::ForLoopNumeric loop(name.name, std::move(start), std::move(limit), std::move(step));
+        loop.body = std::move(body);
+        return loop;
+    }
+};
+
+struct GenericFor : parser::Grammar
+<
+    GenericFor, ast::ForLoopGeneric,
+
+    parser::Sequence<
+        parser::Lex<lualex::For>,
+        parser::Repeating<lualex::Name, parser::Lex<lualex::Name>, lualex::Comma>,
+        parser::Lex<lualex::In>,
+        HighLevelExpression,
+        parser::Lex<lualex::Do>,
+        Block,
+        parser::Lex<lualex::End>
+    >
+>
+{
+    static ast::ForLoopGeneric visit(lualex::For, const parser::Alternating<lualex::Name, lualex::Comma>& names,
+        lualex::In, ast::NodePtr& iterator, lualex::Do, std::deque<ast::NodePtr>& body, lualex::End)
+    {
+        ast::ForLoopGeneric loop(std::move(iterator));
+        for (const lualex::Name& name : names.parts)
+        {
+            loop.names.emplace_back(name.name);
+        }
         loop.body = std::move(body);
         return loop;
     }

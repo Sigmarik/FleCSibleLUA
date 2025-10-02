@@ -64,6 +64,22 @@ void AstDebugger::visit(ast::ForLoopNumeric& node)
     m_stream << m_indent << "}\n";
 }
 
+void AstDebugger::visit(ast::ForLoopGeneric& node)
+{
+    m_stream << m_indent << "For ";
+    for (const ids::ResolvableName& name : node.names)
+    {
+        m_stream << name.string << " ";
+    }
+    m_stream << "in\n";
+    increaseIndent();
+    Visitor::visit(node.iterator);
+    decreaseIndent();
+    m_stream << m_indent << "{\n";
+    visitList(node.body);
+    m_stream << m_indent << "}\n";
+}
+
 void AstDebugger::visit(ast::RepeatUntil& node)
 {
     m_stream << m_indent << "Repeat {\n";

@@ -52,6 +52,7 @@ using While = parser::DefiniteLexeme<"while", "'while'">;
 using Repeat = parser::DefiniteLexeme<"repeat", "'repeat'">;
 using Until = parser::DefiniteLexeme<"until", "'until'">;
 using For = parser::DefiniteLexeme<"for", "'for'">;
+using In = parser::DefiniteLexeme<"in", "'in'">;
 using Break = parser::DefiniteLexeme<"break", "'break'">;
 using Continue = parser::DefiniteLexeme<"continue", "'continue'">;
 
@@ -155,6 +156,7 @@ using LuaLexer = parser::Lexer<
     Repeat,
     Until,
     For,
+    In,
     Do,
     End,
     Break,

@@ -22,6 +22,7 @@ protected:
     void visit(ast::System& node) override;
     void visit(ast::WhileLoop& node) override;
     void visit(ast::ForLoopNumeric& node) override;
+    void visit(ast::ForLoopGeneric& node) override;
     void visit(ast::RepeatUntil& node) override;
     void visit(ast::Query& node) override;
     void visit(ast::Branch& node) override;
