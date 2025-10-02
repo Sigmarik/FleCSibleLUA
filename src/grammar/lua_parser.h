@@ -74,12 +74,12 @@ struct Function : parser::Grammar
 >
 {
     static ast::Function visit(lualex::Function, const lualex::Name& name, lualex::BracketRoundOp,
-        auto& params, lualex::BracketRoundCl, std::deque<ast::NodePtr>& body, lualex::End)
+        std::deque<lualex::Name>& params, lualex::BracketRoundCl, std::deque<ast::NodePtr>& body, lualex::End)
     {
         ast::Function function;
         function.body = std::move(body);
         function.name = name.name;
-        for (lualex::Name& paramName : params.parts)
+        for (lualex::Name& paramName : params)
         {
             function.parameters.emplace_back(paramName.name);
         }
@@ -102,12 +102,12 @@ struct InlineFunction : parser::Grammar
 >
 {
     static ast::Function visit(lualex::Function, lualex::BracketRoundOp,
-        auto& params, lualex::BracketRoundCl, std::deque<ast::NodePtr>& body, lualex::End)
+        std::deque<lualex::Name>& params, lualex::BracketRoundCl, std::deque<ast::NodePtr>& body, lualex::End)
     {
         ast::Function function;
         function.body = std::move(body);
         function.name = ids::ResolvableName("");
-        for (lualex::Name& paramName : params.parts)
+        for (lualex::Name& paramName : params)
         {
             function.parameters.emplace_back(paramName.name);
         }
@@ -508,10 +508,10 @@ struct ExprSingleton : parser::Grammar
     }
 
     static ast::NodePtr visit(ast::NodePtr& func, lualex::BracketRoundOp,
-        parser::Alternating<ast::NodePtr, lualex::Comma>& args, lualex::BracketRoundCl)
+        std::deque<ast::NodePtr>& args, lualex::BracketRoundCl)
     {
         ast::FunctionCall function(std::move(func));
-        for (ast::NodePtr& arg : args.parts)
+        for (ast::NodePtr& arg : args)
         {
             function.args.emplace_back(std::move(arg));
         }
@@ -677,11 +677,11 @@ struct GenericFor : parser::Grammar
     >
 >
 {
-    static ast::ForLoopGeneric visit(lualex::For, const parser::Alternating<lualex::Name, lualex::Comma>& names,
+    static ast::ForLoopGeneric visit(lualex::For, const std::deque<lualex::Name>& names,
         lualex::In, ast::NodePtr& iterator, lualex::Do, std::deque<ast::NodePtr>& body, lualex::End)
     {
         ast::ForLoopGeneric loop(std::move(iterator));
-        for (const lualex::Name& name : names.parts)
+        for (const lualex::Name& name : names)
         {
             loop.names.emplace_back(name.name);
         }

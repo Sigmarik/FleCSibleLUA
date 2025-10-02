@@ -249,24 +249,21 @@ struct Alternating
 template <class PartRt, class Part, class ...OpLexemes>
 struct Repeating : Grammar
 <
-    Repeating<PartRt, Part, OpLexemes...>, Alternating<PartRt, OpLexemes...>,
+    Repeating<PartRt, Part, OpLexemes...>, std::deque<PartRt>,
 
-    Sequence<Part, Lex<OpLexemes>, Repeating<PartRt, Part, OpLexemes...>>...,
+    Sequence<Repeating<PartRt, Part, OpLexemes...>, Lex<OpLexemes>, Part>...,
     Sequence<Part>
 >
 {
-    using AltSequence = Alternating<PartRt, OpLexemes...>;
-
-    static AltSequence visit(PartRt& part)
+    static std::deque<PartRt> visit(PartRt& part)
     {
-        return {.parts = {std::move(part)}, .ops = {}};
+        return {std::move(part)};
     }
 
     template <class OpLexeme>
-    static AltSequence visit(PartRt& part, OpLexeme& op, AltSequence& sequence)
+    static std::deque<PartRt> visit(std::deque<PartRt>& sequence, OpLexeme&&, PartRt& part)
     {
-        sequence.parts.emplace_front(std::move(part));
-        sequence.ops.emplace_front(std::move(op));
+        sequence.emplace_back(std::move(part));
         return std::move(sequence);
     }
 };
@@ -276,7 +273,7 @@ struct Repeating<PartRt, Part> : Grammar
 <
     Repeating<PartRt, Part>, std::deque<PartRt>,
 
-    Sequence<Part, Repeating<PartRt, Part>>,
+    Sequence<Repeating<PartRt, Part>, Part>,
     Sequence<>
 >
 {
@@ -285,9 +282,9 @@ struct Repeating<PartRt, Part> : Grammar
         return {};
     }
 
-    static std::deque<PartRt> visit(PartRt& part, std::deque<PartRt>& sequence)
+    static std::deque<PartRt> visit(std::deque<PartRt>& sequence, PartRt& part)
     {
-        sequence.emplace_front(std::move(part));
+        sequence.emplace_back(std::move(part));
         return std::move(sequence);
     }
 };
