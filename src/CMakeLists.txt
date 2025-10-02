@@ -1,15 +1,12 @@
-add_library(FlecsibleLua)
-
-target_sources(FlecsibleLua PRIVATE
-		${CMAKE_CURRENT_SOURCE_DIR}/flecsible_lua.cpp
-		${CMAKE_CURRENT_SOURCE_DIR}/ast/ast_nodes.cpp
-		${CMAKE_CURRENT_SOURCE_DIR}/ast/visitor.cpp
-		${CMAKE_CURRENT_SOURCE_DIR}/ast/identification.cpp
-		${CMAKE_CURRENT_SOURCE_DIR}/ast/data_types.cpp
-		${CMAKE_CURRENT_SOURCE_DIR}/visitors/dbg.cpp
-
-		${CMAKE_CURRENT_SOURCE_DIR}/grammar/lua_lexemes.cpp
-)
+add_library(FlecsibleLua
+		flecsible_lua.cpp
+		ast/ast_nodes.cpp
+		ast/visitor.cpp
+		ast/identification.cpp
+		ast/data_types.cpp
+		visitors/dbg.cpp
+		grammar/lua_lexemes.cpp
+		parser/char_pos.cpp)
 
 if (WINDOWS)
 	target_compile_options(FlecsibleLua PRIVATE "/bigobj")

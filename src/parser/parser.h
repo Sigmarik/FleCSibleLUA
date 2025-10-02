@@ -4,8 +4,11 @@
 #include <tuple>
 #include <variant>
 #include <expected>
+#include <optional>
 #include <string>
 #include <deque>
+
+#include <iostream>
 
 #include "char_pos.h"
 #include "error.h"
@@ -13,6 +16,39 @@
 namespace flua::parser
 {
 using namespace flua;
+
+namespace
+{
+    struct IParser
+    {
+        ParsingError error{.what = "No error", .where = CharacterPos{.line = 0, .column = 0}};
+
+        void trySetError(const ParsingError& newError)
+        {
+            if (error.where < newError.where)
+                error = newError;
+        }
+    };
+}
+
+template <class RootGrammar>
+struct Parser : IParser
+{
+    template <class LexemeVariantPtr>
+    static std::expected<typename RootGrammar::RetType, ParsingError> tryParse(
+        LexemeVariantPtr& start, const LexemeVariantPtr& end)
+    {
+        Parser parser;
+
+        std::optional<typename RootGrammar::RetType> result = RootGrammar::tryParse(parser, start, end);
+        if (!result.has_value())
+            return std::unexpected(std::move(parser.error));
+        return *result;
+    }
+
+private:
+    Parser() = default;
+};
 
 namespace
 {
@@ -32,22 +68,6 @@ namespace
 
     template <class Tuple>
     using get_first_type_t = get_first_type<Tuple>::type;
-
-    template <class Sequence, class... CallStack>
-    class has_head_recursion
-    {
-        using CallTuple = std::tuple<CallStack...>;
-
-        static constexpr bool hasImmediateRecursion =
-            (... || std::is_same_v<get_first_type_t<typename Sequence::SequenceTuple>, CallStack>);
-
-    public:
-        static constexpr bool value = hasImmediateRecursion;
-        // TODO: Recursive check for head recursion
-    };
-
-    template <class Sequence, class... CallStack>
-    constexpr bool has_head_recursion_v = has_head_recursion<Sequence, CallStack...>::value;
 }
 
 template <class ThisType, class ReturnType, class... Variants>
@@ -55,16 +75,16 @@ struct Grammar
 {
     using RetType = ReturnType;
 
-    template <class LexemeVariantPtr>
-    static std::expected<ReturnType, ParsingError> tryParse(LexemeVariantPtr& start, const LexemeVariantPtr& end)
+    template <class ParserT, class LexemeVariantPtr>
+    static std::optional<RetType> tryParse(ParserT& parser, LexemeVariantPtr& start, const LexemeVariantPtr& end)
     {
-        std::expected<ReturnType, ParsingError> head = tryParseVariant<0, LexemeVariantPtr>(start, end);
+        std::optional<ReturnType> head = tryParseVariant<0, ParserT, LexemeVariantPtr>(parser, start, end);
         if (!head.has_value())
         {
             return head;
         }
 
-        while (tryGrowHead<0, LexemeVariantPtr>(head.value(), start, end)) {}
+        while (tryGrowHead<0, ParserT, LexemeVariantPtr>(head.value(), parser, start, end)) {}
 
         return head;
     }
@@ -72,16 +92,16 @@ struct Grammar
 private:
     using VariantTuple = std::tuple<Variants...>;
 
-    template <unsigned VariantIndex, class LexemeVariantPtr>
-    static std::expected<ReturnType, ParsingError> tryParseVariant(LexemeVariantPtr& start, const LexemeVariantPtr& end)
+    template <unsigned VariantIndex, class ParserT, class LexemeVariantPtr>
+    static std::optional<ReturnType> tryParseVariant(ParserT& parser, LexemeVariantPtr& start, const LexemeVariantPtr& end)
     {
         if constexpr (VariantIndex < std::tuple_size_v<VariantTuple>)
         {
             LexemeVariantPtr formerStart = start;
-            std::expected<ReturnType, ParsingError> result =
+            std::optional<ReturnType> result =
                 std::tuple_element_t<VariantIndex, VariantTuple>::template tryParse<
-                    ReturnType, ThisType, LexemeVariantPtr
-                >(start, end);
+                    ReturnType, ThisType, ParserT, LexemeVariantPtr
+                >(parser, start, end);
             if (result.has_value())
             {
                 return result;
@@ -90,17 +110,20 @@ private:
             start = formerStart;
 
             if constexpr (VariantIndex + 1 < std::tuple_size_v<VariantTuple>)
-                return tryParseVariant<VariantIndex + 1, LexemeVariantPtr>(start, end);
+            {
+                return tryParseVariant<VariantIndex + 1, ParserT, LexemeVariantPtr>(parser, start, end);
+            }
 
             return result;
         }
 
         auto what = "All options failed";
-        return std::unexpected(ParsingError{.what = what, .where = posFromVariant(*start)});
+        parser.trySetError(ParsingError{.what = what, .where = posFromVariant(*start)});
+        return std::nullopt;
     }
 
-    template <unsigned VariantIndex, class LexemeVariantPtr>
-    static bool tryGrowHead(ReturnType& head, LexemeVariantPtr& start, const LexemeVariantPtr& end)
+    template <unsigned VariantIndex, class ParserT, class LexemeVariantPtr>
+    static bool tryGrowHead(ReturnType& head, ParserT& parser, LexemeVariantPtr& start, const LexemeVariantPtr& end)
     {
         if (start == end)
         {
@@ -112,8 +135,8 @@ private:
             LexemeVariantPtr formerStart = start;
             bool result =
                 std::tuple_element_t<VariantIndex, VariantTuple>::template tryExtend<
-                    ReturnType, ThisType, LexemeVariantPtr
-                >(head, start, end);
+                    ReturnType, ThisType, ParserT, LexemeVariantPtr
+                >(head, parser, start, end);
             if (result)
             {
                 return true;
@@ -121,7 +144,7 @@ private:
 
             start = formerStart;
 
-            return tryGrowHead<VariantIndex + 1, LexemeVariantPtr>(head, start, end);
+            return tryGrowHead<VariantIndex + 1, ParserT, LexemeVariantPtr>(head, parser, start, end);
         }
 
         return false;
@@ -133,8 +156,8 @@ struct Lex final
 {
     using RetType = Lexeme;
 
-    template <class LexemeVariantPtr>
-    static std::expected<Lexeme, ParsingError> tryParse(LexemeVariantPtr& start, const LexemeVariantPtr& end)
+    template <class ParserT, class LexemeVariantPtr>
+    static std::optional<Lexeme> tryParse(ParserT& parser, LexemeVariantPtr& start, const LexemeVariantPtr& end)
     {
         if (start != end && std::holds_alternative<Lexeme>(*start))
         {
@@ -145,7 +168,8 @@ struct Lex final
 
         std::string what = std::string("Expected ") + Lexeme::kName.value + ", but found a ";
         std::visit([&](const auto& specificLexeme){ what += specificLexeme.kName.value; }, *start);
-        return std::unexpected(ParsingError{.what = what, .where = posFromVariant(*start)});
+        parser.trySetError(ParsingError{.what = what, .where = posFromVariant(*start)});
+        return std::nullopt;
     }
 };
 
@@ -167,32 +191,31 @@ struct Sequence
 {
     using SequenceTuple = std::tuple<Elements...>;
 
-    template <class ReturnType, class Lexeme, class LexemeVariantPtr>
-    static std::expected<ReturnType, ParsingError> tryParse(LexemeVariantPtr& start, const LexemeVariantPtr& end)
+    template <class ReturnType, class Lexeme, class ParserT, class LexemeVariantPtr>
+    static std::optional<ReturnType> tryParse(ParserT& parser,
+        LexemeVariantPtr& start, const LexemeVariantPtr& end)
     {
         if constexpr (std::is_same_v<get_first_type_t<SequenceTuple>, Lexeme>)
         {
-            std::string what = "[INTERNAL PARSER ERROR] Parser fell into infinite recursion while processing rule ";
-            what += typeid(Lexeme).name();
-            return std::unexpected(ParsingError{.what = what, .where = posFromVariant(*start)});
+            return std::nullopt;
         }
         else
         {
             using ArgumentTypeTuple = std::tuple<std::optional<typename Elements::RetType>...>;
 
             ArgumentTypeTuple args;
-            std::optional<ParsingError> error = fillArgumentTuple<0, ArgumentTypeTuple, LexemeVariantPtr>(args, start, end);
-            if (error)
+            bool success = fillArgumentTuple<0, ArgumentTypeTuple, ParserT, LexemeVariantPtr>(args, parser, start, end);
+            if (!success)
             {
-                return std::unexpected(*error);
+                return std::nullopt;
             }
 
             return call_with_tuple<Lexeme, ArgumentTypeTuple>(args);
         }
     }
 
-    template <class ReturnType, class Lexeme, class LexemeVariantPtr>
-    static bool tryExtend(ReturnType& head, LexemeVariantPtr& start,
+    template <class ReturnType, class Lexeme, class ParserT, class LexemeVariantPtr>
+    static bool tryExtend(ReturnType& head, ParserT& parser, LexemeVariantPtr& start,
         const LexemeVariantPtr& end)
     {
         if constexpr (!std::is_same_v<get_first_type_t<SequenceTuple>, Lexeme>)
@@ -205,8 +228,9 @@ struct Sequence
 
             ArgumentTypeTuple args;
             std::get<0>(args) = std::move(head);
-            std::optional<ParsingError> error = fillArgumentTuple<1, ArgumentTypeTuple, LexemeVariantPtr>(args, start, end);
-            if (error)
+            bool success =
+                fillArgumentTuple<1, ArgumentTypeTuple, ParserT, LexemeVariantPtr>(args,parser, start, end);
+            if (!success)
             {
                 head = std::move(*std::get<0>(args));
                 return false;
@@ -218,24 +242,24 @@ struct Sequence
     }
 
 private:
-    template <unsigned Index, class Tuple, class LexemeVariantPtr>
-    static std::optional<ParsingError> fillArgumentTuple(Tuple& tuple, LexemeVariantPtr& start, const LexemeVariantPtr& end)
+    template <unsigned Index, class Tuple, class ParserT, class LexemeVariantPtr>
+    static bool fillArgumentTuple(Tuple& tuple, ParserT& parser, LexemeVariantPtr& start, const LexemeVariantPtr& end)
     {
         if constexpr (Index < std::tuple_size_v<SequenceTuple>)
         {
             using CurrentGrammar = std::tuple_element_t<Index, SequenceTuple>;
-            auto result = CurrentGrammar::tryParse(start, end);
+            auto result = CurrentGrammar::tryParse(parser, start, end);
             if (!result.has_value())
             {
-                return result.error();
+                return false;
             }
 
             std::get<Index>(tuple) = result.value();
 
-            return fillArgumentTuple<Index + 1, Tuple, LexemeVariantPtr>(tuple, start, end);
+            return fillArgumentTuple<Index + 1, Tuple, ParserT, LexemeVariantPtr>(tuple, parser, start, end);
         }
 
-        return std::nullopt;
+        return true;
     }
 };
 

@@ -11,23 +11,10 @@ struct CharacterPos
     unsigned line = 1;
     unsigned column = 1;
 
-    void considerChar(char chr)
-    {
-        if (chr == '\n')
-        {
-            ++line;
-            column = 1;
-        }
-        else if (chr == '\t')
-        {
-            column += kTabSize;
-        }
-        else
-        {
-            ++column;
-        }
-    }
+    void considerChar(char chr);
 };
+
+bool operator<(const CharacterPos& alpha, const CharacterPos& beta);
 
 template <class LexemeVariant>
 CharacterPos posFromVariant(LexemeVariant&& variant)

@@ -9,7 +9,7 @@ using namespace flua;
 
 struct Program;
 
-using Parser = parser::Parser<Program, lualex::LuaLexer, lualex::LuaIgnored>;
+using Parser = parser::CompleteParser<Program, lualex::LuaLexer, lualex::LuaIgnored>;
 
 struct Function;
 struct ParamNames;
@@ -147,17 +147,17 @@ struct Block : parser::Grammar
 <
     Block, std::deque<ast::NodePtr>,
 
-    parser::Sequence<Action, Block>,
+    parser::Sequence<Block, Action>,
     parser::Sequence<Return>,
     parser::Sequence<Break>,
     parser::Sequence<Continue>,
     parser::Sequence<>
 >
 {
-    static std::deque<ast::NodePtr> visit(ast::NodePtr& action, std::deque<ast::NodePtr>& body)
+    static std::deque<ast::NodePtr> visit(std::deque<ast::NodePtr>& body, ast::NodePtr& action)
     {
         std::deque<ast::NodePtr> newBody = std::move(body);
-        newBody.emplace_front(action);
+        newBody.emplace_back(action);
         return newBody;
     }
 

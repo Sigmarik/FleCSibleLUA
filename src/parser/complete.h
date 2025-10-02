@@ -18,9 +18,11 @@ struct IgnoreLexemes
 };
 
 template <class MainGrammar, class LexerT, class IgnoredLexemes>
-struct Parser
+struct CompleteParser
 {
     using ParsingResult = std::expected<typename MainGrammar::RetType, ParsingError>;
+
+    using ParserT = Parser<MainGrammar>;
 
     static ParsingResult parse(const std::string& text)
     {
@@ -33,7 +35,7 @@ struct Parser
 
         auto bgn = lexemes.value().begin();
         auto end = lexemes.value().end();
-        return MainGrammar::tryParse(bgn, end);
+        return ParserT::tryParse(bgn, end);
     }
 };
 }
