@@ -19,7 +19,18 @@ using namespace flua;
 
 struct INode
 {
-    parser::CharacterPos position{0, 0};
+    explicit INode(const parser::CharacterPos& pos) : m_position(pos) {}
+
+    INode(const INode&) = default;
+    INode(INode&&) = default;
+
+    INode& operator=(const INode&) = default;
+    INode& operator=(INode&&) = default;
+
+    [[nodiscard]] parser::CharacterPos getPos() const { return m_position; }
+
+private:
+    parser::CharacterPos m_position;
 };
 
 struct Program;
@@ -30,6 +41,8 @@ using NodePtr = mem_utils::CopyMovePtr<AstNode>;
 
 struct Program : INode
 {
+    using INode::INode;
+
     std::deque<NodePtr> components{};
 };
 
@@ -41,6 +54,8 @@ public:
 
 struct Function : INode
 {
+    using INode::INode;
+
     ids::ResolvableName name{"!UNNAMED_FUNCTION!"};
     std::deque<ids::ResolvableName> parameters{};
     std::deque<NodePtr> body{};
@@ -48,6 +63,8 @@ struct Function : INode
 
 struct System : INode
 {
+    using INode::INode;
+
     ids::ResolvableName name{"!UNNAMED_SYSTEM!"};
     std::deque<ids::ResolvableName> parameters{};
 
@@ -57,7 +74,8 @@ struct System : INode
 
 struct WhileLoop : INode
 {
-    explicit WhileLoop(NodePtr&& condition);
+    explicit WhileLoop(const parser::CharacterPos& pos, NodePtr&& condition)
+        : INode(pos), condition(std::move(condition)) {}
 
     NodePtr condition;
     std::deque<NodePtr> body{};
@@ -65,8 +83,9 @@ struct WhileLoop : INode
 
 struct ForLoopNumeric : INode
 {
-    explicit ForLoopNumeric(const std::string& name, NodePtr&& base, NodePtr&& limit, NodePtr&& step)
-        : name(name), base(std::move(base)), limit(std::move(limit)), step(std::move(step)) {}
+    explicit ForLoopNumeric(const parser::CharacterPos& pos, const std::string& name, NodePtr&& base, NodePtr&& limit,
+        NodePtr&& step)
+        : INode(pos), name(name), base(std::move(base)), limit(std::move(limit)), step(std::move(step)) {}
 
     ids::ResolvableName name;
     NodePtr base;
@@ -78,7 +97,8 @@ struct ForLoopNumeric : INode
 
 struct ForLoopGeneric : INode
 {
-    explicit ForLoopGeneric(NodePtr&& iterator) : iterator(std::move(iterator)) {}
+    explicit ForLoopGeneric(const parser::CharacterPos& pos, NodePtr&& iterator)
+        : INode(pos), iterator(std::move(iterator)) {}
 
     std::vector<ids::ResolvableName> names{};
     NodePtr iterator;
@@ -88,7 +108,8 @@ struct ForLoopGeneric : INode
 
 struct RepeatUntil : INode
 {
-    explicit RepeatUntil(NodePtr&& condition) : condition(std::move(condition)) {}
+    explicit RepeatUntil(const parser::CharacterPos& pos, NodePtr&& condition)
+        : INode(pos), condition(std::move(condition)) {}
 
     NodePtr condition;
     std::deque<NodePtr> body{};
@@ -96,6 +117,8 @@ struct RepeatUntil : INode
 
 struct Query : INode
 {
+    using INode::INode;
+
     std::string query = "!UNRESOLVED_QUERY!";
     ids::ResolvableName entityName{"!UNDEFINED_QUERY_ENTITY_NAME!"};
     std::deque<NodePtr> body{};
@@ -103,6 +126,8 @@ struct Query : INode
 
 struct Branch : INode
 {
+    using INode::INode;
+
     struct Case
     {
         Case(NodePtr&& condition, std::deque<NodePtr>&& block)
@@ -126,7 +151,8 @@ struct UnaryOperator : INode
         Length,
     };
 
-    UnaryOperator(Type type, NodePtr&& node);
+    UnaryOperator(const parser::CharacterPos& pos, Type type, NodePtr&& node)
+        : INode(pos), type(type), node(std::move(node)) {}
 
     Type type;
     NodePtr node;
@@ -143,14 +169,10 @@ struct BinaryOperator : INode
 
         Mod,
         Pow,
-        FloorDiv,
 
         And,
         Or,
         Xor,
-
-        ShiftLeft,
-        ShiftRight,
 
         Concatenate,
         
@@ -159,14 +181,13 @@ struct BinaryOperator : INode
         CmpLe,
         CmpGt,
         CmpGe,
-        CmpNeq,
-
-        Index,
+        CmpNeq
     };
 
     static const std::map<Type, std::string> kTypeNames;
 
-    BinaryOperator(Type type, NodePtr&& left, NodePtr&& right);
+    BinaryOperator(const parser::CharacterPos& pos, Type type, NodePtr&& left, NodePtr&& right)
+        : INode(pos), type(type), left(std::move(left)), right(std::move(right)) {}
 
     Type type;
     NodePtr left, right;
@@ -174,7 +195,8 @@ struct BinaryOperator : INode
 
 struct FieldRequest : INode
 {
-    FieldRequest(NodePtr&& body, std::string field);
+    FieldRequest(const parser::CharacterPos& pos, NodePtr&& body, std::string field)
+        : INode(pos), body(std::move(body)), field(std::move(field)) {}
 
     NodePtr body;
     std::string field;
@@ -182,7 +204,8 @@ struct FieldRequest : INode
 
 struct IndexRequest : INode
 {
-    IndexRequest(NodePtr&& body, NodePtr&& index);
+    IndexRequest(const parser::CharacterPos& pos, NodePtr&& body, NodePtr&& index)
+        : INode(pos), body(std::move(body)), index(std::move(index)) {}
 
     NodePtr body;
     NodePtr index;
@@ -190,15 +213,16 @@ struct IndexRequest : INode
 
 struct Constant : INode
 {
-    explicit Constant(data::GenericValue value)
-        : value(std::move(value))
-    {}
+    explicit Constant(const parser::CharacterPos& pos, data::GenericValue value)
+        : INode(pos), value(std::move(value)) {}
 
     data::GenericValue value;
 };
 
 struct MakeTable : INode
 {
+    using INode::INode;
+
     struct KeyValuePair
     {
         explicit KeyValuePair(NodePtr&& value) : value(std::move(value)) {}
@@ -212,14 +236,14 @@ struct MakeTable : INode
 
 struct Variable : INode
 {
-    explicit Variable(const std::string& name) : name(name) {}
+    explicit Variable(const parser::CharacterPos& pos, const std::string& name) : INode(pos), name(name) {}
 
     ids::ResolvableName name;
 };
 
 struct FunctionCall : INode
 {
-    explicit FunctionCall(NodePtr&& what) : function(std::move(what)) {}
+    explicit FunctionCall(const parser::CharacterPos& pos, NodePtr&& what) : INode(pos), function(std::move(what)) {}
 
     NodePtr function;
     std::deque<NodePtr> args;
@@ -227,17 +251,27 @@ struct FunctionCall : INode
 
 struct Assignment : INode
 {
+    using INode::INode;
+
     std::deque<NodePtr> subjects{};
     std::deque<NodePtr> data{};
 };
 
 struct Return : INode
 {
+    using INode::INode;
     std::deque<NodePtr> values{};
 };
 
-struct Break : INode {};
-struct Continue : INode {};
+struct Break : INode
+{
+    using INode::INode;
+};
+
+struct Continue : INode
+{
+    using INode::INode;
+};
 
 namespace
 {

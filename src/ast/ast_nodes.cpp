@@ -10,12 +10,9 @@ const std::map<BinaryOperator::Type, std::string> BinaryOperator::kTypeNames = {
     {Type::Divide, "Divide"},
     {Type::Mod, "Mod"},
     {Type::Pow, "Pow"},
-    {Type::FloorDiv, "FloorDiv"},
     {Type::And, "And"},
     {Type::Or, "Or"},
     {Type::Xor, "Xor"},
-    {Type::ShiftLeft, "ShiftLeft"},
-    {Type::ShiftRight, "ShiftRight"},
     {Type::Concatenate, "Concatenate"},
     {Type::CmpEq, "CmpEq"},
     {Type::CmpLt, "CmpLt"},
@@ -23,22 +20,6 @@ const std::map<BinaryOperator::Type, std::string> BinaryOperator::kTypeNames = {
     {Type::CmpGt, "CmpGt"},
     {Type::CmpGe, "CmpGe"},
     {Type::CmpNeq, "CmpNeq"},
-    {Type::Index, "Index"},
 };
 
-WhileLoop::WhileLoop(NodePtr&& condition) : condition(std::move(condition)) {}
-
-UnaryOperator::UnaryOperator(Type type, NodePtr&& node) : type(type), node(std::move(node)) {}
-
-BinaryOperator::BinaryOperator(Type type, NodePtr&& left, NodePtr&& right)
-        : type(type), left(std::move(left)), right(std::move(right))
-{}
-
-FieldRequest::FieldRequest(NodePtr&& body, std::string field)
-        : body(std::move(body)), field(std::move(field))
-{}
-
-IndexRequest::IndexRequest(NodePtr&& body, NodePtr&& index)
-        : body(std::move(body)), index(std::move(index))
-{}
 }

@@ -44,12 +44,13 @@ struct Program : parser::Grammar
 
     parser::Sequence<>,
     parser::Sequence<Program, Function>,
+    parser::Sequence<Program, Assignment>,
     parser::Sequence<Program, parser::Lex<parser::Eof>>
 >
 {
     static ast::Program visit()
     {
-        return {};
+        return ast::Program(parser::CharacterPos{1, 1});
     }
 
     static ast::Program visit(ast::Program& program, parser::Eof)
@@ -60,6 +61,12 @@ struct Program : parser::Grammar
     static ast::Program visit(ast::Program& program, ast::Function& function)
     {
         program.components.emplace_back(std::move(function));
+        return std::move(program);
+    }
+
+    static ast::Program visit(ast::Program& program, ast::Assignment& assignment)
+    {
+        program.components.emplace_back(std::move(assignment));
         return std::move(program);
     }
 };
@@ -76,19 +83,37 @@ struct Function : parser::Grammar
         parser::Lex<lualex::BracketRoundCl>,
         Block,
         parser::Lex<lualex::End>
+    >,
+
+    parser::Sequence<
+        parser::Lex<lualex::Function>,
+        parser::Lex<lualex::Name>,
+        parser::Lex<lualex::BracketRoundOp>,
+        parser::Lex<lualex::BracketRoundCl>,
+        Block,
+        parser::Lex<lualex::End>
     >
 >
 {
-    static ast::Function visit(lualex::Function, const lualex::Name& name, lualex::BracketRoundOp,
+    static ast::Function visit(lualex::Function fnc, const lualex::Name& name, lualex::BracketRoundOp,
         std::deque<lualex::Name>& params, lualex::BracketRoundCl, std::deque<ast::NodePtr>& body, lualex::End)
     {
-        ast::Function function;
+        ast::Function function(fnc.startingPos);
         function.body = std::move(body);
         function.name = name.name;
         for (lualex::Name& paramName : params)
         {
             function.parameters.emplace_back(paramName.name);
         }
+        return function;
+    }
+
+    static ast::Function visit(lualex::Function fnc, const lualex::Name& name, lualex::BracketRoundOp,
+        lualex::BracketRoundCl, std::deque<ast::NodePtr>& body, lualex::End)
+    {
+        ast::Function function(fnc.startingPos);
+        function.body = std::move(body);
+        function.name = name.name;
         return function;
     }
 };
@@ -104,19 +129,35 @@ struct InlineFunction : parser::Grammar
         parser::Lex<lualex::BracketRoundCl>,
         Block,
         parser::Lex<lualex::End>
+    >,
+    parser::Sequence<
+        parser::Lex<lualex::Function>,
+        parser::Lex<lualex::BracketRoundOp>,
+        parser::Lex<lualex::BracketRoundCl>,
+        Block,
+        parser::Lex<lualex::End>
     >
 >
 {
-    static ast::Function visit(lualex::Function, lualex::BracketRoundOp,
+    static ast::Function visit(lualex::Function fnc, lualex::BracketRoundOp,
         std::deque<lualex::Name>& params, lualex::BracketRoundCl, std::deque<ast::NodePtr>& body, lualex::End)
     {
-        ast::Function function;
+        ast::Function function(fnc.startingPos);
         function.body = std::move(body);
         function.name = ids::ResolvableName("");
         for (lualex::Name& paramName : params)
         {
             function.parameters.emplace_back(paramName.name);
         }
+        return function;
+    }
+
+    static ast::Function visit(lualex::Function fnc, lualex::BracketRoundOp,
+        lualex::BracketRoundCl, std::deque<ast::NodePtr>& body, lualex::End)
+    {
+        ast::Function function(fnc.startingPos);
+        function.body = std::move(body);
+        function.name = ids::ResolvableName("");
         return function;
     }
 };
@@ -219,14 +260,14 @@ struct Return : parser::Grammar
     // TODO: Add return with an argument
 >
 {
-    static ast::Return visit(lualex::Return)
+    static ast::Return visit(lualex::Return rt)
     {
-        return {};
+        return ast::Return(rt.startingPos);
     }
 
-    static ast::Return visit(lualex::Return, std::deque<ast::NodePtr>& values)
+    static ast::Return visit(lualex::Return rt, std::deque<ast::NodePtr>& values)
     {
-        ast::Return ret;
+        ast::Return ret(rt.startingPos);
         ret.values = std::move(values);
         return {std::move(ret)};
     }
@@ -234,27 +275,66 @@ struct Return : parser::Grammar
 
 struct ExprLogical;
 
-struct HighLevelExpression : parser::Grammar
-<
-    HighLevelExpression, ast::NodePtr,
+template <class Lex>
+constexpr ast::BinaryOperator::Type lex2bin_v = ast::BinaryOperator::Type::Add;
 
-    parser::Sequence<ExprLogical>,
-    parser::Sequence<HighLevelExpression, parser::Lex<lualex::Concat>, ExprLogical>
->
+template <> constexpr ast::BinaryOperator::Type lex2bin_v<lualex::CmpEq> = ast::BinaryOperator::Type::CmpEq;
+template <> constexpr ast::BinaryOperator::Type lex2bin_v<lualex::CmpNeq> = ast::BinaryOperator::Type::CmpNeq;
+template <> constexpr ast::BinaryOperator::Type lex2bin_v<lualex::CmpGe> = ast::BinaryOperator::Type::CmpGe;
+template <> constexpr ast::BinaryOperator::Type lex2bin_v<lualex::CmpLe> = ast::BinaryOperator::Type::CmpLe;
+template <> constexpr ast::BinaryOperator::Type lex2bin_v<lualex::CmpGt> = ast::BinaryOperator::Type::CmpGt;
+template <> constexpr ast::BinaryOperator::Type lex2bin_v<lualex::CmpLt> = ast::BinaryOperator::Type::CmpLt;
+template <> constexpr ast::BinaryOperator::Type lex2bin_v<lualex::Plus> = ast::BinaryOperator::Type::Add;
+template <> constexpr ast::BinaryOperator::Type lex2bin_v<lualex::Minus> = ast::BinaryOperator::Type::Subtract;
+template <> constexpr ast::BinaryOperator::Type lex2bin_v<lualex::Multiply> = ast::BinaryOperator::Type::Multiply;
+template <> constexpr ast::BinaryOperator::Type lex2bin_v<lualex::Divide> = ast::BinaryOperator::Type::Divide;
+template <> constexpr ast::BinaryOperator::Type lex2bin_v<lualex::Mod> = ast::BinaryOperator::Type::Mod;
+template <> constexpr ast::BinaryOperator::Type lex2bin_v<lualex::Pow> = ast::BinaryOperator::Type::Pow;
+template <> constexpr ast::BinaryOperator::Type lex2bin_v<lualex::And> = ast::BinaryOperator::Type::And;
+template <> constexpr ast::BinaryOperator::Type lex2bin_v<lualex::Or> = ast::BinaryOperator::Type::Or;
+template <> constexpr ast::BinaryOperator::Type lex2bin_v<lualex::Concat> = ast::BinaryOperator::Type::Concatenate;
+
+template <class Lex>
+constexpr ast::UnaryOperator::Type lex2un_v = ast::UnaryOperator::Type::Length;
+
+template <> constexpr ast::UnaryOperator::Type lex2un_v<lualex::Length> = ast::UnaryOperator::Type::Length;
+template <> constexpr ast::UnaryOperator::Type lex2un_v<lualex::Not> = ast::UnaryOperator::Type::Not;
+template <> constexpr ast::UnaryOperator::Type lex2un_v<lualex::Minus> = ast::UnaryOperator::Type::Negate;
+
+template <class ...Descriptors>
+struct OperatorLike : parser::Grammar<Descriptors...>
 {
     static ast::NodePtr visit(ast::NodePtr& node)
     {
         return std::move(node);
     }
 
-    static ast::NodePtr visit(ast::NodePtr& left, lualex::Concat, ast::NodePtr& right)
+    template <class Lex>
+    static ast::NodePtr visit(ast::NodePtr& left, const Lex lex, ast::NodePtr& right)
     {
-        return ast::NodePtr{ast::BinaryOperator(ast::BinaryOperator::Type::Concatenate,
-            std::move(left), std::move(right))};
+        ast::BinaryOperator op(lex.startingPos, lex2bin_v<Lex>,
+            std::move(left), std::move(right));
+        return ast::NodePtr{std::move(op)};
+    }
+
+    template <class Lex>
+    static ast::NodePtr visit(const Lex lex, ast::NodePtr& value)
+    {
+        ast::UnaryOperator op(lex.startingPos, lex2un_v<Lex>, std::move(value));
+        return ast::NodePtr{std::move(op)};
     }
 };
 
-struct ExprLogical : parser::Grammar
+struct HighLevelExpression : OperatorLike
+<
+    HighLevelExpression, ast::NodePtr,
+
+    parser::Sequence<ExprLogical>,
+    parser::Sequence<HighLevelExpression, parser::Lex<lualex::Concat>, ExprLogical>
+>
+{};
+
+struct ExprLogical : OperatorLike
 <
     ExprLogical, ast::NodePtr,
 
@@ -262,24 +342,9 @@ struct ExprLogical : parser::Grammar
     parser::Sequence<ExprLogical, parser::Lex<lualex::And>, ExprComparison>,
     parser::Sequence<ExprLogical, parser::Lex<lualex::Or>, ExprComparison>
 >
-{
-    static ast::NodePtr visit(ast::NodePtr& node)
-    {
-        return std::move(node);
-    }
+{};
 
-    static ast::NodePtr visit(ast::NodePtr& left, lualex::And, ast::NodePtr& right)
-    {
-        return ast::NodePtr{ast::BinaryOperator(ast::BinaryOperator::Type::And, std::move(left), std::move(right))};
-    }
-
-    static ast::NodePtr visit(ast::NodePtr& left, lualex::Or, ast::NodePtr& right)
-    {
-        return ast::NodePtr{ast::BinaryOperator(ast::BinaryOperator::Type::Or, std::move(left), std::move(right))};
-    }
-};
-
-struct ExprComparison : parser::Grammar
+struct ExprComparison : OperatorLike
 <
     ExprComparison, ast::NodePtr,
 
@@ -291,44 +356,9 @@ struct ExprComparison : parser::Grammar
     parser::Sequence<ExprComputation, parser::Lex<lualex::CmpNeq>, ExprComputation>,
     parser::Sequence<ExprComputation>
 >
-{
-    static ast::NodePtr visit(ast::NodePtr& node)
-    {
-        return std::move(node);
-    }
+{};
 
-    static ast::NodePtr visit(ast::NodePtr& left, lualex::CmpEq, ast::NodePtr& right)
-    {
-        return ast::NodePtr{ast::BinaryOperator(ast::BinaryOperator::Type::CmpEq, std::move(left), std::move(right))};
-    }
-
-    static ast::NodePtr visit(ast::NodePtr& left, lualex::CmpGe, ast::NodePtr& right)
-    {
-        return ast::NodePtr{ast::BinaryOperator(ast::BinaryOperator::Type::CmpGe, std::move(left), std::move(right))};
-    }
-
-    static ast::NodePtr visit(ast::NodePtr& left, lualex::CmpGt, ast::NodePtr& right)
-    {
-        return ast::NodePtr{ast::BinaryOperator(ast::BinaryOperator::Type::CmpGt, std::move(left), std::move(right))};
-    }
-
-    static ast::NodePtr visit(ast::NodePtr& left, lualex::CmpLe, ast::NodePtr& right)
-    {
-        return ast::NodePtr{ast::BinaryOperator(ast::BinaryOperator::Type::CmpLe, std::move(left), std::move(right))};
-    }
-
-    static ast::NodePtr visit(ast::NodePtr& left, lualex::CmpLt, ast::NodePtr& right)
-    {
-        return ast::NodePtr{ast::BinaryOperator(ast::BinaryOperator::Type::CmpLt, std::move(left), std::move(right))};
-    }
-
-    static ast::NodePtr visit(ast::NodePtr& left, lualex::CmpNeq, ast::NodePtr& right)
-    {
-        return ast::NodePtr{ast::BinaryOperator(ast::BinaryOperator::Type::CmpNeq, std::move(left), std::move(right))};
-    }
-};
-
-struct ExprComputation : parser::Grammar
+struct ExprComputation : OperatorLike
 <
     ExprComputation, ast::NodePtr,
 
@@ -336,28 +366,11 @@ struct ExprComputation : parser::Grammar
     parser::Sequence<ExprComputation, parser::Lex<lualex::Minus>, ExprMultiplication>,
     parser::Sequence<ExprMultiplication>
 >
-{
-    static ast::NodePtr visit(ast::NodePtr& value)
-    {
-        return std::move(value);
-    }
-
-    static ast::NodePtr visit(ast::NodePtr& left, lualex::Plus, ast::NodePtr& right)
-    {
-        return ast::NodePtr{ast::BinaryOperator(ast::BinaryOperator::Type::Add,
-            std::move(left), std::move(right))};
-    }
-
-    static ast::NodePtr visit(ast::NodePtr& left, lualex::Minus, ast::NodePtr& right)
-    {
-        return ast::NodePtr{ast::BinaryOperator(ast::BinaryOperator::Type::Subtract,
-            std::move(left), std::move(right))};
-    }
-};
+{};
 
 struct ExprPower;
 
-struct ExprMultiplication : parser::Grammar
+struct ExprMultiplication : OperatorLike
 <
     ExprMultiplication, ast::NodePtr,
 
@@ -366,52 +379,18 @@ struct ExprMultiplication : parser::Grammar
     parser::Sequence<ExprMultiplication, parser::Lex<lualex::Divide>, ExprPower>,
     parser::Sequence<ExprMultiplication, parser::Lex<lualex::Mod>, ExprPower>
 >
-{
-    static ast::NodePtr visit(ast::NodePtr& node)
-    {
-        return std::move(node);
-    }
+{};
 
-    static ast::NodePtr visit(ast::NodePtr& left, lualex::Multiply, ast::NodePtr& right)
-    {
-        return ast::NodePtr{ast::BinaryOperator(ast::BinaryOperator::Type::Multiply,
-            std::move(left), std::move(right))};
-    }
-
-    static ast::NodePtr visit(ast::NodePtr& left, lualex::Divide, ast::NodePtr& right)
-    {
-        return ast::NodePtr{ast::BinaryOperator(ast::BinaryOperator::Type::Divide,
-            std::move(left), std::move(right))};
-    }
-
-    static ast::NodePtr visit(ast::NodePtr& left, lualex::Mod, ast::NodePtr& right)
-    {
-        return ast::NodePtr{ast::BinaryOperator(ast::BinaryOperator::Type::Mod,
-            std::move(left), std::move(right))};
-    }
-};
-
-struct ExprPower : parser::Grammar
+struct ExprPower : OperatorLike
 <
     ExprPower, ast::NodePtr,
 
     parser::Sequence<ExprUnary, parser::Lex<lualex::Pow>, ExprPower>,
     parser::Sequence<ExprUnary>
 >
-{
-    static ast::NodePtr visit(ast::NodePtr& node)
-    {
-        return std::move(node);
-    }
+{};
 
-    static ast::NodePtr visit(ast::NodePtr& left, lualex::Pow, ast::NodePtr& right)
-    {
-        return ast::NodePtr{ast::BinaryOperator(ast::BinaryOperator::Type::Pow,
-            std::move(left), std::move(right))};
-    }
-};
-
-struct ExprUnary : parser::Grammar
+struct ExprUnary : OperatorLike
 <
     ExprUnary, ast::NodePtr,
 
@@ -420,27 +399,7 @@ struct ExprUnary : parser::Grammar
     parser::Sequence<parser::Lex<lualex::Not>, ExprUnary>,
     parser::Sequence<ExprSingleton>
 >
-{
-    static ast::NodePtr visit(lualex::Minus, ast::NodePtr& value)
-    {
-        return ast::NodePtr{ast::UnaryOperator(ast::UnaryOperator::Type::Negate, std::move(value))};
-    }
-
-    static ast::NodePtr visit(lualex::Length, ast::NodePtr& value)
-    {
-        return ast::NodePtr{ast::UnaryOperator(ast::UnaryOperator::Type::Length, std::move(value))};
-    }
-
-    static ast::NodePtr visit(lualex::Not, ast::NodePtr& value)
-    {
-        return ast::NodePtr{ast::UnaryOperator(ast::UnaryOperator::Type::Not, std::move(value))};
-    }
-
-    static ast::NodePtr visit(ast::NodePtr& value)
-    {
-        return std::move(value);
-    }
-};
+{};
 
 struct KeyValuePair : parser::Grammar
 <
@@ -467,7 +426,7 @@ struct KeyValuePair : parser::Grammar
     static ast::MakeTable::KeyValuePair visit(const lualex::Name& name, lualex::Assignment, ast::NodePtr& node)
     {
         ast::MakeTable::KeyValuePair pair(std::move(node));
-        pair.index = ast::NodePtr{ast::Constant(name.name)};
+        pair.index = ast::NodePtr{ast::Constant(name.startingPos, name.name)};
         return pair;
     }
 };
@@ -504,47 +463,49 @@ struct ExprSingleton : parser::Grammar
     parser::Sequence<parser::Lex<lualex::BracketCurlyOp>, parser::Lex<lualex::BracketCurlyCl>>
 >
 {
-    static ast::NodePtr visit(ast::NodePtr& root, lualex::Method, const lualex::Name& name, lualex::BracketRoundOp,
+    static ast::NodePtr visit(ast::NodePtr& root, lualex::Method, const lualex::Name& name, lualex::BracketRoundOp bOp,
         std::deque<ast::NodePtr>& args, lualex::BracketRoundCl)
     {
         args.emplace_front(std::move(root));
-        ast::NodePtr function(ast::Variable(name.name));
-        ast::FunctionCall call(std::move(function));
+        ast::Variable var(name.startingPos, name.name);
+        ast::NodePtr function(std::move(var));
+        ast::FunctionCall call(bOp.startingPos, std::move(function));
         call.args = std::move(args);
         return ast::NodePtr{std::move(call)};
     }
 
-    static ast::NodePtr visit(ast::NodePtr& root, lualex::Method, const lualex::Name& name, lualex::BracketRoundOp,
+    static ast::NodePtr visit(ast::NodePtr& root, lualex::Method, const lualex::Name& name, lualex::BracketRoundOp bOp,
         lualex::BracketRoundCl)
     {
-        ast::NodePtr function(ast::Variable(name.name));
-        ast::FunctionCall call(std::move(function));
+        ast::Variable var(name.startingPos, name.name);
+        ast::NodePtr function(std::move(var));
+        ast::FunctionCall call(bOp.startingPos, std::move(function));
         call.args.emplace_front(std::move(root));
         return ast::NodePtr{std::move(call)};
     }
 
-    static ast::NodePtr visit(lualex::BracketCurlyOp, lualex::BracketCurlyCl)
+    static ast::NodePtr visit(lualex::BracketCurlyOp bOp, lualex::BracketCurlyCl)
     {
-        return ast::NodePtr{ast::MakeTable()};
+        return ast::NodePtr{ast::MakeTable(bOp.startingPos)};
     }
 
-    static ast::NodePtr visit(lualex::BracketCurlyOp, std::deque<ast::MakeTable::KeyValuePair>& pairs,
+    static ast::NodePtr visit(lualex::BracketCurlyOp bOp, std::deque<ast::MakeTable::KeyValuePair>& pairs,
         lualex::BracketCurlyCl)
     {
-        ast::MakeTable makeTable;
+        ast::MakeTable makeTable(bOp.startingPos);
         makeTable.values = std::move(pairs);
         return ast::NodePtr{std::move(makeTable)};
     }
 
-    static ast::NodePtr visit(ast::NodePtr& body, lualex::BracketSquareOp, ast::NodePtr& index, lualex::BracketSquareCl)
+    static ast::NodePtr visit(ast::NodePtr& body, lualex::BracketSquareOp bOp, ast::NodePtr& index, lualex::BracketSquareCl)
     {
-        return ast::NodePtr{ast::IndexRequest(std::move(body), std::move(index))};
+        return ast::NodePtr{ast::IndexRequest(bOp.startingPos, std::move(body), std::move(index))};
     }
 
-    static ast::NodePtr visit(ast::NodePtr& body, lualex::Dot, const lualex::Name& field)
+    static ast::NodePtr visit(ast::NodePtr& body, lualex::Dot dot, const lualex::Name& field)
     {
-        ast::NodePtr index = ast::NodePtr{ast::Constant(field.name)};
-        return ast::NodePtr{ast::IndexRequest(std::move(body), std::move(index))};
+        ast::NodePtr index = ast::NodePtr{ast::Constant(field.startingPos, field.name)};
+        return ast::NodePtr{ast::IndexRequest(dot.startingPos, std::move(body), std::move(index))};
     }
 
     static ast::NodePtr visit(lualex::BracketRoundOp, ast::NodePtr& value, lualex::BracketRoundCl)
@@ -552,29 +513,29 @@ struct ExprSingleton : parser::Grammar
         return std::move(value);
     }
 
-    static ast::NodePtr visit(lualex::True)
+    static ast::NodePtr visit(lualex::True lex)
     {
-        return ast::NodePtr{ast::Constant(true)};
+        return ast::NodePtr{ast::Constant(lex.startingPos, true)};
     }
 
-    static ast::NodePtr visit(lualex::False)
+    static ast::NodePtr visit(lualex::False lex)
     {
-        return ast::NodePtr{ast::Constant(false)};
+        return ast::NodePtr{ast::Constant(lex.startingPos, false)};
     }
 
     static ast::NodePtr visit(const lualex::Name& varName)
     {
-        return ast::NodePtr{ast::Variable(varName.name)};
+        return ast::NodePtr{ast::Variable(varName.startingPos, varName.name)};
     }
 
     static ast::NodePtr visit(const lualex::Number& constNumber)
     {
-        return ast::NodePtr{ast::Constant(constNumber.value)};
+        return ast::NodePtr{ast::Constant(constNumber.startingPos, constNumber.value)};
     }
 
     static ast::NodePtr visit(const lualex::String& constString)
     {
-        return ast::NodePtr{ast::Constant(constString.string)};
+        return ast::NodePtr{ast::Constant(constString.startingPos, constString.string)};
     }
 
     static ast::NodePtr visit(ast::Function& lambda)
@@ -582,16 +543,16 @@ struct ExprSingleton : parser::Grammar
         return ast::NodePtr{std::move(lambda)};
     }
 
-    static ast::NodePtr visit(ast::NodePtr& func, lualex::BracketRoundOp, lualex::BracketRoundCl)
+    static ast::NodePtr visit(ast::NodePtr& func, lualex::BracketRoundOp bOp, lualex::BracketRoundCl)
     {
-        ast::FunctionCall function(std::move(func));
+        ast::FunctionCall function(bOp.startingPos, std::move(func));
         return ast::NodePtr{std::move(function)};
     }
 
-    static ast::NodePtr visit(ast::NodePtr& func, lualex::BracketRoundOp,
+    static ast::NodePtr visit(ast::NodePtr& func, lualex::BracketRoundOp bOp,
         std::deque<ast::NodePtr>& args, lualex::BracketRoundCl)
     {
-        ast::FunctionCall function(std::move(func));
+        ast::FunctionCall function(bOp.startingPos, std::move(func));
         for (ast::NodePtr& arg : args)
         {
             function.args.emplace_back(std::move(arg));
@@ -610,9 +571,9 @@ struct Assignment : parser::Grammar
         parser::Lex<lualex::Assignment>, parser::Repeating<ast::NodePtr, HighLevelExpression, lualex::Comma>>
 >
 {
-    static ast::Assignment visit(std::deque<ast::NodePtr>& subjects, lualex::Assignment, std::deque<ast::NodePtr>& values)
+    static ast::Assignment visit(std::deque<ast::NodePtr>& subjects, lualex::Assignment lex, std::deque<ast::NodePtr>& values)
     {
-        ast::Assignment assignment;
+        ast::Assignment assignment(lex.startingPos);
         assignment.subjects = std::move(subjects);
         assignment.data = std::move(values);
         return assignment;
@@ -656,9 +617,9 @@ struct BranchBgn : parser::Grammar
         return std::move(branch);
     }
 
-    static ast::Branch visit(lualex::If, ast::NodePtr& condition, lualex::Then, std::deque<ast::NodePtr>& block)
+    static ast::Branch visit(lualex::If lex, ast::NodePtr& condition, lualex::Then, std::deque<ast::NodePtr>& block)
     {
-        ast::Branch branch;
+        ast::Branch branch(lex.startingPos);
         branch.cases.emplace_back(std::move(condition), std::move(block));
         return branch;
     }
@@ -672,10 +633,10 @@ struct WhileLoop : parser::Grammar
         parser::Lex<lualex::End>>
 >
 {
-    static ast::WhileLoop visit(lualex::While, ast::NodePtr& condition, lualex::Do,
+    static ast::WhileLoop visit(lualex::While lex, ast::NodePtr& condition, lualex::Do,
         std::deque<ast::NodePtr>& body, lualex::End)
     {
-        ast::WhileLoop loop(std::move(condition));
+        ast::WhileLoop loop(lex.startingPos, std::move(condition));
         loop.body = std::move(body);
         return loop;
     }
@@ -688,9 +649,9 @@ struct RepeatUntil : parser::Grammar
     parser::Sequence<parser::Lex<lualex::Repeat>, Block, parser::Lex<lualex::Until>, HighLevelExpression>
 >
 {
-    static ast::RepeatUntil visit(lualex::Repeat, std::deque<ast::NodePtr>& body, lualex::Until, ast::NodePtr& condition)
+    static ast::RepeatUntil visit(lualex::Repeat lex, std::deque<ast::NodePtr>& body, lualex::Until, ast::NodePtr& condition)
     {
-        ast::RepeatUntil loop(std::move(condition));
+        ast::RepeatUntil loop(lex.startingPos, std::move(condition));
         loop.body = std::move(body);
         return loop;
     }
@@ -727,21 +688,21 @@ struct NumericFor : parser::Grammar
     >
 >
 {
-    static ast::ForLoopNumeric visit(lualex::For, const lualex::Name& name, lualex::Assignment,
+    static ast::ForLoopNumeric visit(lualex::For lex, const lualex::Name& name, lualex::Assignment,
         ast::NodePtr& start, lualex::Comma, ast::NodePtr& limit,
         lualex::Do, std::deque<ast::NodePtr>& body, lualex::End)
     {
-        ast::NodePtr step = ast::NodePtr{ast::Constant(1.0)};
-        ast::ForLoopNumeric loop(name.name, std::move(start), std::move(limit), std::move(step));
+        ast::NodePtr step = ast::NodePtr{ast::Constant(lex.startingPos, 1.0)};
+        ast::ForLoopNumeric loop(lex.startingPos, name.name, std::move(start), std::move(limit), std::move(step));
         loop.body = std::move(body);
         return loop;
     }
 
-    static ast::ForLoopNumeric visit(lualex::For, const lualex::Name& name, lualex::Assignment,
+    static ast::ForLoopNumeric visit(lualex::For lex, const lualex::Name& name, lualex::Assignment,
         ast::NodePtr& start, lualex::Comma, ast::NodePtr& limit, lualex::Comma, ast::NodePtr& step,
         lualex::Do, std::deque<ast::NodePtr>& body, lualex::End)
     {
-        ast::ForLoopNumeric loop(name.name, std::move(start), std::move(limit), std::move(step));
+        ast::ForLoopNumeric loop(lex.startingPos, name.name, std::move(start), std::move(limit), std::move(step));
         loop.body = std::move(body);
         return loop;
     }
@@ -762,10 +723,10 @@ struct GenericFor : parser::Grammar
     >
 >
 {
-    static ast::ForLoopGeneric visit(lualex::For, const std::deque<lualex::Name>& names,
+    static ast::ForLoopGeneric visit(lualex::For lex, const std::deque<lualex::Name>& names,
         lualex::In, ast::NodePtr& iterator, lualex::Do, std::deque<ast::NodePtr>& body, lualex::End)
     {
-        ast::ForLoopGeneric loop(std::move(iterator));
+        ast::ForLoopGeneric loop(lex.startingPos, std::move(iterator));
         for (const lualex::Name& name : names)
         {
             loop.names.emplace_back(name.name);
@@ -774,11 +735,11 @@ struct GenericFor : parser::Grammar
         return loop;
     }
 
-    static ast::ForLoopNumeric visit(lualex::For, const lualex::Name& name, lualex::Assignment,
+    static ast::ForLoopNumeric visit(lualex::For lex, const lualex::Name& name, lualex::Assignment,
         ast::NodePtr& start, lualex::Comma, ast::NodePtr& limit, lualex::Comma, ast::NodePtr& step,
         lualex::Do, std::deque<ast::NodePtr>& body, lualex::End)
     {
-        ast::ForLoopNumeric loop(name.name, std::move(start), std::move(limit), std::move(step));
+        ast::ForLoopNumeric loop(lex.startingPos, name.name, std::move(start), std::move(limit), std::move(step));
         loop.body = std::move(body);
         return loop;
     }
@@ -791,9 +752,9 @@ struct Break : parser::Grammar
     parser::Sequence<parser::Lex<lualex::Break>>
 >
 {
-    static ast::Break visit(lualex::Break)
+    static ast::Break visit(lualex::Break lex)
     {
-        return {};
+        return ast::Break(lex.startingPos);
     }
 };
 
@@ -804,9 +765,9 @@ struct Continue : parser::Grammar
     parser::Sequence<parser::Lex<lualex::Continue>>
 >
 {
-    static ast::Continue visit(lualex::Continue)
+    static ast::Continue visit(lualex::Continue lex)
     {
-        return {};
+        return ast::Continue(lex.startingPos);
     }
 };
 
