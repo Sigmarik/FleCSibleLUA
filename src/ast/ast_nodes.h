@@ -231,15 +231,13 @@ struct FunctionCall
 
 struct Assignment
 {
-    Assignment(NodePtr&& subject, NodePtr&& data);
-
-    NodePtr subject;
-    NodePtr data;
+    std::deque<NodePtr> subjects{};
+    std::deque<NodePtr> data{};
 };
 
 struct Return
 {
-    std::optional<NodePtr> value{};
+    std::deque<NodePtr> values{};
 };
 
 struct Break {};

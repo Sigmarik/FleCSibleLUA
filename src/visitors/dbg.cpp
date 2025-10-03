@@ -200,30 +200,16 @@ void AstDebugger::visit(ast::Variable& node)
 void AstDebugger::visit(ast::Assignment& node)
 {
     m_stream << m_indent << "Assignment to (\n";
-    increaseIndent();
-    Visitor::visit(node.subject);
-    decreaseIndent();
+    visitList(node.subjects);
     m_stream << m_indent << ") of (\n";
-    increaseIndent();
-    Visitor::visit(node.data);
-    decreaseIndent();
+    visitList(node.data);
     m_stream << m_indent << ")\n";
 }
 
 void AstDebugger::visit(ast::Return& node)
 {
-    m_stream << m_indent << "Return";
-    if (node.value)
-    {
-        m_stream << "(\n";
-        increaseIndent();
-        Visitor::visit(*node.value);
-        decreaseIndent();
-        m_stream << m_indent << ")\n";
-    } else
-    {
-        m_stream << "\n";
-    }
+    m_stream << m_indent << "Return\n";
+    visitList(node.values);
 }
 void AstDebugger::visit(ast::Break& node)
 {

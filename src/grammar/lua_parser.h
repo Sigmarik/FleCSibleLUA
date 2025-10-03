@@ -208,7 +208,7 @@ struct Return : parser::Grammar
 <
     Return, ast::Return,
 
-    parser::Sequence<parser::Lex<lualex::Return>, HighLevelExpression>,
+    parser::Sequence<parser::Lex<lualex::Return>, parser::Repeating<ast::NodePtr, HighLevelExpression, lualex::Comma>>,
     parser::Sequence<parser::Lex<lualex::Return>>
     // TODO: Add return with an argument
 >
@@ -218,9 +218,11 @@ struct Return : parser::Grammar
         return {};
     }
 
-    static ast::Return visit(lualex::Return, ast::NodePtr& value)
+    static ast::Return visit(lualex::Return, std::deque<ast::NodePtr>& values)
     {
-        return {std::move(value)};
+        ast::Return ret;
+        ret.values = std::move(values);
+        return {std::move(ret)};
     }
 };
 
@@ -525,12 +527,16 @@ struct Assignment : parser::Grammar
 
     // TODO: Implement batch assignment
     // TODO: Implement op= assignment
-    parser::Sequence<ExprSingleton, parser::Lex<lualex::Assignment>, HighLevelExpression>
+    parser::Sequence<parser::Repeating<ast::NodePtr, ExprSingleton, lualex::Comma>,
+        parser::Lex<lualex::Assignment>, parser::Repeating<ast::NodePtr, HighLevelExpression, lualex::Comma>>
 >
 {
-    static ast::Assignment visit(ast::NodePtr& subject, lualex::Assignment, ast::NodePtr& value)
+    static ast::Assignment visit(std::deque<ast::NodePtr>& subjects, lualex::Assignment, std::deque<ast::NodePtr>& values)
     {
-        return ast::Assignment{std::move(subject), std::move(value)};
+        ast::Assignment assignment;
+        assignment.subjects = std::move(subjects);
+        assignment.data = std::move(values);
+        return assignment;
     }
 };
 

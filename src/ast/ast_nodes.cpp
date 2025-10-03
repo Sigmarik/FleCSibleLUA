@@ -41,6 +41,4 @@ FieldRequest::FieldRequest(NodePtr&& body, std::string field)
 IndexRequest::IndexRequest(NodePtr&& body, NodePtr&& index)
         : body(std::move(body)), index(std::move(index))
 {}
-
-Assignment::Assignment(NodePtr&& subject, NodePtr&& data) : subject(std::move(subject)), data(std::move(data)) {}
 }

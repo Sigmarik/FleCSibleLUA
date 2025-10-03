@@ -164,7 +164,7 @@ struct Lex final
             return result;
         }
 
-        std::string what = std::string("Expected ") + Lexeme::kName.value + ", but found a ";
+        std::string what = std::string(Lexeme::kName.value) + " expected near ";
         std::visit([&](const auto& specificLexeme){ what += specificLexeme.kName.value; }, *start);
         parser.trySetError(ParsingError{.what = what, .where = posFromVariant(*start)});
         return std::nullopt;
