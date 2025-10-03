@@ -494,9 +494,35 @@ struct ExprSingleton : parser::Grammar
     parser::Sequence<parser::Lex<lualex::BracketCurlyOp>,
         parser::Repeating<ast::MakeTable::KeyValuePair, KeyValuePair, lualex::Comma>,
         parser::Lex<lualex::BracketCurlyCl>>,
+    parser::Sequence<ExprSingleton, parser::Lex<lualex::Method>, parser::Lex<lualex::Name>,
+        parser::Lex<lualex::BracketRoundOp>,
+        parser::Repeating<ast::NodePtr, HighLevelExpression, lualex::Comma>,
+        parser::Lex<lualex::BracketRoundCl>>,
+    parser::Sequence<ExprSingleton, parser::Lex<lualex::Method>, parser::Lex<lualex::Name>,
+        parser::Lex<lualex::BracketRoundOp>,
+        parser::Lex<lualex::BracketRoundCl>>,
     parser::Sequence<parser::Lex<lualex::BracketCurlyOp>, parser::Lex<lualex::BracketCurlyCl>>
 >
 {
+    static ast::NodePtr visit(ast::NodePtr& root, lualex::Method, const lualex::Name& name, lualex::BracketRoundOp,
+        std::deque<ast::NodePtr>& args, lualex::BracketRoundCl)
+    {
+        args.emplace_front(std::move(root));
+        ast::NodePtr function(ast::Variable(name.name));
+        ast::FunctionCall call(std::move(function));
+        call.args = std::move(args);
+        return ast::NodePtr{std::move(call)};
+    }
+
+    static ast::NodePtr visit(ast::NodePtr& root, lualex::Method, const lualex::Name& name, lualex::BracketRoundOp,
+        lualex::BracketRoundCl)
+    {
+        ast::NodePtr function(ast::Variable(name.name));
+        ast::FunctionCall call(std::move(function));
+        call.args.emplace_front(std::move(root));
+        return ast::NodePtr{std::move(call)};
+    }
+
     static ast::NodePtr visit(lualex::BracketCurlyOp, lualex::BracketCurlyCl)
     {
         return ast::NodePtr{ast::MakeTable()};
