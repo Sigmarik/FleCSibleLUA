@@ -192,6 +192,29 @@ void AstDebugger::visit(ast::Constant& node)
     m_stream << m_indent << "Constant " << data::to_string(node.value) << "\n";
 }
 
+void AstDebugger::visit(ast::MakeTable& node)
+{
+    m_stream << m_indent << "Table {\n";
+    increaseIndent();
+    for (ast::MakeTable::KeyValuePair& pair : node.values)
+    {
+        if (pair.index)
+        {
+            m_stream << m_indent << "Key\n";
+            increaseIndent();
+            Visitor::visit(*pair.index);
+            decreaseIndent();
+        }
+
+        m_stream << m_indent << "Value\n";
+        increaseIndent();
+        Visitor::visit(pair.value);
+        decreaseIndent();
+    }
+    decreaseIndent();
+    m_stream << m_indent << "}\n";
+}
+
 void AstDebugger::visit(ast::Variable& node)
 {
     m_stream << m_indent << "Variable " << node.name.string << "\n";

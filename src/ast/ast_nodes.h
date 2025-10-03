@@ -17,29 +17,6 @@ namespace flua::ast
 using namespace flua;
 
 struct Program;
-struct Function;
-struct System;
-
-struct WhileLoop;
-struct ForLoopNumeric;
-struct ForLoopGeneric;
-struct RepeatUntil;
-struct Query;
-struct Branch;
-
-struct FunctionCall;
-struct UnaryOperator;
-struct BinaryOperator;
-
-struct FieldRequest;
-struct IndexRequest;
-struct Constant;
-struct Variable;
-
-struct Assignment;
-struct Return;
-struct Break;
-struct Continue;
 
 struct AstNode;
 
@@ -214,6 +191,19 @@ struct Constant
     data::GenericValue value;
 };
 
+struct MakeTable
+{
+    struct KeyValuePair
+    {
+        explicit KeyValuePair(NodePtr&& value) : value(std::move(value)) {}
+
+        std::optional<NodePtr> index{};
+        NodePtr value;
+    };
+
+    std::deque<KeyValuePair> values{};
+};
+
 struct Variable
 {
     explicit Variable(const std::string& name) : name(name) {}
@@ -260,6 +250,7 @@ namespace
         FieldRequest,
         IndexRequest,
         Constant,
+        MakeTable,
         Variable,
         FunctionCall,
         Assignment,

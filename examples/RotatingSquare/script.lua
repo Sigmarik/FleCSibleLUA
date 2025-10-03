@@ -1,5 +1,5 @@
 function overAndOver(alpha, beta)
-    return function(x) return x + 1 end, 2, 3
+    return function(x) return x + 1 end, 2, {1, 2, hi = 3}
 end
 
 function RotateBoxes(entity, alpha, beta, gama)

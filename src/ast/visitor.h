@@ -31,6 +31,7 @@ protected:
     virtual void visit(FieldRequest& node) = 0;
     virtual void visit(IndexRequest& node) = 0;
     virtual void visit(Constant& node) = 0;
+    virtual void visit(MakeTable& node) = 0;
     virtual void visit(Variable& node) = 0;
     virtual void visit(Assignment& node) = 0;
     virtual void visit(Return& node) = 0;

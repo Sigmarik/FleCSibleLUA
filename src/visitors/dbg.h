@@ -32,6 +32,7 @@ protected:
     void visit(ast::FieldRequest& node) override;
     void visit(ast::IndexRequest& node) override;
     void visit(ast::Constant& node) override;
+    void visit(ast::MakeTable& node) override;
     void visit(ast::Variable& node) override;
     void visit(ast::Assignment& node) override;
     void visit(ast::Return& node) override;

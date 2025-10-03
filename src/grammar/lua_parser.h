@@ -436,6 +436,36 @@ struct ExprUnary : parser::Grammar
     }
 };
 
+struct KeyValuePair : parser::Grammar
+<
+    KeyValuePair, ast::MakeTable::KeyValuePair,
+
+    parser::Sequence<parser::Lex<lualex::BracketSquareOp>, HighLevelExpression, parser::Lex<lualex::BracketSquareCl>,
+        parser::Lex<lualex::Assignment>, HighLevelExpression>,
+    parser::Sequence<parser::Lex<lualex::Name>, parser::Lex<lualex::Assignment>, HighLevelExpression>,
+    parser::Sequence<HighLevelExpression>
+>
+{
+    static ast::MakeTable::KeyValuePair visit(ast::NodePtr& node)
+    {
+        return ast::MakeTable::KeyValuePair(std::move(node));
+    }
+
+    static ast::MakeTable::KeyValuePair visit(lualex::BracketSquareOp, ast::NodePtr& index, lualex::BracketSquareCl, lualex::Assignment, ast::NodePtr& node)
+    {
+        ast::MakeTable::KeyValuePair pair(std::move(node));
+        pair.index = std::move(index);
+        return pair;
+    }
+
+    static ast::MakeTable::KeyValuePair visit(const lualex::Name& name, lualex::Assignment, ast::NodePtr& node)
+    {
+        ast::MakeTable::KeyValuePair pair(std::move(node));
+        pair.index = ast::NodePtr{ast::Constant(name.name)};
+        return pair;
+    }
+};
+
 struct ExprSingleton : parser::Grammar
 <
     ExprSingleton, ast::NodePtr,
@@ -454,9 +484,26 @@ struct ExprSingleton : parser::Grammar
         parser::Lex<lualex::BracketRoundCl>>,
     parser::Sequence<ExprSingleton, parser::Lex<lualex::BracketRoundOp>,
         parser::Repeating<ast::NodePtr, HighLevelExpression, lualex::Comma>,
-        parser::Lex<lualex::BracketRoundCl>>
+        parser::Lex<lualex::BracketRoundCl>>,
+    parser::Sequence<parser::Lex<lualex::BracketCurlyOp>,
+        parser::Repeating<ast::MakeTable::KeyValuePair, KeyValuePair, lualex::Comma>,
+        parser::Lex<lualex::BracketCurlyCl>>,
+    parser::Sequence<parser::Lex<lualex::BracketCurlyOp>, parser::Lex<lualex::BracketCurlyCl>>
 >
 {
+    static ast::NodePtr visit(lualex::BracketCurlyOp, lualex::BracketCurlyCl)
+    {
+        return ast::NodePtr{ast::MakeTable()};
+    }
+
+    static ast::NodePtr visit(lualex::BracketCurlyOp, std::deque<ast::MakeTable::KeyValuePair>& pairs,
+        lualex::BracketCurlyCl)
+    {
+        ast::MakeTable makeTable;
+        makeTable.values = std::move(pairs);
+        return ast::NodePtr{std::move(makeTable)};
+    }
+
     static ast::NodePtr visit(ast::NodePtr& body, lualex::BracketSquareOp, ast::NodePtr& index, lualex::BracketSquareCl)
     {
         return ast::NodePtr{ast::IndexRequest(std::move(body), std::move(index))};
