@@ -11,10 +11,16 @@
 #include "data_types.h"
 #include "identification.h"
 #include "mem_utils/copyable_ptr.h"
+#include "parser/char_pos.h"
 
 namespace flua::ast
 {
 using namespace flua;
+
+struct INode
+{
+    parser::CharacterPos position{0, 0};
+};
 
 struct Program;
 
@@ -22,7 +28,7 @@ struct AstNode;
 
 using NodePtr = mem_utils::CopyMovePtr<AstNode>;
 
-struct Program
+struct Program : INode
 {
     std::deque<NodePtr> components{};
 };
@@ -33,14 +39,14 @@ public:
     Program program;
 };
 
-struct Function
+struct Function : INode
 {
     ids::ResolvableName name{"!UNNAMED_FUNCTION!"};
     std::deque<ids::ResolvableName> parameters{};
     std::deque<NodePtr> body{};
 };
 
-struct System
+struct System : INode
 {
     ids::ResolvableName name{"!UNNAMED_SYSTEM!"};
     std::deque<ids::ResolvableName> parameters{};
@@ -49,7 +55,7 @@ struct System
     std::deque<NodePtr> body{};
 };
 
-struct WhileLoop
+struct WhileLoop : INode
 {
     explicit WhileLoop(NodePtr&& condition);
 
@@ -57,7 +63,7 @@ struct WhileLoop
     std::deque<NodePtr> body{};
 };
 
-struct ForLoopNumeric
+struct ForLoopNumeric : INode
 {
     explicit ForLoopNumeric(const std::string& name, NodePtr&& base, NodePtr&& limit, NodePtr&& step)
         : name(name), base(std::move(base)), limit(std::move(limit)), step(std::move(step)) {}
@@ -70,7 +76,7 @@ struct ForLoopNumeric
     std::deque<NodePtr> body{};
 };
 
-struct ForLoopGeneric
+struct ForLoopGeneric : INode
 {
     explicit ForLoopGeneric(NodePtr&& iterator) : iterator(std::move(iterator)) {}
 
@@ -80,7 +86,7 @@ struct ForLoopGeneric
     std::deque<NodePtr> body{};
 };
 
-struct RepeatUntil
+struct RepeatUntil : INode
 {
     explicit RepeatUntil(NodePtr&& condition) : condition(std::move(condition)) {}
 
@@ -88,14 +94,14 @@ struct RepeatUntil
     std::deque<NodePtr> body{};
 };
 
-struct Query
+struct Query : INode
 {
     std::string query = "!UNRESOLVED_QUERY!";
     ids::ResolvableName entityName{"!UNDEFINED_QUERY_ENTITY_NAME!"};
     std::deque<NodePtr> body{};
 };
 
-struct Branch
+struct Branch : INode
 {
     struct Case
     {
@@ -111,7 +117,7 @@ struct Branch
     std::deque<NodePtr> ifFalse{};
 };
 
-struct UnaryOperator
+struct UnaryOperator : INode
 {
     enum class Type
     {
@@ -126,7 +132,7 @@ struct UnaryOperator
     NodePtr node;
 };
 
-struct BinaryOperator
+struct BinaryOperator : INode
 {
     enum class Type
     {
@@ -166,7 +172,7 @@ struct BinaryOperator
     NodePtr left, right;
 };
 
-struct FieldRequest
+struct FieldRequest : INode
 {
     FieldRequest(NodePtr&& body, std::string field);
 
@@ -174,7 +180,7 @@ struct FieldRequest
     std::string field;
 };
 
-struct IndexRequest
+struct IndexRequest : INode
 {
     IndexRequest(NodePtr&& body, NodePtr&& index);
 
@@ -182,7 +188,7 @@ struct IndexRequest
     NodePtr index;
 };
 
-struct Constant
+struct Constant : INode
 {
     explicit Constant(data::GenericValue value)
         : value(std::move(value))
@@ -191,7 +197,7 @@ struct Constant
     data::GenericValue value;
 };
 
-struct MakeTable
+struct MakeTable : INode
 {
     struct KeyValuePair
     {
@@ -204,14 +210,14 @@ struct MakeTable
     std::deque<KeyValuePair> values{};
 };
 
-struct Variable
+struct Variable : INode
 {
     explicit Variable(const std::string& name) : name(name) {}
 
     ids::ResolvableName name;
 };
 
-struct FunctionCall
+struct FunctionCall : INode
 {
     explicit FunctionCall(NodePtr&& what) : function(std::move(what)) {}
 
@@ -219,19 +225,19 @@ struct FunctionCall
     std::deque<NodePtr> args;
 };
 
-struct Assignment
+struct Assignment : INode
 {
     std::deque<NodePtr> subjects{};
     std::deque<NodePtr> data{};
 };
 
-struct Return
+struct Return : INode
 {
     std::deque<NodePtr> values{};
 };
 
-struct Break {};
-struct Continue {};
+struct Break : INode {};
+struct Continue : INode {};
 
 namespace
 {

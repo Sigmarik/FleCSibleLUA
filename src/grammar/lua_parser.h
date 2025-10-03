@@ -42,18 +42,24 @@ struct Program : parser::Grammar
 <
     Program, ast::Program,
 
-    parser::Sequence<parser::Lex<parser::Eof>>,
-    parser::Sequence<Function, Program>
+    parser::Sequence<>,
+    parser::Sequence<Program, Function>,
+    parser::Sequence<Program, parser::Lex<parser::Eof>>
 >
 {
-    static ast::Program visit(parser::Eof)
+    static ast::Program visit()
     {
         return {};
     }
 
-    static ast::Program visit(ast::Function& function, ast::Program& program)
+    static ast::Program visit(ast::Program& program, parser::Eof)
     {
-        program.components.emplace_front(std::move(function));
+        return std::move(program);
+    }
+
+    static ast::Program visit(ast::Program& program, ast::Function& function)
+    {
+        program.components.emplace_back(std::move(function));
         return std::move(program);
     }
 };
