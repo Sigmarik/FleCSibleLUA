@@ -34,6 +34,7 @@ protected:
     virtual void visit(MakeTable& node) = 0;
     virtual void visit(Variable& node) = 0;
     virtual void visit(Assignment& node) = 0;
+    virtual void visit(LocalAssignment& node) = 0;
     virtual void visit(Return& node) = 0;
     virtual void visit(Break& node) = 0;
     virtual void visit(Continue& node) = 0;

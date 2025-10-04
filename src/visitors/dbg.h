@@ -35,6 +35,7 @@ protected:
     void visit(ast::MakeTable& node) override;
     void visit(ast::Variable& node) override;
     void visit(ast::Assignment& node) override;
+    void visit(ast::LocalAssignment& node) override;
     void visit(ast::Return& node) override;
     void visit(ast::Break& node) override;
     void visit(ast::Continue& node) override;

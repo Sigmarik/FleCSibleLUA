@@ -5,11 +5,15 @@ function overAndOver(alpha, beta)
 end
 
 function RotateBoxes(entity, alpha, beta, gama)
-    for x, y, z in overAndOver(1, 10) do
+    local a, b, c = 1, 2
+
+    function hehe()
         something()
     end
 
-    alpha, beta, gama = 1, 2, 3
+    local function haha() end
+
+    local undefined
 end
 
 

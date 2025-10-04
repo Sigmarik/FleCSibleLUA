@@ -229,6 +229,20 @@ void AstDebugger::visit(ast::Assignment& node)
     m_stream << m_indent << ")\n";
 }
 
+void AstDebugger::visit(ast::LocalAssignment& node)
+{
+    m_stream << m_indent << "Local assignment to\n";
+    increaseIndent();
+    for (ids::ResolvableName& name : node.names)
+    {
+        m_stream << m_indent << name.string << "\n";
+    }
+    decreaseIndent();
+    m_stream << m_indent << "of (\n";
+    visitList(node.values);
+    m_stream << m_indent << ")\n";
+}
+
 void AstDebugger::visit(ast::Return& node)
 {
     m_stream << m_indent << "Return\n";

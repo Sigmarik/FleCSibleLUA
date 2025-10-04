@@ -177,7 +177,6 @@ using LuaLexer = parser::Lexer<
 
 using LuaIgnored = parser::IgnoreLexemes
 <
-    Local, // TODO: Actually consider local definitions.
     Semicolon,
     Whitespace,
     SingleLineComment,

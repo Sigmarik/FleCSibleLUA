@@ -257,6 +257,14 @@ struct Assignment : INode
     std::deque<NodePtr> data{};
 };
 
+struct LocalAssignment : INode
+{
+    using INode::INode;
+
+    std::deque<ids::ResolvableName> names;
+    std::deque<NodePtr> values{};
+};
+
 struct Return : INode
 {
     using INode::INode;
@@ -294,6 +302,7 @@ namespace
         Variable,
         FunctionCall,
         Assignment,
+        LocalAssignment,
         Return,
         Break,
         Continue

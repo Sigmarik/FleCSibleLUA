@@ -20,6 +20,7 @@ struct Break;
 struct Continue;
 
 struct Assignment;
+struct LocalAssignment;
 
 struct HighLevelExpression;
 struct ExprComparison;
@@ -240,8 +241,8 @@ struct Action : parser::Grammar
     parser::Sequence<RepeatUntil>,
     parser::Sequence<NumericFor>,
     parser::Sequence<GenericFor>,
-    parser::Sequence<Function>
-    // TODO: Add assignments, branches, for/while loops and other stuff
+    parser::Sequence<Function>,
+    parser::Sequence<LocalAssignment>
 >
 {
     template <class T>
@@ -257,7 +258,6 @@ struct Return : parser::Grammar
 
     parser::Sequence<parser::Lex<lualex::Return>, parser::Repeating<ast::NodePtr, HighLevelExpression, lualex::Comma>>,
     parser::Sequence<parser::Lex<lualex::Return>>
-    // TODO: Add return with an argument
 >
 {
     static ast::Return visit(lualex::Return rt)
@@ -565,7 +565,6 @@ struct Assignment : parser::Grammar
 <
     Assignment, ast::Assignment,
 
-    // TODO: Implement batch assignment
     // TODO: Implement op= assignment
     parser::Sequence<parser::Repeating<ast::NodePtr, ExprSingleton, lualex::Comma>,
         parser::Lex<lualex::Assignment>, parser::Repeating<ast::NodePtr, HighLevelExpression, lualex::Comma>>
@@ -576,6 +575,59 @@ struct Assignment : parser::Grammar
         ast::Assignment assignment(lex.startingPos);
         assignment.subjects = std::move(subjects);
         assignment.data = std::move(values);
+        return assignment;
+    }
+};
+
+struct LocalAssignment : parser::Grammar
+<
+    LocalAssignment, ast::LocalAssignment,
+
+    parser::Sequence<
+        parser::Lex<lualex::Local>,
+        parser::Repeating<lualex::Name, parser::Lex<lualex::Name>, lualex::Comma>,
+        parser::Lex<lualex::Assignment>,
+        parser::Repeating<ast::NodePtr, HighLevelExpression, lualex::Comma>
+    >,
+    parser::Sequence<
+        parser::Lex<lualex::Local>,
+        parser::Repeating<lualex::Name, parser::Lex<lualex::Name>, lualex::Comma>
+    >,
+
+    parser::Sequence<
+        parser::Lex<lualex::Local>,
+        Function
+    >
+>
+{
+    static ast::LocalAssignment visit(lualex::Local, std::deque<lualex::Name>& names, lualex::Assignment lex,
+        std::deque<ast::NodePtr>& values)
+    {
+        ast::LocalAssignment assignment(lex.startingPos);
+        for (lualex::Name& name : names)
+        {
+            assignment.names.emplace_back(name.name);
+        }
+        assignment.values = std::move(values);
+        return assignment;
+    }
+
+    static ast::LocalAssignment visit(lualex::Local lex, std::deque<lualex::Name>& names)
+    {
+        ast::LocalAssignment assignment(lex.startingPos);
+        for (lualex::Name& name : names)
+        {
+            assignment.names.emplace_back(name.name);
+        }
+        return assignment;
+    }
+
+    static ast::LocalAssignment visit(lualex::Local lex, ast::Function& function)
+    {
+        ast::LocalAssignment assignment(lex.startingPos);
+        assignment.names.emplace_back(function.name);
+        function.name = ids::ResolvableName("");
+        assignment.values.emplace_back(std::move(function));
         return assignment;
     }
 };
