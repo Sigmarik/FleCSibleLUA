@@ -1,3 +1,5 @@
+gravity = 9.815
+
 function overAndOver(alpha, beta)
     return function(x) return x + 1 end, 2, {1, 2, hi = 3}
 end
