@@ -61,17 +61,6 @@ struct Function : INode
     std::deque<NodePtr> body{};
 };
 
-struct System : INode
-{
-    using INode::INode;
-
-    ids::ResolvableName name{"!UNNAMED_SYSTEM!"};
-    std::deque<ids::ResolvableName> parameters{};
-
-    std::string query = "!UNRESOLVED_QUERY!";
-    std::deque<NodePtr> body{};
-};
-
 struct WhileLoop : INode
 {
     explicit WhileLoop(const parser::CharacterPos& pos, NodePtr&& condition)
@@ -112,15 +101,6 @@ struct RepeatUntil : INode
         : INode(pos), condition(std::move(condition)) {}
 
     NodePtr condition;
-    std::deque<NodePtr> body{};
-};
-
-struct Query : INode
-{
-    using INode::INode;
-
-    std::string query = "!UNRESOLVED_QUERY!";
-    ids::ResolvableName entityName{"!UNDEFINED_QUERY_ENTITY_NAME!"};
     std::deque<NodePtr> body{};
 };
 
@@ -286,12 +266,10 @@ namespace
     using NodeVariant = std::variant<
         Program,
         Function,
-        System,
         WhileLoop,
         ForLoopNumeric,
         ForLoopGeneric,
         RepeatUntil,
-        Query,
         Branch,
         UnaryOperator,
         BinaryOperator,

@@ -22,18 +22,6 @@ void AstDebugger::visit(ast::Function& node)
     m_stream << m_indent << "}\n";
 }
 
-void AstDebugger::visit(ast::System& node)
-{
-    m_stream << m_indent << "System (" << node.query << ") " << node.name.string << "( ";
-    for (ids::ResolvableName& param : node.parameters)
-    {
-        m_stream << param.string << " ";
-    }
-    m_stream << ") {\n";
-    visitList(node.body);
-    m_stream << m_indent << "}\n";
-}
-
 void AstDebugger::visit(ast::WhileLoop& node)
 {
     m_stream << m_indent << "While (\n";
@@ -89,18 +77,6 @@ void AstDebugger::visit(ast::RepeatUntil& node)
     Visitor::visit(node.condition);
     decreaseIndent();
     m_stream << m_indent << ")\n";
-}
-
-void AstDebugger::visit(ast::Query& node)
-{
-    m_stream << m_indent << "Query (\n";
-    increaseIndent();
-    m_stream << m_indent << "query: " << node.query << "\n";
-    m_stream << m_indent << "entity: " << node.entityName.string << "\n";
-    decreaseIndent();
-    m_stream << m_indent << ") {\n";
-    visitList(node.body);
-    m_stream << m_indent << "}\n";
 }
 
 void AstDebugger::visit(ast::Branch& node)
