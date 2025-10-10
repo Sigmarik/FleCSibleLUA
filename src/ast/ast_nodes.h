@@ -56,7 +56,6 @@ struct Function : INode
 {
     using INode::INode;
 
-    ids::ResolvableName name{"!UNNAMED_FUNCTION!"};
     std::deque<ids::ResolvableName> parameters{};
     std::deque<NodePtr> body{};
 };

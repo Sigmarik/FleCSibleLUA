@@ -12,7 +12,7 @@ void AstDebugger::visit(ast::Program& node)
 
 void AstDebugger::visit(ast::Function& node)
 {
-    m_stream << m_indent << "Function " << node.name.string << "( ";
+    m_stream << m_indent << "Function ( ";
     for (ids::ResolvableName& param : node.parameters)
     {
         m_stream << param.string << " ";
@@ -207,7 +207,7 @@ void AstDebugger::visit(ast::Assignment& node)
 
 void AstDebugger::visit(ast::LocalAssignment& node)
 {
-    m_stream << m_indent << "Local assignment to\n";
+    m_stream << m_indent << "LocalAssignment to\n";
     increaseIndent();
     for (ids::ResolvableName& name : node.names)
     {

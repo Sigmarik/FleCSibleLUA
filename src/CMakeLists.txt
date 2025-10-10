@@ -6,7 +6,8 @@ add_library(FlecsibleLua
 		ast/data_types.cpp
 		visitors/dbg.cpp
 		grammar/lua_lexemes.cpp
-		parser/char_pos.cpp)
+		parser/char_pos.cpp
+		visitors/interpreter/interpreter.cpp)
 
 if (WINDOWS)
 	target_compile_options(FlecsibleLua PRIVATE "/bigobj")

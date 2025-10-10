@@ -1,5 +1,7 @@
 #pragma once
 
+#include <functional>
+
 #include "lua_lexemes.h"
 #include "ast/ast_nodes.h"
 
@@ -59,12 +61,6 @@ struct Program : parser::Grammar
         return std::move(program);
     }
 
-    static ast::Program visit(ast::Program& program, ast::Function& function)
-    {
-        program.components.emplace_back(std::move(function));
-        return std::move(program);
-    }
-
     static ast::Program visit(ast::Program& program, ast::Assignment& assignment)
     {
         program.components.emplace_back(std::move(assignment));
@@ -74,7 +70,7 @@ struct Program : parser::Grammar
 
 struct Function : parser::Grammar
 <
-    Function, ast::Function,
+    Function, ast::Assignment,
 
     parser::Sequence<
         parser::Lex<lualex::Function>,
@@ -96,26 +92,32 @@ struct Function : parser::Grammar
     >
 >
 {
-    static ast::Function visit(lualex::Function fnc, const lualex::Name& name, lualex::BracketRoundOp,
+    static ast::Assignment visit(lualex::Function fnc, const lualex::Name& name, lualex::BracketRoundOp,
         std::deque<lualex::Name>& params, lualex::BracketRoundCl, std::deque<ast::NodePtr>& body, lualex::End)
     {
         ast::Function function(fnc.startingPos);
         function.body = std::move(body);
-        function.name = name.name;
+        ast::Variable assignee(name.startingPos, name.name);
         for (lualex::Name& paramName : params)
         {
             function.parameters.emplace_back(paramName.name);
         }
-        return function;
+        ast::Assignment assignment(fnc.startingPos);
+        assignment.subjects.emplace_back(std::move(assignee));
+        assignment.data.emplace_back(std::move(function));
+        return assignment;
     }
 
-    static ast::Function visit(lualex::Function fnc, const lualex::Name& name, lualex::BracketRoundOp,
+    static ast::Assignment visit(lualex::Function fnc, const lualex::Name& name, lualex::BracketRoundOp,
         lualex::BracketRoundCl, std::deque<ast::NodePtr>& body, lualex::End)
     {
         ast::Function function(fnc.startingPos);
         function.body = std::move(body);
-        function.name = name.name;
-        return function;
+        ast::Variable assignee(name.startingPos, name.name);
+        ast::Assignment assignment(fnc.startingPos);
+        assignment.subjects.emplace_back(std::move(assignee));
+        assignment.data.emplace_back(std::move(function));
+        return assignment;
     }
 };
 
@@ -145,7 +147,6 @@ struct InlineFunction : parser::Grammar
     {
         ast::Function function(fnc.startingPos);
         function.body = std::move(body);
-        function.name = ids::ResolvableName("");
         for (lualex::Name& paramName : params)
         {
             function.parameters.emplace_back(paramName.name);
@@ -158,7 +159,6 @@ struct InlineFunction : parser::Grammar
     {
         ast::Function function(fnc.startingPos);
         function.body = std::move(body);
-        function.name = ids::ResolvableName("");
         return function;
     }
 };
@@ -622,12 +622,18 @@ struct LocalAssignment : parser::Grammar
         return assignment;
     }
 
-    static ast::LocalAssignment visit(lualex::Local lex, ast::Function& function)
+    static ast::LocalAssignment visit(lualex::Local lex, ast::Assignment& fncAssignment)
     {
         ast::LocalAssignment assignment(lex.startingPos);
-        assignment.names.emplace_back(function.name);
-        function.name = ids::ResolvableName("");
-        assignment.values.emplace_back(std::move(function));
+        for (ast::NodePtr& var : fncAssignment.subjects)
+        {
+            assert(std::holds_alternative<ast::Variable>(*var));
+            assignment.names.emplace_back(std::get<ast::Variable>(*var).name);
+        }
+        for (ast::NodePtr& value : fncAssignment.data)
+        {
+            assignment.values.emplace_back(std::move(value));
+        }
         return assignment;
     }
 };
