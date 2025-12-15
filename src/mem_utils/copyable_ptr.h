@@ -51,6 +51,9 @@ public:
     T& operator->() { return *m_data; }
     const T& operator->() const { return *m_data; }
 
+    T* get() { return m_data; }
+    const T* get() const { return m_data; }
+
 private:
     T* m_data;
 };

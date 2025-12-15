@@ -32,19 +32,32 @@ static std::string pointer_to_hex_string(const void* ptr) {
     return oss.str();
 }
 
-static std::string to_string(const List& list)
-{
-    return "table: " + pointer_to_hex_string(&list);
-}
 
-static std::string to_string(const Dict& dict)
+static std::string to_string(const Table& dict)
 {
-    return "table: " + pointer_to_hex_string(&dict);
+    return "table: " + pointer_to_hex_string(dict.get());
 }
 
 static std::string to_string(const Entity& entity)
 {
     return "entity: " + std::to_string(entity.entity);
+}
+
+static std::string to_string(const Function& function)
+{
+    if (const LibraryFunction* fnc = std::get_if<LibraryFunction>(&function))
+    {
+        return "library function: " + fnc->name;
+    }
+
+    if (const LuaFunction* fnc = std::get_if<LuaFunction>(&function))
+    {
+        return "function: " + pointer_to_hex_string(fnc->body);
+    }
+
+    assert(false && "Unknown function type");
+
+    return "[UNKNOWN FUNCTION TYPE]";
 }
 
 static std::string to_string(const GenericClass& generic)
@@ -59,4 +72,34 @@ std::string to_string(const GenericValue& value)
     return result;
 }
 
+bool to_bool(const GenericValue& value)
+{
+    if (std::holds_alternative<Nil>(value)) return false;
+    if (std::holds_alternative<bool>(value)) return std::get<bool>(value);
+
+    return true;
+}
+
+void ValueSequence::add(const GenericValue& value)
+{
+    sequence.emplace_back(ValueBackrefPair{.value = value, .reference = nullptr});
+}
+
+void ValueSequence::add(GenericValue&& value)
+{
+    sequence.emplace_back(ValueBackrefPair{.value = std::move(value), .reference = nullptr});
+}
+
+void ValueSequence::addReferenced(GenericValue& value)
+{
+    sequence.emplace_back(ValueBackrefPair{.value = value, .reference = &value});
+}
+
+GenericValue ValueSequence::spit()
+{
+    if (sequence.empty()) return Nil{};
+    GenericValue result = std::move(sequence.front().value);
+    sequence.clear();
+    return result;
+}
 }

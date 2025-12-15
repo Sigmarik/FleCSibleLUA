@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 #include "ast/visitor.h"
 #include "ast/data_types.h"
 
@@ -11,11 +13,21 @@ using namespace flua;
 class Interpreter final : public ast::Visitor
 {
 public:
+    struct LuaRuntimeError : std::exception
+    {
+        LuaRuntimeError(const ast::INode& node, const std::string& what) : what(what), where(node.getPos()) {}
+
+        std::string what;
+        parser::CharacterPos where;
+    };
+
     explicit Interpreter(std::ostream& errStream)
         : m_errStream(errStream)
     {}
 
     data::GenericValue run(const std::string& function, std::vector<data::GenericValue>& params);
+
+    [[nodiscard]] bool fallen() const { return m_fallen; }
 
 protected:
     using Visitor::visit;
@@ -42,34 +54,43 @@ protected:
     void visit(ast::Continue& node) override;
 
 private:
-    void visitBlock(std::deque<ast::NodePtr>& nodes);
+    void visitTransparentBlock(std::deque<ast::NodePtr>& nodes);
 
-    struct InternalValue
-    {
-        struct Ptr
-        {
-            unsigned stackDepth = 0;
-            std::string varName{};
-            std::vector<data::GenericValue> indexSequence{};
-        };
+    void executeFunction(ast::Function& function);
 
-        std::optional<Ptr> ptr{};
-        data::GenericValue value = data::Nil{};
-    };
+    void runLuaFunction(data::LuaFunction& function, std::vector<data::GenericValue>& args);
 
     struct Frame
     {
-        std::unordered_map<std::string, InternalValue> varNameMap{};
+        std::unordered_map<std::string, mem_utils::CopyMovePtr<data::GenericValue>> varNameMap{};
         bool transparent = false;
+    };
+
+    struct NamespaceHolder
+    {
+        explicit NamespaceHolder(std::vector<Frame>& stack, bool transparent = true)
+            : m_stack(&stack)
+        {
+            m_stack->emplace_back();
+            m_stack->back().transparent = transparent;
+        }
+
+        ~NamespaceHolder() { m_stack->pop_back(); }
+
+    private:
+        std::vector<Frame>* m_stack;
     };
 
     std::vector<Frame> m_stack{Frame{}};
 
-    InternalValue m_returnedValue{};
+    data::ValueSequence m_returnedValue{};
 
     bool m_breaking = false;
     bool m_continuing = false;
     bool m_returning = false;
+    bool m_inLocalAssignment = false;
+
+    bool m_fallen = false;
 
     std::ostream& m_errStream;
 };

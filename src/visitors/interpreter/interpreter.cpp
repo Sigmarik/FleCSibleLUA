@@ -1,5 +1,8 @@
 #include "interpreter.h"
 
+#include <iostream>
+#include <memory>
+
 namespace flua::vst
 {
 using namespace flua;
@@ -7,9 +10,511 @@ using namespace flua;
 
 void Interpreter::visit(ast::Program& node)
 {
-    for (ast::NodePtr& component : node.components)
+    // NOTE: Internal errors are thrown as exceptions and isolated here.
+    //       Please do not take this as an allowance to use exceptions elsewhere
+    //       in the project without a VERY good reason.
+    try
     {
-        // Visitor::visit(component);
+        for (ast::NodePtr& component : node.components)
+        {
+            Visitor::visit(component);
+        }
+        m_returnedValue.clear();
     }
+    catch (const LuaRuntimeError& err)
+    {
+        m_fallen = true;
+        m_errStream << "FLua runtime ERROR at line " << err.where.line << " column " << err.where.column << ":\n\t" <<
+                err.what << std::endl;
+    }
+}
+
+void Interpreter::visit(ast::Function& node)
+{
+    m_returnedValue = data::Function{data::LuaFunction{.body = &node}};
+}
+
+void Interpreter::visit(ast::WhileLoop& node)
+{
+    while (true)
+    {
+        m_continuing = false;
+
+        Visitor::visit(node.condition);
+        if (!data::to_bool(m_returnedValue.spit())) break;
+
+        visitTransparentBlock(node.body);
+
+        if (m_returning || m_breaking) break;
+    }
+
+    m_breaking = false;
+
+    if (!m_returning) m_returnedValue.clear();
+}
+
+void Interpreter::visit(ast::ForLoopNumeric& node)
+{
+    NamespaceHolder forNamespace(m_stack);
+
+    Frame& frame = m_stack.back();
+    frame.transparent = true;
+    Visitor::visit(node.base);
+    data::GenericValue& counter =
+            *(frame.varNameMap[node.name.string] = mem_utils::CopyMovePtr<data::GenericValue>(m_returnedValue.spit()));
+    Visitor::visit(node.limit);
+    data::GenericValue limit = m_returnedValue.spit();
+
+    Visitor::visit(node.step);
+    data::GenericValue step = m_returnedValue.spit();
+
+    double* counterPtr = std::get_if<double>(&counter);
+    double* limitPtr = std::get_if<double>(&limit);
+    double* stepPtr = std::get_if<double>(&step);
+
+    assert(counterPtr && limitPtr && stepPtr && "Not all arguments of the for loop returned numeric values");
+
+    while ((*limitPtr - *counterPtr) * *stepPtr >= 0)
+    {
+        visitTransparentBlock(node.body);
+
+        if (m_returning || m_breaking) break;
+
+        *limitPtr += *stepPtr;
+    }
+
+    m_breaking = false;
+    if (!m_returning) m_returnedValue.clear();
+}
+
+void Interpreter::visit(ast::ForLoopGeneric& node)
+{
+    // TODO: Implement
+    assert(false && "NOT IMPLEMENTED");
+}
+
+void Interpreter::visit(ast::RepeatUntil& node)
+{
+    while (true)
+    {
+        m_continuing = false;
+
+        visitTransparentBlock(node.body);
+
+        if (m_returning || m_breaking) break;
+
+        Visitor::visit(node.condition);
+        if (!data::to_bool(m_returnedValue.spit())) break;
+    }
+
+    m_breaking = false;
+    if (!m_returning) m_returnedValue.clear();
+}
+
+void Interpreter::visit(ast::Branch& node)
+{
+    bool executeElseBranch = true;
+    for (ast::Branch::Case& branchCase : node.cases)
+    {
+        Visitor::visit(branchCase.condition);
+        if (data::to_bool(m_returnedValue.spit()))
+        {
+            executeElseBranch = false;
+            visitTransparentBlock(branchCase.block);
+            if (m_returning || m_breaking || m_continuing) return;
+        }
+
+        if (!m_returning) m_returnedValue.clear();
+    }
+
+    if (executeElseBranch)
+    {
+        visitTransparentBlock(node.ifFalse);
+    }
+
+    if (!m_returning) m_returnedValue.clear();
+}
+
+void Interpreter::visit(ast::FunctionCall& node)
+{
+    Visitor::visit(node.function);
+
+    data::Function* func = std::get_if<data::Function>(&m_returnedValue.sequence.front().value);
+
+    assert(func && "Cannot execute a non-functional object");
+
+    std::vector<data::GenericValue> arguments;
+    for (ast::NodePtr& argument : node.args)
+    {
+        Visitor::visit(argument);
+        arguments.emplace_back(m_returnedValue.spit());
+    }
+
+    if (data::LuaFunction* luaFunction = std::get_if<data::LuaFunction>(func))
+    {
+        runLuaFunction(*luaFunction, arguments);
+    }
+    else
+    {
+        // TODO: Implement
+        assert(false && "NOT IMPLEMENTED");
+    }
+}
+
+void Interpreter::visit(ast::UnaryOperator& node)
+{
+    Visitor::visit(node.node);
+    data::GenericValue operand = m_returnedValue.spit();
+    switch (node.type)
+    {
+        case ast::UnaryOperator::Type::Not:
+        {
+            m_returnedValue = !data::to_bool(operand);
+        }
+        break;
+        case ast::UnaryOperator::Type::Negate:
+        {
+            if (std::holds_alternative<double>(operand))
+            {
+                m_returnedValue = -std::get<double>(operand);
+            }
+            else if (std::holds_alternative<bool>(operand))
+            {
+                m_returnedValue = !data::to_bool(operand);
+            }
+            else
+            {
+                throw LuaRuntimeError(node, "Cannot negate a non-numerical and non-logical type");
+            }
+        }
+        break;
+        case ast::UnaryOperator::Type::Length:
+        {
+            m_returnedValue = static_cast<double>(data::to_string(operand).length());
+        }
+        break;
+    }
+}
+
+void Interpreter::visit(ast::BinaryOperator& node)
+{
+    Visitor::visit(node.left);
+    data::GenericValue leftOperand = m_returnedValue.spit();
+
+    if (node.type == ast::BinaryOperator::Type::And && !data::to_bool(leftOperand))
+    {
+        m_returnedValue = false;
+        return;
+    }
+    if (node.type == ast::BinaryOperator::Type::Or && data::to_bool(leftOperand))
+    {
+        m_returnedValue = true;
+        return;
+    }
+
+    Visitor::visit(node.right);
+    data::GenericValue rightOperand = m_returnedValue.spit();
+
+    if (node.type == ast::BinaryOperator::Type::Concatenate)
+    {
+        m_returnedValue = data::to_string(leftOperand) + data::to_string(rightOperand);
+        return;
+    }
+
+    if (node.type == ast::BinaryOperator::Type::CmpEq)
+    {
+        m_returnedValue = data::to_string(leftOperand) == data::to_string(rightOperand);
+        return;
+    }
+
+    if (node.type == ast::BinaryOperator::Type::CmpNeq)
+    {
+        m_returnedValue = data::to_string(leftOperand) != data::to_string(rightOperand);
+        return;
+    }
+
+    switch (node.type)
+    {
+        case ast::BinaryOperator::Type::And:
+        {
+            m_returnedValue = data::to_bool(leftOperand) && data::to_bool(rightOperand);
+        }
+            return;
+        case ast::BinaryOperator::Type::Or:
+        {
+            m_returnedValue = data::to_bool(leftOperand) || data::to_bool(rightOperand);
+        }
+            return;
+        case ast::BinaryOperator::Type::Xor:
+        {
+            m_returnedValue = data::to_bool(leftOperand) != data::to_bool(rightOperand);
+        }
+            return;
+    }
+
+    if (!std::holds_alternative<double>(leftOperand) || !std::holds_alternative<double>(rightOperand))
+    {
+        throw LuaRuntimeError(node, "Attempt to perform arithmetics on a non-numeric value");
+    }
+
+    double alpha = std::get<double>(leftOperand);
+    double beta = std::get<double>(rightOperand);
+
+    switch (node.type)
+    {
+        case ast::BinaryOperator::Type::Add:
+            m_returnedValue = alpha + beta;
+            break;
+        case ast::BinaryOperator::Type::Subtract:
+            m_returnedValue = alpha - beta;
+            break;
+        case ast::BinaryOperator::Type::Multiply:
+            m_returnedValue = alpha * beta;
+            break;
+        case ast::BinaryOperator::Type::Divide:
+            m_returnedValue = alpha / beta;
+            break;
+        case ast::BinaryOperator::Type::Mod:
+            m_returnedValue = alpha - std::floor(alpha / beta) * beta;
+            break;
+        case ast::BinaryOperator::Type::Pow:
+            m_returnedValue = std::pow(alpha, beta);
+            break;
+        case ast::BinaryOperator::Type::CmpGe:
+            m_returnedValue = alpha >= beta;
+            break;
+        case ast::BinaryOperator::Type::CmpGt:
+            m_returnedValue = alpha > beta;
+            break;
+        case ast::BinaryOperator::Type::CmpLe:
+            m_returnedValue = alpha <= beta;
+            break;
+        case ast::BinaryOperator::Type::CmpLt:
+            m_returnedValue = alpha < beta;
+            break;
+    }
+}
+
+void Interpreter::visit(ast::FieldRequest& node)
+{
+    assert(false && "Not implemented");
+}
+
+void Interpreter::visit(ast::IndexRequest& node)
+{
+    Visitor::visit(node.body);
+    data::GenericValue dict = m_returnedValue.spit();
+    if (!std::holds_alternative<data::Table>(dict))
+    {
+        throw LuaRuntimeError(node, "Attempt to index a non-dictionary value");
+    }
+
+    Visitor::visit(node.index);
+    std::string index = data::to_string(m_returnedValue.spit());
+    auto& dct = std::get<data::Table>(dict);
+    if (!dct->contains(index))
+    {
+        m_returnedValue = data::Nil();
+        return;
+    }
+    m_returnedValue.clear();
+    m_returnedValue.addReferenced(*dct->at(index));
+}
+
+void Interpreter::visit(ast::Constant& node)
+{
+    m_returnedValue = node.value;
+}
+
+void Interpreter::visit(ast::MakeTable& node)
+{
+    data::Table table;
+    size_t elementIndex = 1;
+    for (auto& element : node.values)
+    {
+        data::GenericValue index = static_cast<double>(elementIndex);
+        if (element.index.has_value())
+        {
+            Visitor::visit(*element.index.value());
+            index = m_returnedValue.spit();
+        }
+        else
+        {
+            ++elementIndex;
+        }
+
+        Visitor::visit(*element.value);
+        table->emplace(data::to_string(index), new data::GenericValue(m_returnedValue.spit()));
+    }
+
+    m_returnedValue = std::move(table);
+}
+
+void Interpreter::visit(ast::Variable& node)
+{
+    bool localAssignment = m_inLocalAssignment;
+    m_inLocalAssignment = false;
+
+    data::GenericValue* foundValue = nullptr;
+    for (auto frameIt = m_stack.rbegin(), frameEnd = m_stack.rend(); frameIt != frameEnd; ++frameIt)
+    {
+        auto found = frameIt->varNameMap.find(node.name.string);
+        if (found != frameIt->varNameMap.end())
+        {
+            foundValue = found->second.get();
+            break;
+        }
+        if (!frameIt->transparent)
+        {
+            break;
+        }
+    }
+
+    if (foundValue == nullptr)
+    {
+        std::unordered_map<std::string, mem_utils::CopyMovePtr<data::GenericValue> >& frameToAddTo =
+                localAssignment ? m_stack.back().varNameMap : m_stack.front().varNameMap;
+        foundValue = (frameToAddTo[node.name.string] =
+                      mem_utils::CopyMovePtr<data::GenericValue>(data::Nil())).get();
+    }
+
+    m_returnedValue.clear();
+    m_returnedValue.addReferenced(*foundValue);
+}
+
+void Interpreter::visit(ast::Assignment& node)
+{
+    std::vector<data::GenericValue*> subjects;
+    std::vector<data::GenericValue> values;
+    subjects.reserve(node.subjects.size());
+    for (ast::NodePtr& subject : node.subjects)
+    {
+        Visitor::visit(subject);
+        if (m_returnedValue.sequence.empty() || m_returnedValue.sequence.front().reference == nullptr)
+        {
+            throw LuaRuntimeError(node, "Attempt to assign a value to a non-assignable variable");
+        }
+        subjects.emplace_back(m_returnedValue.sequence.front().reference);
+    }
+
+    for (ast::NodePtr& value : node.data)
+    {
+        Visitor::visit(value);
+
+        for (data::ValueSequence::ValueBackrefPair& pair : m_returnedValue.sequence)
+        {
+            values.emplace_back(std::move(pair.value));
+        }
+    }
+
+    for (size_t idx = 0; idx < subjects.size(); ++idx)
+    {
+        auto& subject = subjects[idx];
+        *subject = idx < values.size() ? std::move(values[idx]) : data::Nil();
+    }
+}
+
+void Interpreter::visit(ast::LocalAssignment& node)
+{
+    std::vector<data::GenericValue*> subjects;
+    std::vector<data::GenericValue> values;
+    subjects.reserve(node.names.size());
+    for (const ids::ResolvableName& subject : node.names)
+    {
+        Frame& localFrame = m_stack.back();
+        auto emplacementResult = localFrame.varNameMap.try_emplace(subject.string);
+        if (!emplacementResult.second)
+        {
+            throw LuaRuntimeError(
+                node, "Attempt to create a local variable \"" + subject.string + "\" that already exists");
+        }
+        subjects.emplace_back(emplacementResult.first->second.get());
+    }
+
+    for (ast::NodePtr& value : node.values)
+    {
+        Visitor::visit(value);
+
+        for (data::ValueSequence::ValueBackrefPair& pair : m_returnedValue.sequence)
+        {
+            values.emplace_back(std::move(pair.value));
+        }
+    }
+
+    for (size_t idx = 0; idx < subjects.size(); ++idx)
+    {
+        auto& subject = subjects[idx];
+        *subject = idx < values.size() ? std::move(values[idx]) : data::Nil();
+    }
+}
+
+void Interpreter::visit(ast::Return& node)
+{
+    std::vector<data::ValueSequence::ValueBackrefPair> values;
+    for (ast::NodePtr& value : node.values)
+    {
+        Visitor::visit(value);
+
+        for (data::ValueSequence::ValueBackrefPair& pair : m_returnedValue.sequence)
+        {
+            values.emplace_back(std::move(pair));
+        }
+
+        m_returnedValue.clear();
+    }
+
+    m_returnedValue.sequence = std::move(values);
+    m_returning = true;
+}
+
+void Interpreter::visit(ast::Break& node)
+{
+    m_breaking = true;
+    m_returnedValue.clear();
+}
+
+void Interpreter::visit(ast::Continue& node)
+{
+    m_continuing = true;
+    m_returnedValue.clear();
+}
+
+void Interpreter::visitTransparentBlock(std::deque<ast::NodePtr>& nodes)
+{
+    NamespaceHolder blockNamespace(m_stack, true);
+
+    for (ast::NodePtr& node : nodes)
+    {
+        Visitor::visit(node);
+        if (m_breaking || m_continuing || m_returning) break;
+        m_returnedValue.clear();
+    }
+}
+
+void Interpreter::executeFunction(ast::Function& function)
+{
+    visitTransparentBlock(function.body);
+    if (!m_returning) m_returnedValue.clear();
+    m_returning = m_breaking = m_continuing = false;
+}
+
+void Interpreter::runLuaFunction(data::LuaFunction& luaFunction, std::vector<data::GenericValue>& args)
+{
+    NamespaceHolder functionEnvNamespace(m_stack, false);
+
+    m_stack.back().varNameMap = std::move(luaFunction.frame);
+
+    {
+        NamespaceHolder functionNamespace(m_stack);
+
+        for (size_t idx = 0; idx < luaFunction.body->parameters.size() && idx < args.size(); ++idx)
+        {
+            ids::ResolvableName& name = luaFunction.body->parameters[idx];
+            m_stack.back().varNameMap[name.string] = mem_utils::CopyMovePtr<data::GenericValue>(std::move(args[idx]));
+        }
+
+        executeFunction(*luaFunction.body);
+    }
+    luaFunction.frame = std::move(m_stack.back().varNameMap);
 }
 }

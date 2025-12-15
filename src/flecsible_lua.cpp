@@ -7,6 +7,7 @@
 #include "ast/ast_nodes.h"
 #include "grammar/lua_parser.h"
 #include "visitors/dbg.h"
+#include "visitors/interpreter/interpreter.h"
 
 namespace flua
 {
@@ -100,7 +101,7 @@ Script Script::Load(const std::string& path)
     }
     else
     {
-        // TODO: Somehow return the error to the user?
+        // TODO: Return the error to the user?
         const auto& [what, where] = parsingResult.error();
         std::cerr << "FLua ERROR in file " << path << " at line " << where.line << " column " << where.column << ":\n\t" << what << std::endl;
     }
@@ -118,6 +119,10 @@ std::vector<flecs::system> Script::deploy(flecs::world& world)
     vst::AstDebugger dbg(std::cout);
 
     dbg.process(*m_ast);
+
+    vst::Interpreter interpreter(std::cerr);
+
+    interpreter.process(*m_ast);
 
     return {};
 }
