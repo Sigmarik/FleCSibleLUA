@@ -139,9 +139,12 @@ void Interpreter::visit(ast::FunctionCall& node)
 {
     Visitor::visit(node.function);
 
-    data::Function* func = std::get_if<data::Function>(&m_returnedValue.sequence.front().value);
+    data::GenericValue maybeFunction = m_returnedValue.spit();
 
-    assert(func && "Cannot execute a non-functional object");
+    if (!std::holds_alternative<data::Function>(maybeFunction))
+        throw LuaRuntimeError(node, "Cannot execute a non-functional object");
+
+    data::Function& func = std::get<data::Function>(maybeFunction);
 
     std::vector<data::GenericValue> arguments;
     for (ast::NodePtr& argument : node.args)
@@ -150,14 +153,27 @@ void Interpreter::visit(ast::FunctionCall& node)
         arguments.emplace_back(m_returnedValue.spit());
     }
 
-    if (data::LuaFunction* luaFunction = std::get_if<data::LuaFunction>(func))
+    if (data::LuaFunction* luaFunction = std::get_if<data::LuaFunction>(&func))
     {
         runLuaFunction(*luaFunction, arguments);
     }
     else
     {
-        // TODO: Implement
-        assert(false && "NOT IMPLEMENTED");
+        // TODO: Implement external function lookup and execution
+        auto& libFunction = std::get<data::LibraryFunction>(func);
+        if (libFunction.name == "print")
+        {
+            for (data::GenericValue& argument : arguments)
+            {
+                m_outStream << data::to_string(argument) << "\t";
+            }
+            m_outStream << std::endl;
+            m_returnedValue.clear();
+        }
+        else
+        {
+            assert(false && "NOT IMPLEMENTED");
+        }
     }
 }
 
@@ -355,6 +371,15 @@ void Interpreter::visit(ast::Variable& node)
     bool localAssignment = m_inLocalAssignment;
     m_inLocalAssignment = false;
 
+    // TODO: Implement external (library) function lookup
+    if (node.name.string == "print")
+    {
+        data::LibraryFunction libFunction;
+        libFunction.name = "print";
+        m_returnedValue = data::Function(libFunction);
+        return;
+    }
+
     data::GenericValue* foundValue = nullptr;
     for (auto frameIt = m_stack.rbegin(), frameEnd = m_stack.rend(); frameIt != frameEnd; ++frameIt)
     {
@@ -409,9 +434,11 @@ void Interpreter::visit(ast::Assignment& node)
 
     for (size_t idx = 0; idx < subjects.size(); ++idx)
     {
-        auto& subject = subjects[idx];
+        data::GenericValue* subject = subjects[idx];
         *subject = idx < values.size() ? std::move(values[idx]) : data::Nil();
     }
+
+    m_returnedValue.clear();
 }
 
 void Interpreter::visit(ast::LocalAssignment& node)

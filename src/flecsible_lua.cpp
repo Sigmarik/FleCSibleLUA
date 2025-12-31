@@ -120,7 +120,7 @@ std::vector<flecs::system> Script::deploy(flecs::world& world)
 
     dbg.process(*m_ast);
 
-    vst::Interpreter interpreter(std::cerr);
+    vst::Interpreter interpreter(std::cout, std::cerr);
 
     interpreter.process(*m_ast);
 

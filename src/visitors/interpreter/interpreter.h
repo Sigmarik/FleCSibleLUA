@@ -21,9 +21,11 @@ public:
         parser::CharacterPos where;
     };
 
-    explicit Interpreter(std::ostream& errStream)
-        : m_errStream(errStream)
-    {}
+    Interpreter(std::ostream& outStream, std::ostream& errStream)
+        : m_errStream(errStream), m_outStream(outStream)
+    {
+        m_stack.emplace_back();
+    }
 
     data::GenericValue run(const std::string& function, std::vector<data::GenericValue>& params);
 
@@ -62,6 +64,10 @@ private:
 
     struct Frame
     {
+        Frame() = default;
+        Frame(const Frame&) = delete;
+        Frame(Frame&&) = default;
+
         std::unordered_map<std::string, mem_utils::CopyMovePtr<data::GenericValue>> varNameMap{};
         bool transparent = false;
     };
@@ -81,7 +87,7 @@ private:
         std::vector<Frame>* m_stack;
     };
 
-    std::vector<Frame> m_stack{Frame{}};
+    std::vector<Frame> m_stack{};
 
     data::ValueSequence m_returnedValue{};
 
@@ -93,6 +99,7 @@ private:
     bool m_fallen = false;
 
     std::ostream& m_errStream;
+    std::ostream& m_outStream;
 };
 
 }
