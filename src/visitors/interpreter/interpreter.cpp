@@ -80,7 +80,7 @@ void Interpreter::visit(ast::ForLoopNumeric& node)
 
         if (m_returning || m_breaking) break;
 
-        *limitPtr += *stepPtr;
+        *counterPtr += *stepPtr;
     }
 
     m_breaking = false;

@@ -48,6 +48,7 @@ struct Program : parser::Grammar
     parser::Sequence<>,
     parser::Sequence<Program, Function>,
     parser::Sequence<Program, Assignment>,
+    parser::Sequence<Program, Action>,
     parser::Sequence<Program, parser::Lex<parser::Eof>>
 >
 {
@@ -64,6 +65,12 @@ struct Program : parser::Grammar
     static ast::Program visit(ast::Program& program, ast::Assignment& assignment)
     {
         program.components.emplace_back(std::move(assignment));
+        return std::move(program);
+    }
+
+    static ast::Program visit(ast::Program& program, ast::NodePtr& node)
+    {
+        program.components.emplace_back(std::move(node));
         return std::move(program);
     }
 };
