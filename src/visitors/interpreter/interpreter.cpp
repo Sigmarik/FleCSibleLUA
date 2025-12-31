@@ -330,8 +330,7 @@ void Interpreter::visit(ast::IndexRequest& node)
     auto& dct = std::get<data::Table>(dict);
     if (!dct->contains(index))
     {
-        m_returnedValue = data::Nil();
-        return;
+        dct->emplace(index, std::make_unique<data::GenericValue>(data::Nil()));
     }
     m_returnedValue.clear();
     m_returnedValue.addReferenced(*dct->at(index));
