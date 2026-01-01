@@ -31,7 +31,21 @@ void Interpreter::visit(ast::Program& node)
 
 void Interpreter::visit(ast::Function& node)
 {
-    m_returnedValue = data::Function{data::LuaFunction{.body = &node}};
+    std::unordered_map<std::string, mem_utils::CopyMovePtr<data::GenericValue>> bakedFrame;
+    if (m_stack.size() > 1)
+    {
+        for (auto frameIt = m_stack.rbegin(); frameIt != m_stack.rend(); ++frameIt)
+        {
+            auto& frame = *frameIt;
+            for (auto& [name, value] : frame.varNameMap)
+            {
+                if (bakedFrame.contains(name)) continue;
+                bakedFrame[name] = value;
+            }
+            if (!frame.transparent) break;
+        }
+    }
+    m_returnedValue = data::Function{data::LuaFunction{.body = &node, .frame = bakedFrame}};
 }
 
 void Interpreter::visit(ast::WhileLoop& node)
@@ -144,7 +158,7 @@ void Interpreter::visit(ast::FunctionCall& node)
     if (!std::holds_alternative<data::Function>(maybeFunction))
         throw LuaRuntimeError(node, "Cannot execute a non-functional object");
 
-    data::Function& func = std::get<data::Function>(maybeFunction);
+    data::Function func = std::get<data::Function>(maybeFunction);
 
     std::vector<data::GenericValue> arguments;
     for (ast::NodePtr& argument : node.args)
@@ -392,6 +406,12 @@ void Interpreter::visit(ast::Variable& node)
         {
             break;
         }
+    }
+
+    if (foundValue == nullptr && !localAssignment)
+    {
+        auto foundGlobal = m_stack.front().varNameMap.find(node.name.string);
+        if (foundGlobal != m_stack.front().varNameMap.end()) foundValue = foundGlobal->second.get();
     }
 
     if (foundValue == nullptr)
