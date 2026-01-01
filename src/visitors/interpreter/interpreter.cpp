@@ -31,7 +31,8 @@ void Interpreter::visit(ast::Program& node)
 
 void Interpreter::visit(ast::Function& node)
 {
-    std::unordered_map<std::string, mem_utils::CopyMovePtr<data::GenericValue>> bakedFrame;
+    using VariableMap = std::unordered_map<std::string, mem_utils::CopyMovePtr<data::GenericValue>>;
+    VariableMap bakedFrame;
     if (m_stack.size() > 1)
     {
         for (auto frameIt = m_stack.rbegin(); frameIt != m_stack.rend(); ++frameIt)
@@ -45,7 +46,10 @@ void Interpreter::visit(ast::Function& node)
             if (!frame.transparent) break;
         }
     }
-    m_returnedValue = data::Function{data::LuaFunction{.body = &node, .frame = bakedFrame}};
+    m_returnedValue = data::Function{data::LuaFunction{
+        .body = &node,
+        .frame = std::make_shared<VariableMap>(bakedFrame),
+    }};
 }
 
 void Interpreter::visit(ast::WhileLoop& node)
@@ -548,7 +552,7 @@ void Interpreter::runLuaFunction(data::LuaFunction& luaFunction, std::vector<dat
 {
     NamespaceHolder functionEnvNamespace(m_stack, false);
 
-    m_stack.back().varNameMap = std::move(luaFunction.frame);
+    m_stack.back().varNameMap = std::move(*luaFunction.frame);
 
     {
         NamespaceHolder functionNamespace(m_stack);
@@ -561,6 +565,6 @@ void Interpreter::runLuaFunction(data::LuaFunction& luaFunction, std::vector<dat
 
         executeFunction(*luaFunction.body);
     }
-    luaFunction.frame = std::move(m_stack.back().varNameMap);
+    *luaFunction.frame = std::move(m_stack.back().varNameMap);
 }
 }

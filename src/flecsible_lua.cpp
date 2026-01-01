@@ -116,9 +116,9 @@ std::vector<flecs::system> Script::deploy(flecs::world& world)
         return {};
     }
 
-    vst::AstDebugger dbg(std::cout);
-
-    dbg.process(*m_ast);
+    // vst::AstDebugger dbg(std::cout);
+    //
+    // dbg.process(*m_ast);
 
     vst::Interpreter interpreter(std::cout, std::cerr);
 

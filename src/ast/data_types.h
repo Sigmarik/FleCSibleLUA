@@ -42,7 +42,7 @@ bool to_bool(const GenericValue& value);
 struct LuaFunction
 {
     ast::Function* body = nullptr;
-    std::unordered_map<std::string, mem_utils::CopyMovePtr<GenericValue>> frame{};
+    std::shared_ptr<std::unordered_map<std::string, mem_utils::CopyMovePtr<GenericValue>>> frame{};
 };
 
 struct LibraryFunction
