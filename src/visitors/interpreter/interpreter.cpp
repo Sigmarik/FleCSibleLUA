@@ -390,15 +390,6 @@ void Interpreter::visit(ast::Variable& node)
     bool localAssignment = m_inLocalAssignment;
     m_inLocalAssignment = false;
 
-    // TODO: Implement external (library) function lookup
-    if (node.name.string == "print")
-    {
-        data::LibraryFunction libFunction;
-        libFunction.name = "print";
-        m_returnedValue = data::Function(libFunction);
-        return;
-    }
-
     data::GenericValue* foundValue = nullptr;
     for (auto& frameIt : std::ranges::reverse_view(m_stack))
     {
@@ -418,6 +409,16 @@ void Interpreter::visit(ast::Variable& node)
     {
         auto foundGlobal = m_stack.front().varNameMap.find(node.name.string);
         if (foundGlobal != m_stack.front().varNameMap.end()) foundValue = foundGlobal->second.get();
+    }
+
+    if (foundValue == nullptr)
+    {
+        auto maybeExternalFunction = m_externalFunctions.find(node.name.string);
+        if (maybeExternalFunction != m_externalFunctions.end())
+        {
+            m_returnedValue = data::Function(maybeExternalFunction->second);
+            return;
+        }
     }
 
     if (foundValue == nullptr)
@@ -560,19 +561,18 @@ void Interpreter::executeFunction(data::Function& func, std::deque<ast::NodePtr>
     {
         // TODO: Implement external function lookup and execution
         auto& libFunction = std::get<data::LibraryFunction>(func);
-        if (libFunction.name == "print")
+        m_externalFunctionInputs = std::move(arguments);
+        FluaState state = generatePublicState();
+
+        libFunction(&state);
+
+        m_externalFunctionInputs.clear();
+        m_returnedValue.clear();
+        for (const auto& returned : m_externalFunctionOutputs)
         {
-            for (data::GenericValue& argument : arguments)
-            {
-                m_outStream << data::to_string(argument) << "\t";
-            }
-            m_outStream << std::endl;
-            m_returnedValue.clear();
+            m_returnedValue.sequence.emplace_back(std::move(returned));
         }
-        else
-        {
-            assert(false && "NOT IMPLEMENTED");
-        }
+        m_externalFunctionOutputs.clear();
     }
 }
 
@@ -601,5 +601,10 @@ void Interpreter::runLuaFunction(data::LuaFunction& luaFunction, std::vector<dat
         executeFunction(*luaFunction.body);
     }
     *luaFunction.frame = std::move(m_stack.back().varNameMap);
+}
+
+FluaState Interpreter::generatePublicState()
+{
+    return FluaState(this);
 }
 }

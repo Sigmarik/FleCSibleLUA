@@ -5,8 +5,15 @@
 #include <unordered_map>
 #include <variant>
 #include <vector>
+#include <functional>
+
 #include "flecs.h"
 #include "mem_utils/copyable_ptr.h"
+
+namespace flua
+{
+    class FluaState;
+}
 
 namespace flua::ast
 {
@@ -34,7 +41,7 @@ struct Nil {};
 
 struct Function;
 
-using GenericValue = std::variant<Nil, bool, double, std::string, Table, Entity, GenericClass, Function>;
+class GenericValue;
 
 std::string to_string(const GenericValue& value);
 bool to_bool(const GenericValue& value);
@@ -45,10 +52,7 @@ struct LuaFunction
     std::shared_ptr<std::unordered_map<std::string, mem_utils::CopyMovePtr<GenericValue>>> frame{};
 };
 
-struct LibraryFunction
-{
-    std::string name{};
-};
+using LibraryFunction = std::function<void(FluaState*)>;
 
 struct Function : std::variant<LuaFunction, LibraryFunction>
 {
@@ -62,6 +66,11 @@ struct Table : std::shared_ptr<std::unordered_map<std::string, std::unique_ptr<G
     using std::shared_ptr<MapType>::shared_ptr;
 
     Table() : std::shared_ptr<MapType>(std::make_shared<MapType>()) {}
+};
+
+class GenericValue : public std::variant<Nil, bool, double, std::string, Table, Entity, GenericClass, Function>
+{
+    using std::variant<Nil, bool, double, std::string, Table, Entity, GenericClass, Function>::variant;
 };
 
 struct ValueSequence

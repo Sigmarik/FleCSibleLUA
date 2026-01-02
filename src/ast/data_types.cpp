@@ -47,7 +47,7 @@ static std::string to_string(const Function& function)
 {
     if (const LibraryFunction* fnc = std::get_if<LibraryFunction>(&function))
     {
-        return "library function: " + fnc->name;
+        return "external functor";
     }
 
     if (const LuaFunction* fnc = std::get_if<LuaFunction>(&function))

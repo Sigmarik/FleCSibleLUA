@@ -4,9 +4,12 @@
 
 #include <flecs.h>
 #include <vector>
+#include <functional>
 
 namespace flua
 {
+
+class FluaState;
 
 namespace ast
 {
@@ -27,9 +30,9 @@ public:
 
     static Script Load(const std::string& path);
 
-    // TODO: Add the ability to define custom functions
-
     std::vector<flecs::system> deploy(flecs::world& world);
+
+    void import_library_function(const std::string& name, const std::function<void(FluaState*)>& func);
 
 private:
     Script() = default;

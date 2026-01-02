@@ -1,5 +1,6 @@
 add_library(FlecsibleLua
 		flecsible_lua.cpp
+		flecsible_lua_api.cpp
 		ast/ast_nodes.cpp
 		ast/visitor.cpp
 		ast/identification.cpp
@@ -7,6 +8,8 @@ add_library(FlecsibleLua
 		visitors/dbg.cpp
 		grammar/lua_lexemes.cpp
 		parser/char_pos.cpp
+		library/library.cpp
+		library/output.cpp
 		visitors/interpreter/interpreter.cpp)
 
 if (WINDOWS)

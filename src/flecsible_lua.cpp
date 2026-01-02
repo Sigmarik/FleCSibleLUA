@@ -7,6 +7,7 @@
 #include "ast/ast_nodes.h"
 #include "grammar/lua_parser.h"
 #include "visitors/dbg.h"
+#include "library/library.h"
 #include "visitors/interpreter/interpreter.h"
 
 namespace flua
@@ -121,6 +122,11 @@ std::vector<flecs::system> Script::deploy(flecs::world& world)
     // dbg.process(*m_ast);
 
     vst::Interpreter interpreter(std::cout, std::cerr);
+
+    for (const auto& [name, function] : lib::STANDARD_LIBRARY)
+    {
+        interpreter.loadExternal(name, function);
+    }
 
     interpreter.process(*m_ast);
 

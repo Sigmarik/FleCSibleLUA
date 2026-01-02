@@ -4,10 +4,15 @@
 
 #include "ast/visitor.h"
 #include "ast/data_types.h"
+#include "flecsible_lua_api.h"
+
+namespace flua::lib
+{
+    void print(FluaState*);
+}
 
 namespace flua::vst
 {
-
 using namespace flua;
 
 class Interpreter final : public ast::Visitor
@@ -27,7 +32,10 @@ public:
         m_stack.emplace_back();
     }
 
-    data::GenericValue run(const std::string& function, std::vector<data::GenericValue>& params);
+    void loadExternal(const std::string& name, const std::function<void(FluaState*)>& function)
+    {
+        m_externalFunctions.emplace(name, function);
+    }
 
     [[nodiscard]] bool fallen() const { return m_fallen; }
 
@@ -55,13 +63,19 @@ protected:
     void visit(ast::Break& node) override;
     void visit(ast::Continue& node) override;
 
+    friend class FluaState;
+
 private:
+    friend void lib::print(FluaState* lua);
+
     void visitTransparentBlock(std::deque<ast::NodePtr>& nodes);
 
     void executeFunction(data::Function& function, std::deque<ast::NodePtr>& args);
     void executeFunction(ast::Function& function);
 
     void runLuaFunction(data::LuaFunction& function, std::vector<data::GenericValue>& args);
+
+    FluaState generatePublicState();
 
     struct Frame
     {
@@ -101,6 +115,11 @@ private:
 
     std::ostream& m_errStream;
     std::ostream& m_outStream;
+
+    std::vector<data::GenericValue> m_externalFunctionInputs{};
+    std::vector<data::GenericValue> m_externalFunctionOutputs{};
+
+    std::unordered_map<std::string, data::LibraryFunction> m_externalFunctions{};
 };
 
 }
