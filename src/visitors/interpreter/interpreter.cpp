@@ -32,7 +32,7 @@ void Interpreter::visit(ast::Program& node)
 
 void Interpreter::visit(ast::Function& node)
 {
-    using VariableMap = std::unordered_map<std::string, mem_utils::CopyMovePtr<data::GenericValue>>;
+    using VariableMap = std::unordered_map<std::string, mem_utils::CopyMovePtr<data::GenericValue> >;
     VariableMap bakedFrame;
     if (m_stack.size() > 1)
     {
@@ -47,10 +47,12 @@ void Interpreter::visit(ast::Function& node)
             if (!frame.transparent) break;
         }
     }
-    m_returnedValue = data::Function{data::LuaFunction{
-        .body = &node,
-        .frame = std::make_shared<VariableMap>(bakedFrame),
-    }};
+    m_returnedValue = data::Function{
+        data::LuaFunction{
+            .body = &node,
+            .frame = std::make_shared<VariableMap>(bakedFrame),
+        }
+    };
 }
 
 void Interpreter::visit(ast::WhileLoop& node)
@@ -108,8 +110,41 @@ void Interpreter::visit(ast::ForLoopNumeric& node)
 
 void Interpreter::visit(ast::ForLoopGeneric& node)
 {
-    // TODO: Implement
-    assert(false && "NOT IMPLEMENTED");
+    Visitor::visit(node.iterator);
+    data::GenericValue functor = m_returnedValue.spit();
+
+    if (!std::holds_alternative<data::Function>(functor))
+        throw LuaRuntimeError(node, "Attempt to call a non-functional value");
+
+    {
+        while (true)
+        {
+            NamespaceHolder forNamespace(m_stack);
+            std::deque<ast::NodePtr> args;
+            executeFunction(std::get<data::Function>(functor), args);
+            if (m_returnedValue.sequence.empty() || std::holds_alternative<data::Nil>(m_returnedValue.sequence.front().value))
+                break;
+            for (unsigned id = 0; id < node.names.size(); ++id)
+            {
+                const std::string& name = node.names[id].string;
+                if (id < m_returnedValue.sequence.size())
+                    m_stack.back().varNameMap[name] = mem_utils::CopyMovePtr<data::GenericValue>(
+                        std::move(m_returnedValue.sequence[id].value));
+                else
+                    m_stack.back().varNameMap[name] = mem_utils::CopyMovePtr<data::GenericValue>(data::Nil());
+            }
+
+            visitTransparentBlock(node.body);
+
+            if (m_returning) break;
+            if (m_continuing) m_continuing = false;
+            if (m_breaking)
+            {
+                m_breaking = false;
+                break;
+            }
+        }
+    }
 }
 
 void Interpreter::visit(ast::RepeatUntil& node)
@@ -165,35 +200,7 @@ void Interpreter::visit(ast::FunctionCall& node)
 
     data::Function func = std::get<data::Function>(maybeFunction);
 
-    std::vector<data::GenericValue> arguments;
-    for (ast::NodePtr& argument : node.args)
-    {
-        Visitor::visit(argument);
-        arguments.emplace_back(m_returnedValue.spit());
-    }
-
-    if (data::LuaFunction* luaFunction = std::get_if<data::LuaFunction>(&func))
-    {
-        runLuaFunction(*luaFunction, arguments);
-    }
-    else
-    {
-        // TODO: Implement external function lookup and execution
-        auto& libFunction = std::get<data::LibraryFunction>(func);
-        if (libFunction.name == "print")
-        {
-            for (data::GenericValue& argument : arguments)
-            {
-                m_outStream << data::to_string(argument) << "\t";
-            }
-            m_outStream << std::endl;
-            m_returnedValue.clear();
-        }
-        else
-        {
-            assert(false && "NOT IMPLEMENTED");
-        }
-    }
+    executeFunction(func, node.args);
 }
 
 void Interpreter::visit(ast::UnaryOperator& node)
@@ -535,6 +542,39 @@ void Interpreter::visitTransparentBlock(std::deque<ast::NodePtr>& nodes)
         Visitor::visit(node);
         if (m_breaking || m_continuing || m_returning) break;
         m_returnedValue.clear();
+    }
+}
+
+void Interpreter::executeFunction(data::Function& func, std::deque<ast::NodePtr>& args)
+{
+    std::vector<data::GenericValue> arguments;
+    for (ast::NodePtr& argument : args)
+    {
+        Visitor::visit(argument);
+        arguments.emplace_back(m_returnedValue.spit());
+    }
+
+    if (data::LuaFunction* luaFunction = std::get_if<data::LuaFunction>(&func))
+    {
+        runLuaFunction(*luaFunction, arguments);
+    }
+    else
+    {
+        // TODO: Implement external function lookup and execution
+        auto& libFunction = std::get<data::LibraryFunction>(func);
+        if (libFunction.name == "print")
+        {
+            for (data::GenericValue& argument : arguments)
+            {
+                m_outStream << data::to_string(argument) << "\t";
+            }
+            m_outStream << std::endl;
+            m_returnedValue.clear();
+        }
+        else
+        {
+            assert(false && "NOT IMPLEMENTED");
+        }
     }
 }
 

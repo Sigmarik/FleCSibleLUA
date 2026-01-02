@@ -466,6 +466,7 @@ struct ExprSingleton : parser::Grammar
     parser::Sequence<ExprSingleton,
         parser::Lex<lualex::BracketSquareOp>, HighLevelExpression, parser::Lex<lualex::BracketSquareCl>>,
     parser::Sequence<ExprSingleton, parser::Lex<lualex::Dot>, parser::Lex<lualex::Name>>,
+    parser::Sequence<parser::Lex<lualex::Nil>>,
     parser::Sequence<parser::Lex<lualex::True>>,
     parser::Sequence<parser::Lex<lualex::False>>,
     parser::Sequence<parser::Lex<lualex::Name>>,
@@ -538,6 +539,11 @@ struct ExprSingleton : parser::Grammar
     static ast::NodePtr visit(lualex::BracketRoundOp, ast::NodePtr& value, lualex::BracketRoundCl)
     {
         return std::move(value);
+    }
+
+    static ast::NodePtr visit(lualex::Nil lex)
+    {
+        return ast::NodePtr{ast::Constant(lex.startingPos, data::Nil())};
     }
 
     static ast::NodePtr visit(lualex::True lex)
