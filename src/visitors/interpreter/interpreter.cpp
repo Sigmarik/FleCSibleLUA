@@ -9,6 +9,21 @@ namespace flua::vst
 using namespace flua;
 
 
+void Interpreter::overrideGlobal(const std::string& name, const std::function<void(FluaState*)>& function)
+{
+    m_stack.front().varNameMap[name] = mem_utils::CopyMovePtr<data::GenericValue>(data::Function(function));
+}
+
+void Interpreter::overrideGlobal(const std::string& name, double value)
+{
+    m_stack.front().varNameMap[name] = mem_utils::CopyMovePtr<data::GenericValue>(value);
+}
+
+void Interpreter::overrideGlobal(const std::string& name, const std::string& value)
+{
+    m_stack.front().varNameMap[name] = mem_utils::CopyMovePtr<data::GenericValue>(value);
+}
+
 void Interpreter::visit(ast::Program& node)
 {
     // NOTE: Internal errors are thrown as exceptions and isolated here.
@@ -409,16 +424,6 @@ void Interpreter::visit(ast::Variable& node)
     {
         auto foundGlobal = m_stack.front().varNameMap.find(node.name.string);
         if (foundGlobal != m_stack.front().varNameMap.end()) foundValue = foundGlobal->second.get();
-    }
-
-    if (foundValue == nullptr)
-    {
-        auto maybeExternalFunction = m_externalFunctions.find(node.name.string);
-        if (maybeExternalFunction != m_externalFunctions.end())
-        {
-            m_returnedValue = data::Function(maybeExternalFunction->second);
-            return;
-        }
     }
 
     if (foundValue == nullptr)

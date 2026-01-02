@@ -5,6 +5,7 @@
 #include <flecs.h>
 #include <vector>
 #include <functional>
+#include <variant>
 
 namespace flua
 {
@@ -30,9 +31,11 @@ public:
 
     static Script Load(const std::string& path);
 
-    std::vector<flecs::system> deploy(flecs::world& world);
+    void overrideGlobal(const std::string& name, const std::function<void(FluaState*)>& function);
+    void overrideGlobal(const std::string& name, double value);
+    void overrideGlobal(const std::string& name, const std::string& value);
 
-    void import_library_function(const std::string& name, const std::function<void(FluaState*)>& func);
+    std::vector<flecs::system> deploy(flecs::world& world);
 
 private:
     Script() = default;
@@ -41,6 +44,9 @@ private:
     ast::Ast* m_ast = nullptr;
 
     std::string m_sourcePath{};
+
+    using PrimitiveGeneric = std::variant<std::function<void(FluaState*)>, std::string, double>;
+    std::unordered_map<std::string, PrimitiveGeneric> m_globalOverrides{};
 };
 
 }

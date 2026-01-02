@@ -32,10 +32,9 @@ public:
         m_stack.emplace_back();
     }
 
-    void loadExternal(const std::string& name, const std::function<void(FluaState*)>& function)
-    {
-        m_externalFunctions.emplace(name, function);
-    }
+    void overrideGlobal(const std::string& name, const std::function<void(FluaState*)>& function);
+    void overrideGlobal(const std::string& name, double value);
+    void overrideGlobal(const std::string& name, const std::string& value);
 
     [[nodiscard]] bool fallen() const { return m_fallen; }
 
@@ -118,8 +117,6 @@ private:
 
     std::vector<data::GenericValue> m_externalFunctionInputs{};
     std::vector<data::GenericValue> m_externalFunctionOutputs{};
-
-    std::unordered_map<std::string, data::LibraryFunction> m_externalFunctions{};
 };
 
 }

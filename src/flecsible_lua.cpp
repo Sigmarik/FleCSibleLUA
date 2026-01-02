@@ -110,6 +110,21 @@ Script Script::Load(const std::string& path)
     return script;
 }
 
+void Script::overrideGlobal(const std::string& name, const std::function<void(FluaState*)>& function)
+{
+    m_globalOverrides[name] = function;
+}
+
+void Script::overrideGlobal(const std::string& name, double value)
+{
+    m_globalOverrides[name] = value;
+}
+
+void Script::overrideGlobal(const std::string& name, const std::string& value)
+{
+    m_globalOverrides[name] = value;
+}
+
 std::vector<flecs::system> Script::deploy(flecs::world& world)
 {
     if (m_ast == nullptr)
@@ -117,15 +132,16 @@ std::vector<flecs::system> Script::deploy(flecs::world& world)
         return {};
     }
 
-    // vst::AstDebugger dbg(std::cout);
-    //
-    // dbg.process(*m_ast);
-
     vst::Interpreter interpreter(std::cout, std::cerr);
 
     for (const auto& [name, function] : lib::STANDARD_LIBRARY)
     {
-        interpreter.loadExternal(name, function);
+        interpreter.overrideGlobal(name, function);
+    }
+
+    for (const auto& [name, genericValue] : m_globalOverrides)
+    {
+        std::visit([&](const auto& value) { interpreter.overrideGlobal(name, value); }, genericValue);
     }
 
     interpreter.process(*m_ast);

@@ -25,6 +25,7 @@ int main()
     register_rendering_system(world, window, box);
 
     flua::Script script = flua::Script::Load("examples/RotatingSquare/script.lua");
+    script.overrideGlobal("ROTATION_SPEED", 7.0);
     script.deploy(world);
 
     world.entity()

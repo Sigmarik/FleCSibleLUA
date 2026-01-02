@@ -2,7 +2,6 @@
 
 #include <iostream>
 
-#include "ast/data_types.h"
 #include "visitors/interpreter/interpreter.h"
 
 namespace flua::lib
