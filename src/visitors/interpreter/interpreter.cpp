@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <memory>
+#include <ranges>
 
 namespace flua::vst
 {
@@ -270,20 +271,15 @@ void Interpreter::visit(ast::BinaryOperator& node)
     switch (node.type)
     {
         case ast::BinaryOperator::Type::And:
-        {
             m_returnedValue = data::to_bool(leftOperand) && data::to_bool(rightOperand);
-        }
             return;
         case ast::BinaryOperator::Type::Or:
-        {
             m_returnedValue = data::to_bool(leftOperand) || data::to_bool(rightOperand);
-        }
             return;
         case ast::BinaryOperator::Type::Xor:
-        {
             m_returnedValue = data::to_bool(leftOperand) != data::to_bool(rightOperand);
-        }
             return;
+        default: ;
     }
 
     if (!std::holds_alternative<double>(leftOperand) || !std::holds_alternative<double>(rightOperand))
@@ -326,6 +322,7 @@ void Interpreter::visit(ast::BinaryOperator& node)
         case ast::BinaryOperator::Type::CmpLt:
             m_returnedValue = alpha < beta;
             break;
+        default: ;
     }
 }
 
@@ -398,15 +395,15 @@ void Interpreter::visit(ast::Variable& node)
     }
 
     data::GenericValue* foundValue = nullptr;
-    for (auto frameIt = m_stack.rbegin(), frameEnd = m_stack.rend(); frameIt != frameEnd; ++frameIt)
+    for (auto& frameIt : std::ranges::reverse_view(m_stack))
     {
-        auto found = frameIt->varNameMap.find(node.name.string);
-        if (found != frameIt->varNameMap.end())
+        auto found = frameIt.varNameMap.find(node.name.string);
+        if (found != frameIt.varNameMap.end())
         {
             foundValue = found->second.get();
             break;
         }
-        if (!frameIt->transparent)
+        if (!frameIt.transparent)
         {
             break;
         }
