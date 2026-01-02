@@ -10,6 +10,7 @@ add_library(FlecsibleLua
 		parser/char_pos.cpp
 		library/library.cpp
 		library/output.cpp
+		library/tables.cpp
 		visitors/interpreter/interpreter.cpp)
 
 if (WINDOWS)

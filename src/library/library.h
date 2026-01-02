@@ -1,4 +1,5 @@
 #include "output.h"
+#include "tables.h"
 
 #include <functional>
 

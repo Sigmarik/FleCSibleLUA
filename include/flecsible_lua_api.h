@@ -3,6 +3,7 @@
 #include <string>
 #include <variant>
 #include <vector>
+#include <exception>
 
 namespace flua
 {
@@ -11,6 +12,13 @@ namespace data
 {
     class GenericValue;
 }
+
+struct Error final : public std::exception
+{
+    explicit Error(const std::string& msg) : message(msg) {}
+
+    std::string message{};
+};
 
 class FluaState;
 
@@ -57,6 +65,8 @@ public:
     double getNumber(const ValueAccessor& key) const;
 
     std::string asString(const ValueAccessor& key) const;
+
+    void pushRaw(data::GenericValue* value);
 
     void pushNil() const;
     void pushValue(double value) const;

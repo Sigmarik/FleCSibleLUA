@@ -136,7 +136,7 @@ void Interpreter::visit(ast::ForLoopGeneric& node)
     {
         NamespaceHolder forNamespace(m_stack);
         std::deque<ast::NodePtr> args;
-        executeFunction(std::get<data::Function>(functor), args);
+        executeFunction(node, std::get<data::Function>(functor), args);
         if (m_returnedValue.sequence.empty() || std::holds_alternative<data::Nil>(m_returnedValue.sequence.front().value))
             break;
         for (unsigned id = 0; id < node.names.size(); ++id)
@@ -213,7 +213,7 @@ void Interpreter::visit(ast::FunctionCall& node)
 
     data::Function func = std::get<data::Function>(maybeFunction);
 
-    executeFunction(func, node.args);
+    executeFunction(node, func, node.args);
 }
 
 void Interpreter::visit(ast::UnaryOperator& node)
@@ -549,7 +549,7 @@ void Interpreter::visitTransparentBlock(std::deque<ast::NodePtr>& nodes)
     }
 }
 
-void Interpreter::executeFunction(data::Function& func, std::deque<ast::NodePtr>& args)
+void Interpreter::executeFunction(const ast::INode& node, data::Function& func, std::deque<ast::NodePtr>& args)
 {
     std::vector<data::GenericValue> arguments;
     for (ast::NodePtr& argument : args)
@@ -564,16 +564,22 @@ void Interpreter::executeFunction(data::Function& func, std::deque<ast::NodePtr>
     }
     else
     {
-        // TODO: Implement external function lookup and execution
         auto& libFunction = std::get<data::LibraryFunction>(func);
         m_externalFunctionInputs = std::move(arguments);
         FluaState state = generatePublicState();
 
-        libFunction(&state);
+        try
+        {
+            libFunction(&state);
+        }
+        catch (Error& userError)
+        {
+            throw LuaRuntimeError(node, userError.message);
+        }
 
         m_externalFunctionInputs.clear();
         m_returnedValue.clear();
-        for (const auto& returned : m_externalFunctionOutputs)
+        for (auto& returned : m_externalFunctionOutputs)
         {
             m_returnedValue.sequence.emplace_back(std::move(returned));
         }

@@ -69,7 +69,7 @@ private:
 
     void visitTransparentBlock(std::deque<ast::NodePtr>& nodes);
 
-    void executeFunction(data::Function& function, std::deque<ast::NodePtr>& args);
+    void executeFunction(const ast::INode& node, data::Function& function, std::deque<ast::NodePtr>& args);
     void executeFunction(ast::Function& function);
 
     void runLuaFunction(data::LuaFunction& function, std::vector<data::GenericValue>& args);

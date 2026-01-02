@@ -55,6 +55,11 @@ std::string FluaState::asString(const ValueAccessor& key) const
     return value != nullptr ? data::to_string(*value) : data::to_string(data::Nil());
 }
 
+void FluaState::pushRaw(data::GenericValue* value)
+{
+    m_interpreter->m_externalFunctionOutputs.emplace_back(std::move(*value));
+}
+
 void FluaState::pushNil() const
 {
     m_interpreter->m_externalFunctionOutputs.emplace_back(data::Nil());
