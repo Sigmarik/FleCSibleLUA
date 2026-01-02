@@ -204,11 +204,11 @@ struct Block : parser::Grammar
 <
     Block, std::deque<ast::NodePtr>,
 
-    parser::Sequence<BlockBody, BlockTerminator>,
+    parser::Sequence<BlockBody, Return>,
     parser::Sequence<BlockBody>
 >
 {
-    static std::deque<ast::NodePtr> visit(std::deque<ast::NodePtr>& body, ast::NodePtr& terminator)
+    static std::deque<ast::NodePtr> visit(std::deque<ast::NodePtr>& body, ast::Return& terminator)
     {
         body.emplace_back(std::move(terminator));
         return std::move(body);
@@ -217,22 +217,6 @@ struct Block : parser::Grammar
     static std::deque<ast::NodePtr> visit(std::deque<ast::NodePtr>& body)
     {
         return std::move(body);
-    }
-};
-
-struct BlockTerminator : parser::Grammar
-<
-    BlockTerminator, ast::NodePtr,
-
-    parser::Sequence<Return>,
-    parser::Sequence<Break>,
-    parser::Sequence<Continue>
->
-{
-    template <class T>
-    static ast::NodePtr visit(T& node)
-    {
-        return {ast::NodePtr(std::move(node))};
     }
 };
 
@@ -269,7 +253,9 @@ struct Action : parser::Grammar
     parser::Sequence<NumericFor>,
     parser::Sequence<GenericFor>,
     parser::Sequence<Function>,
-    parser::Sequence<LocalAssignment>
+    parser::Sequence<LocalAssignment>,
+    parser::Sequence<Break>,
+    parser::Sequence<Continue>
 >
 {
     template <class T>

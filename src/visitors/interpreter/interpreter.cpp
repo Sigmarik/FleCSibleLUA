@@ -66,11 +66,11 @@ void Interpreter::visit(ast::WhileLoop& node)
 
         visitTransparentBlock(node.body);
 
+        if (m_continuing) m_continuing = false;
         if (m_returning || m_breaking) break;
     }
 
     m_breaking = false;
-
     if (!m_returning) m_returnedValue.clear();
 }
 
@@ -99,6 +99,7 @@ void Interpreter::visit(ast::ForLoopNumeric& node)
     {
         visitTransparentBlock(node.body);
 
+        if (m_continuing) m_continuing = false;
         if (m_returning || m_breaking) break;
 
         *counterPtr += *stepPtr;
@@ -116,35 +117,31 @@ void Interpreter::visit(ast::ForLoopGeneric& node)
     if (!std::holds_alternative<data::Function>(functor))
         throw LuaRuntimeError(node, "Attempt to call a non-functional value");
 
+    while (true)
     {
-        while (true)
+        NamespaceHolder forNamespace(m_stack);
+        std::deque<ast::NodePtr> args;
+        executeFunction(std::get<data::Function>(functor), args);
+        if (m_returnedValue.sequence.empty() || std::holds_alternative<data::Nil>(m_returnedValue.sequence.front().value))
+            break;
+        for (unsigned id = 0; id < node.names.size(); ++id)
         {
-            NamespaceHolder forNamespace(m_stack);
-            std::deque<ast::NodePtr> args;
-            executeFunction(std::get<data::Function>(functor), args);
-            if (m_returnedValue.sequence.empty() || std::holds_alternative<data::Nil>(m_returnedValue.sequence.front().value))
-                break;
-            for (unsigned id = 0; id < node.names.size(); ++id)
-            {
-                const std::string& name = node.names[id].string;
-                if (id < m_returnedValue.sequence.size())
-                    m_stack.back().varNameMap[name] = mem_utils::CopyMovePtr<data::GenericValue>(
-                        std::move(m_returnedValue.sequence[id].value));
-                else
-                    m_stack.back().varNameMap[name] = mem_utils::CopyMovePtr<data::GenericValue>(data::Nil());
-            }
-
-            visitTransparentBlock(node.body);
-
-            if (m_returning) break;
-            if (m_continuing) m_continuing = false;
-            if (m_breaking)
-            {
-                m_breaking = false;
-                break;
-            }
+            const std::string& name = node.names[id].string;
+            if (id < m_returnedValue.sequence.size())
+                m_stack.back().varNameMap[name] = mem_utils::CopyMovePtr<data::GenericValue>(
+                    std::move(m_returnedValue.sequence[id].value));
+            else
+                m_stack.back().varNameMap[name] = mem_utils::CopyMovePtr<data::GenericValue>(data::Nil());
         }
+
+        visitTransparentBlock(node.body);
+
+        if (m_continuing) m_continuing = false;
+        if (m_returning || m_breaking) break;
     }
+
+    m_breaking = false;
+    if (!m_returning) m_returnedValue.clear();
 }
 
 void Interpreter::visit(ast::RepeatUntil& node)
@@ -155,6 +152,7 @@ void Interpreter::visit(ast::RepeatUntil& node)
 
         visitTransparentBlock(node.body);
 
+        if (m_continuing) m_continuing = false;
         if (m_returning || m_breaking) break;
 
         Visitor::visit(node.condition);
