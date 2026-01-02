@@ -18,7 +18,7 @@ using BracketCurlyOp = parser::DefiniteLexeme<"{", "'{'">;
 using BracketCurlyCl = parser::DefiniteLexeme<"}", "'}'">;
 
 using CmpEq = parser::DefiniteLexeme<"==", "'=='">;
-using CmpNeq = parser::DefiniteLexeme<"!=", "'!='">;  // TODO: Add ~=
+using CmpNeq = parser::DefiniteLexeme<"~=", "'~='">;  // TODO (optional): Add !=
 using CmpGe = parser::DefiniteLexeme<">=", "'>='">;
 using CmpLe = parser::DefiniteLexeme<"<=", "'<='">;
 using CmpGt = parser::DefiniteLexeme<">", "'>'">;
@@ -34,7 +34,7 @@ using Mod = parser::DefiniteLexeme<"%", "'%'">;
 using Pow = parser::DefiniteLexeme<"^", "'^'">;
 using Concat = parser::DefiniteLexeme<"..", "'..'">;
 using Length = parser::DefiniteLexeme<"#", "'#'">;
-using Not = parser::DefiniteLexeme<"!", "'!'">;  // TODO: Add unary ~
+using Not = parser::DefiniteLexeme<"~", "'~'">;  // TODO (optional): Add unary !
 
 using And = parser::DefiniteLexeme<"and", "'and'">;
 using Or = parser::DefiniteLexeme<"or", "'or'">;
