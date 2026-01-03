@@ -3,8 +3,6 @@
 #include <ios>
 #include <sstream>
 
-#include "component_map/comp_map.h"
-
 namespace flua::data
 {
 

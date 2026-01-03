@@ -5,6 +5,8 @@
 #include <ranges>
 
 #include "component_map/comp_map.h"
+#include "meta/string.h"
+#include "meta/variant_helper.h"
 
 namespace flua::vst
 {
@@ -139,7 +141,8 @@ void Interpreter::visit(ast::ForLoopGeneric& node)
         NamespaceHolder forNamespace(m_stack);
         std::deque<ast::NodePtr> args;
         executeFunction(node, std::get<data::Function>(functor), args);
-        if (m_returnedValue.sequence.empty() || std::holds_alternative<data::Nil>(m_returnedValue.sequence.front().value))
+        if (m_returnedValue.sequence.empty() || std::holds_alternative<data::Nil>(
+                m_returnedValue.sequence.front().value))
             break;
         for (unsigned id = 0; id < node.names.size(); ++id)
         {
@@ -357,13 +360,26 @@ void Interpreter::visit(ast::IndexRequest& node)
 {
     Visitor::visit(node.body);
     data::GenericValue dict = m_returnedValue.spit();
+    Visitor::visit(node.index);
+    std::string index = data::to_string(m_returnedValue.spit());
+
+    if (std::holds_alternative<data::Entity>(dict))
+    {
+        indexEntity(node, std::get<data::Entity>(dict), index);
+        return;
+    }
+
+    if (std::holds_alternative<data::EntityComponent>(dict))
+    {
+        indexEntityComponent(node, std::get<data::EntityComponent>(dict), index);
+        return;
+    }
+
     if (!std::holds_alternative<data::Table>(dict))
     {
         throw LuaRuntimeError(node, "Attempt to index a non-dictionary value");
     }
 
-    Visitor::visit(node.index);
-    std::string index = data::to_string(m_returnedValue.spit());
     auto& dct = std::get<data::Table>(dict);
     if (!dct->contains(index))
     {
@@ -442,13 +458,14 @@ void Interpreter::visit(ast::Variable& node)
 
 void Interpreter::visit(ast::Assignment& node)
 {
-    std::vector<data::GenericValue*> subjects;
+    std::vector<data::MaybeFixedValuePtr> subjects;
     std::vector<data::GenericValue> values;
     subjects.reserve(node.subjects.size());
     for (ast::NodePtr& subject : node.subjects)
     {
         Visitor::visit(subject);
-        if (m_returnedValue.sequence.empty() || m_returnedValue.sequence.front().reference == nullptr)
+        if (m_returnedValue.sequence.empty() || m_returnedValue.sequence.front().reference ==
+            data::MaybeFixedValuePtr(nullptr))
         {
             throw LuaRuntimeError(node, "Attempt to assign a value to a non-assignable variable");
         }
@@ -467,8 +484,18 @@ void Interpreter::visit(ast::Assignment& node)
 
     for (size_t idx = 0; idx < subjects.size(); ++idx)
     {
-        data::GenericValue* subject = subjects[idx];
-        *subject = idx < values.size() ? std::move(values[idx]) : data::Nil();
+        data::MaybeFixedValuePtr& subject = subjects[idx];
+        if (auto genericSubject = std::get_if<data::GenericValue*>(&subject))
+        {
+            **genericSubject = idx < values.size() ? std::move(values[idx]) : data::Nil();
+        }
+        else
+        {
+            if (idx >= values.size())
+                throw LuaRuntimeError(node, "Not enough arguments to satisfy entity component field assignment");
+            data::GenericValue& value = values[idx];
+            performFixedTypeAssignment(node, std::get<cmp_info::GenericComponentPtr>(subject), value);
+        }
     }
 
     m_returnedValue.clear();
@@ -537,6 +564,82 @@ void Interpreter::visit(ast::Continue& node)
 {
     m_continuing = true;
     m_returnedValue.clear();
+}
+
+void Interpreter::performFixedTypeAssignment(ast::Assignment& node, cmp_info::GenericComponentPtr pointer,
+                                             data::GenericValue& value)
+{
+    auto reinterpretations = meta::Overloads{
+        [&](int* ptr)
+        {
+            if (!std::holds_alternative<double>(value))
+                throw LuaRuntimeError(node, "Cannot assign a non-numeric value to numeric component field");
+            *ptr = static_cast<int>(std::get<double>(value));
+        },
+        [&](unsigned* ptr)
+        {
+            if (!std::holds_alternative<double>(value))
+                throw LuaRuntimeError(node, "Cannot assign a non-numeric value to numeric component field");
+            *ptr = static_cast<unsigned>(std::get<double>(value));
+        },
+        [&](float* ptr)
+        {
+            if (!std::holds_alternative<double>(value))
+                throw LuaRuntimeError(node, "Cannot assign a non-numeric value to numeric component field");
+            *ptr = static_cast<float>(std::get<double>(value));
+        },
+        [&](double* ptr)
+        {
+            if (!std::holds_alternative<double>(value))
+                throw LuaRuntimeError(node, "Cannot assign a non-numeric value to numeric component field");
+            *ptr = std::get<double>(value);
+        },
+        [&](auto* ptr)
+        {
+            using UnderlyingType = std::remove_reference_t<decltype(*ptr)>;
+            if (!std::holds_alternative<UnderlyingType>(value))
+                throw LuaRuntimeError(node, "Cannot assign a value of another type to a component field");
+            *ptr = std::get<UnderlyingType>(value);
+        },
+    };
+    std::visit(reinterpretations, pointer);
+}
+
+void Interpreter::indexEntity(ast::IndexRequest& node, data::Entity& entity, const std::string& index)
+{
+    if (!cmp_info::ENTITY_COMPONENT_CHECKERS.contains(index))
+        throw LuaRuntimeError(node, "Component " + index + " is not recognized by the system");
+    m_returnedValue = data::EntityComponent(entity, index);
+}
+
+void Interpreter::indexEntityComponent(ast::IndexRequest& node, data::EntityComponent& component,
+                                       const std::string& index)
+{
+    auto foundMapper = cmp_info::ENTITY_MEMBER_MAP.find(component.name + " " + index);
+    if (foundMapper == cmp_info::ENTITY_MEMBER_MAP.end())
+        throw LuaRuntimeError(node, "Component field " + index + " is not recognized by the system");
+
+    if (!cmp_info::ENTITY_COMPONENT_CHECKERS.at(component.name)(component.entity))
+    {
+        m_returnedValue = data::Nil();
+        return;
+    }
+
+    auto genericReference = foundMapper->second(component.entity);
+    data::GenericValue interpretedValue = data::Nil();
+    auto interpretation = meta::Overloads{
+        [&](std::string* ptr) { interpretedValue = data::GenericValue(*ptr); },
+        [&](bool* ptr) { interpretedValue = data::GenericValue(*ptr); },
+        [&](flecs::entity* ptr) { interpretedValue = data::GenericValue(*ptr); },
+        [&](auto ptr) { interpretedValue = data::GenericValue(static_cast<double>(*ptr)); }
+    };
+    std::visit(interpretation, genericReference);
+
+    m_returnedValue.clear();
+    m_returnedValue.sequence.emplace_back(data::ValueSequence::ValueBackrefPair{
+        .value = interpretedValue,
+        .reference = std::move(genericReference),
+    });
 }
 
 void Interpreter::visitTransparentBlock(std::deque<ast::NodePtr>& nodes)

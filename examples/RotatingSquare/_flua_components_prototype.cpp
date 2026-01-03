@@ -8,7 +8,7 @@
 
 namespace flua::cmp_info
 {
-using GenericComponentPtr = std::variant<int*, unsigned*, float*, double*, std::string*, bool*>;
+using GenericComponentPtr = std::variant<int*, unsigned*, float*, double*, std::string*, bool*, flecs::entity*>;
 
 using EntityMemberAccessor = std::function<GenericComponentPtr(flecs::entity)>;
 

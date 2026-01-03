@@ -8,7 +8,7 @@
 
 namespace flua::lib
 {
-    void print(FluaState*);
+void print(FluaState*);
 }
 
 namespace flua::vst
@@ -33,7 +33,9 @@ public:
     }
 
     void overrideGlobal(const std::string& name, const std::function<void(FluaState*)>& function);
+
     void overrideGlobal(const std::string& name, double value);
+
     void overrideGlobal(const std::string& name, const std::string& value);
 
     [[nodiscard]] bool fallen() const { return m_fallen; }
@@ -42,34 +44,61 @@ protected:
     using Visitor::visit;
 
     void visit(ast::Program& node) override;
+
     void visit(ast::Function& node) override;
+
     void visit(ast::WhileLoop& node) override;
+
     void visit(ast::ForLoopNumeric& node) override;
+
     void visit(ast::ForLoopGeneric& node) override;
+
     void visit(ast::RepeatUntil& node) override;
+
     void visit(ast::Branch& node) override;
+
     void visit(ast::FunctionCall& node) override;
+
     void visit(ast::UnaryOperator& node) override;
+
     void visit(ast::BinaryOperator& node) override;
+
     void visit(ast::FieldRequest& node) override;
+
     void visit(ast::IndexRequest& node) override;
+
     void visit(ast::Constant& node) override;
+
     void visit(ast::MakeTable& node) override;
+
     void visit(ast::Variable& node) override;
+
     void visit(ast::Assignment& node) override;
+
     void visit(ast::LocalAssignment& node) override;
+
     void visit(ast::Return& node) override;
+
     void visit(ast::Break& node) override;
+
     void visit(ast::Continue& node) override;
 
     friend class FluaState;
 
 private:
-    friend void lib::print(FluaState* lua);
+    friend void lib::print(FluaState* lua);\
+
+    void performFixedTypeAssignment(ast::Assignment& node, cmp_info::GenericComponentPtr ptr,
+                                    data::GenericValue& value);
+
+    void indexEntity(ast::IndexRequest& node, data::Entity& entity, const std::string& index);
+
+    void indexEntityComponent(ast::IndexRequest& node, data::EntityComponent& component, const std::string& index);
 
     void visitTransparentBlock(std::deque<ast::NodePtr>& nodes);
 
     void executeFunction(const ast::INode& node, data::Function& function, std::deque<ast::NodePtr>& args);
+
     void executeFunction(ast::Function& function);
 
     void runLuaFunction(data::LuaFunction& function, std::vector<data::GenericValue>& args);
@@ -79,10 +108,12 @@ private:
     struct Frame
     {
         Frame() = default;
+
         Frame(const Frame&) = delete;
+
         Frame(Frame&&) = default;
 
-        std::unordered_map<std::string, mem_utils::CopyMovePtr<data::GenericValue>> varNameMap{};
+        std::unordered_map<std::string, mem_utils::CopyMovePtr<data::GenericValue> > varNameMap{};
         bool transparent = false;
     };
 
@@ -120,5 +151,4 @@ private:
 
     flecs::world* m_world{};
 };
-
 }

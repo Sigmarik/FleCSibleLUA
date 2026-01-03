@@ -9,6 +9,7 @@
 
 #include "flecs.h"
 #include "mem_utils/copyable_ptr.h"
+#include "component_map/comp_map.h"
 
 namespace flua
 {
@@ -76,12 +77,14 @@ class GenericValue : public std::variant<Nil, bool, double, std::string, Table, 
     using std::variant<Nil, bool, double, std::string, Table, Entity, EntityComponent, GenericClass, Function>::variant;
 };
 
+using MaybeFixedValuePtr = std::variant<GenericValue*, cmp_info::GenericComponentPtr>;
+
 struct ValueSequence
 {
     struct ValueBackrefPair
     {
         GenericValue value = Nil();
-        GenericValue* reference = nullptr;
+        MaybeFixedValuePtr reference = nullptr;
     };
 
     std::vector<ValueBackrefPair> sequence{};
