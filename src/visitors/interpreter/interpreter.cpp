@@ -618,6 +618,6 @@ void Interpreter::runLuaFunction(data::LuaFunction& luaFunction, std::vector<dat
 
 FluaState Interpreter::generatePublicState()
 {
-    return FluaState(this);
+    return {this, m_world};
 }
 }

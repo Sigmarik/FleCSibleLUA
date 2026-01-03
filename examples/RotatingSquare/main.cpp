@@ -3,6 +3,7 @@
 #include <SFML/Graphics.hpp>
 #include <flecs.h>
 #include <flecsible_lua.h>
+#include <iostream>
 
 #include "components.h"
 #include "systems.h"
@@ -24,13 +25,14 @@ int main()
     flecs::world world;
     register_rendering_system(world, window, box);
 
-    flua::Script script = flua::Script::Load("examples/RotatingSquare/script.lua");
-    script.overrideGlobal("ROTATION_SPEED", 7.0);
-    script.deploy(world);
-
-    world.entity()
+    flecs::entity boxEntity = world.entity()
         .set<Position>({ 400.0f, 300.0f })
         .set<Rotation>({ 12.3f });
+
+    flua::Script script = flua::Script::Load("examples/RotatingSquare/script.lua");
+    script.overrideGlobal("ROTATION_SPEED", 7.0);
+    script.overrideGlobal("BOX_ENTITY_ID", static_cast<double>(boxEntity.id()));
+    script.deploy(world);
 
     sf::Clock clock;
 

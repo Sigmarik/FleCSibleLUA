@@ -42,12 +42,12 @@ static std::string to_string(const Table& dict)
 
 static std::string to_string(const Entity& entity)
 {
-    return "entity: " + std::to_string(entity.entity);
+    return "entity: " + std::to_string(entity.id());
 }
 
 static std::string to_string(const EntityComponent& component)
 {
-    return "component " + component.name + " of entity " + std::to_string(component.entity);
+    return "component " + component.name + " of entity " + std::to_string(component.entity.id());
 }
 
 static std::string to_string(const Function& function)

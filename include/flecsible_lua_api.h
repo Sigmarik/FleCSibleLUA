@@ -5,6 +5,8 @@
 #include <vector>
 #include <exception>
 
+#include <flecs.h>
+
 namespace flua
 {
 
@@ -55,6 +57,11 @@ public:
 
     friend void lib::print(FluaState*);
 
+    flecs::world* getWorld() const
+    {
+        return m_world;
+    }
+
     unsigned getArgumentCount() const;
 
     const data::GenericValue* getRaw(const ValueAccessor& accessor) const;
@@ -64,6 +71,9 @@ public:
     bool isNumber(const ValueAccessor& key) const;
     double getNumber(const ValueAccessor& key) const;
 
+    bool isEntity(const ValueAccessor& key) const;
+    flecs::entity getEntity(const ValueAccessor& key) const;
+
     std::string asString(const ValueAccessor& key) const;
 
     void pushRaw(data::GenericValue* value);
@@ -71,18 +81,21 @@ public:
     void pushNil() const;
     void pushValue(double value) const;
     void pushValue(const std::string& value) const;
+    void pushValue(flecs::entity value) const;
 
     void setGlobal(const std::string& name, double value) const;
     void setGlobal(const std::string& name, const std::string& value) const;
+    void setGlobal(const std::string& name, flecs::entity value) const;
 
 private:
-    FluaState(vst::Interpreter* interpreter) : m_interpreter(interpreter) {}
+    FluaState(vst::Interpreter* interpreter, flecs::world* world) : m_interpreter(interpreter), m_world(world) {}
     FluaState(const FluaState&) = default;
     FluaState(FluaState&&) = default;
     FluaState& operator=(const FluaState&) = default;
     FluaState& operator=(FluaState&&) = default;
 
     vst::Interpreter* m_interpreter;
+    flecs::world* m_world;
 };
 
 }

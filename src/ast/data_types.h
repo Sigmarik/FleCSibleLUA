@@ -32,10 +32,7 @@ struct GenericClass
     uint32_t typeId = 0;
 };
 
-struct Entity
-{
-    flecs::entity_t entity;
-};
+using Entity = flecs::entity;
 
 struct Nil {};
 
@@ -70,7 +67,7 @@ struct Table : std::shared_ptr<std::unordered_map<std::string, std::unique_ptr<G
 
 struct EntityComponent
 {
-    flecs::entity_t entity;
+    flecs::entity entity;
     std::string name;
 };
 

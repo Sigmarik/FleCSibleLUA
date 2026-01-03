@@ -132,7 +132,7 @@ std::vector<flecs::system> Script::deploy(flecs::world& world)
         return {};
     }
 
-    vst::Interpreter interpreter(std::cout, std::cerr);
+    vst::Interpreter interpreter(std::cout, std::cerr, &world);
 
     for (const auto& [name, function] : lib::STANDARD_LIBRARY)
     {

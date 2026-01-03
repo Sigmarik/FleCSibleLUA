@@ -26,8 +26,8 @@ public:
         parser::CharacterPos where;
     };
 
-    Interpreter(std::ostream& outStream, std::ostream& errStream)
-        : m_errStream(errStream), m_outStream(outStream)
+    Interpreter(std::ostream& outStream, std::ostream& errStream, flecs::world* world)
+        : m_errStream(errStream), m_outStream(outStream), m_world(world)
     {
         m_stack.emplace_back();
     }
@@ -117,6 +117,8 @@ private:
 
     std::vector<data::GenericValue> m_externalFunctionInputs{};
     std::vector<data::GenericValue> m_externalFunctionOutputs{};
+
+    flecs::world* m_world{};
 };
 
 }

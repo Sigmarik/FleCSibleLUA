@@ -1,5 +1,6 @@
 #include "output.h"
 #include "tables.h"
+#include "ecs.h"
 
 #include <functional>
 

@@ -49,6 +49,18 @@ double FluaState::getNumber(const ValueAccessor& key) const
     return std::get<double>(*value);
 }
 
+bool FluaState::isEntity(const ValueAccessor& key) const
+{
+    const data::GenericValue* value = getRaw(key);
+    return value != nullptr && std::holds_alternative<data::Entity>(*value);
+}
+
+flecs::entity FluaState::getEntity(const ValueAccessor& key) const
+{
+    const data::GenericValue* value = getRaw(key);
+    return std::get<data::Entity>(*value);
+}
+
 std::string FluaState::asString(const ValueAccessor& key) const
 {
     const data::GenericValue* value = getRaw(key);
@@ -75,12 +87,22 @@ void FluaState::pushValue(const std::string& value) const
     m_interpreter->m_externalFunctionOutputs.emplace_back(value);
 }
 
+void FluaState::pushValue(flecs::entity value) const
+{
+    m_interpreter->m_externalFunctionOutputs.emplace_back(value);
+}
+
 void FluaState::setGlobal(const std::string& name, double value) const
 {
     m_interpreter->m_stack.front().varNameMap[name] = mem_utils::CopyMovePtr<data::GenericValue>(value);
 }
 
 void FluaState::setGlobal(const std::string& name, const std::string& value) const
+{
+    m_interpreter->m_stack.front().varNameMap[name] = mem_utils::CopyMovePtr<data::GenericValue>(value);
+}
+
+void FluaState::setGlobal(const std::string& name, flecs::entity value) const
 {
     m_interpreter->m_stack.front().varNameMap[name] = mem_utils::CopyMovePtr<data::GenericValue>(value);
 }
