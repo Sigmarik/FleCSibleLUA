@@ -4,6 +4,8 @@
 #include <memory>
 #include <ranges>
 
+#include "component_map/comp_map.h"
+
 namespace flua::vst
 {
 using namespace flua;

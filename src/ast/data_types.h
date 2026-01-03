@@ -68,9 +68,15 @@ struct Table : std::shared_ptr<std::unordered_map<std::string, std::unique_ptr<G
     Table() : std::shared_ptr<MapType>(std::make_shared<MapType>()) {}
 };
 
-class GenericValue : public std::variant<Nil, bool, double, std::string, Table, Entity, GenericClass, Function>
+struct EntityComponent
 {
-    using std::variant<Nil, bool, double, std::string, Table, Entity, GenericClass, Function>::variant;
+    flecs::entity_t entity;
+    std::string name;
+};
+
+class GenericValue : public std::variant<Nil, bool, double, std::string, Table, Entity, EntityComponent, GenericClass, Function>
+{
+    using std::variant<Nil, bool, double, std::string, Table, Entity, EntityComponent, GenericClass, Function>::variant;
 };
 
 struct ValueSequence

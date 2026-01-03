@@ -3,6 +3,8 @@
 #include <ios>
 #include <sstream>
 
+#include "component_map/comp_map.h"
+
 namespace flua::data
 {
 
@@ -43,6 +45,11 @@ static std::string to_string(const Entity& entity)
     return "entity: " + std::to_string(entity.entity);
 }
 
+static std::string to_string(const EntityComponent& component)
+{
+    return "component " + component.name + " of entity " + std::to_string(component.entity);
+}
+
 static std::string to_string(const Function& function)
 {
     if (const LibraryFunction* fnc = std::get_if<LibraryFunction>(&function))
@@ -76,6 +83,13 @@ bool to_bool(const GenericValue& value)
 {
     if (std::holds_alternative<Nil>(value)) return false;
     if (std::holds_alternative<bool>(value)) return std::get<bool>(value);
+    if (std::holds_alternative<EntityComponent>(value))
+    {
+        const EntityComponent& component = std::get<EntityComponent>(value);
+        auto maybeChecker = cmp_info::ENTITY_COMPONENT_CHECKERS.find(component.name);
+        if (maybeChecker == cmp_info::ENTITY_COMPONENT_CHECKERS.end()) return false;
+        return maybeChecker->second(flecs::entity(component.entity));
+    }
 
     return true;
 }

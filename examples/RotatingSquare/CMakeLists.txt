@@ -36,6 +36,7 @@ endif()
 target_sources(RotatingSquare
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
 	PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/systems.cpp
+	PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/_flua_components_prototype.cpp
 )
 
 target_include_directories(RotatingSquare
