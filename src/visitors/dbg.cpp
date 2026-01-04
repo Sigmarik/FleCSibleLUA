@@ -22,6 +22,23 @@ void AstDebugger::visit(ast::Function& node)
     m_stream << m_indent << "}\n";
 }
 
+void AstDebugger::visit(ast::System& node)
+{
+    m_stream << m_indent << "System ( ";
+    for (const ast::System::SystemEntity& entity : node.entities)
+    {
+        m_stream << entity.entityName.string << " ( ";
+        for (const std::string& component : entity.components)
+        {
+            m_stream << component << " ";
+        }
+        m_stream << ") ";
+    }
+    m_stream << ") {\n";
+    visitList(node.body);
+    m_stream << m_indent << "}\n";
+}
+
 void AstDebugger::visit(ast::WhileLoop& node)
 {
     m_stream << m_indent << "While (\n";

@@ -19,6 +19,7 @@ protected:
 
     void visit(ast::Program& node) override;
     void visit(ast::Function& node) override;
+    void visit(ast::System& node) override;
     void visit(ast::WhileLoop& node) override;
     void visit(ast::ForLoopNumeric& node) override;
     void visit(ast::ForLoopGeneric& node) override;

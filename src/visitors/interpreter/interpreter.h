@@ -44,43 +44,25 @@ protected:
     using Visitor::visit;
 
     void visit(ast::Program& node) override;
-
     void visit(ast::Function& node) override;
-
+    void visit(ast::System& node) override;
     void visit(ast::WhileLoop& node) override;
-
     void visit(ast::ForLoopNumeric& node) override;
-
     void visit(ast::ForLoopGeneric& node) override;
-
     void visit(ast::RepeatUntil& node) override;
-
     void visit(ast::Branch& node) override;
-
     void visit(ast::FunctionCall& node) override;
-
     void visit(ast::UnaryOperator& node) override;
-
     void visit(ast::BinaryOperator& node) override;
-
     void visit(ast::FieldRequest& node) override;
-
     void visit(ast::IndexRequest& node) override;
-
     void visit(ast::Constant& node) override;
-
     void visit(ast::MakeTable& node) override;
-
     void visit(ast::Variable& node) override;
-
     void visit(ast::Assignment& node) override;
-
     void visit(ast::LocalAssignment& node) override;
-
     void visit(ast::Return& node) override;
-
     void visit(ast::Break& node) override;
-
     void visit(ast::Continue& node) override;
 
     friend class FluaState;

@@ -60,6 +60,20 @@ struct Function : INode
     std::deque<NodePtr> body{};
 };
 
+struct System : INode
+{
+    using INode::INode;
+
+    struct SystemEntity
+    {
+        ids::ResolvableName entityName{"UNDEFINED_SYSTEM_PARAMETER"};
+        std::deque<std::string> components{};
+    };
+
+    std::deque<SystemEntity> entities{};
+    std::deque<NodePtr> body{};
+};
+
 struct WhileLoop : INode
 {
     explicit WhileLoop(const parser::CharacterPos& pos, NodePtr&& condition)
@@ -265,6 +279,7 @@ namespace
     using NodeVariant = std::variant<
         Program,
         Function,
+        System,
         WhileLoop,
         ForLoopNumeric,
         ForLoopGeneric,

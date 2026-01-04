@@ -74,6 +74,12 @@ void Interpreter::visit(ast::Function& node)
     };
 }
 
+void Interpreter::visit(ast::System& node)
+{
+    // TODO: Implement
+    assert(false && "NOT IMPLEMENTED");
+}
+
 void Interpreter::visit(ast::WhileLoop& node)
 {
     while (true)
