@@ -8,5 +8,6 @@ const std::unordered_map<std::string, std::function<void(FluaState*)> > STANDARD
     {"ipairs", ipairs},
     {"id2entity", id2entity},
     {"entity2id", entity2id},
+    {"deltaTime", getDeltaTime},
 };
 }

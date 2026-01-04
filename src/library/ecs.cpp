@@ -24,4 +24,9 @@ void entity2id(FluaState* state)
 
     state->pushValue(static_cast<double>(state->getEntity(0).id()));
 }
+
+void getDeltaTime(FluaState* state)
+{
+    state->pushValue(state->getWorld()->delta_time());
+}
 }
