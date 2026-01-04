@@ -5,6 +5,7 @@
 #include "ast/visitor.h"
 #include "ast/data_types.h"
 #include "flecsible_lua_api.h"
+#include "component_map/comp_map.h"
 
 namespace flua::lib
 {
@@ -30,6 +31,7 @@ public:
         : m_errStream(errStream), m_outStream(outStream), m_world(world)
     {
         m_stack.emplace_back();
+        m_componentIds = cmp_info::get_component_ids(*world);
     }
 
     void overrideGlobal(const std::string& name, const std::function<void(FluaState*)>& function);
@@ -132,5 +134,7 @@ private:
     std::vector<data::GenericValue> m_externalFunctionOutputs{};
 
     flecs::world* m_world{};
+
+    std::unordered_map<std::string, ecs_id_t> m_componentIds{};
 };
 }

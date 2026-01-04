@@ -8,6 +8,11 @@
 #include "components.h"
 #include "systems.h"
 
+static void system_action_test(ecs_iter_t *it)
+{
+    std::cout << "TEST ACTION" << std::endl;
+}
+
 int main()
 {
     sf::ContextSettings settings;

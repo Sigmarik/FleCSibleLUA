@@ -4,6 +4,8 @@
 #include <memory>
 #include <ranges>
 
+#include <flecs.h>
+
 #include "component_map/comp_map.h"
 #include "meta/string.h"
 #include "meta/variant_helper.h"
@@ -74,10 +76,55 @@ void Interpreter::visit(ast::Function& node)
     };
 }
 
+static void system_action(ecs_iter_t *it)
+{
+    std::cout << "Hello, world!" << std::endl;
+}
+
 void Interpreter::visit(ast::System& node)
 {
-    // TODO: Implement
-    assert(false && "NOT IMPLEMENTED");
+    if (node.entities.size() != 1)
+        throw LuaRuntimeError(node, "Multiple entity systems are not yet implemented");
+
+    auto entity = node.entities.front();
+    std::vector<ecs_id_t> components;
+    if (entity.components.size() > FLECS_TERM_COUNT_MAX)
+        throw LuaRuntimeError(node, "System entity " + entity.entityName.string +
+            " cannot have more than " + std::to_string(FLECS_TERM_COUNT_MAX) + " components");
+    for (const std::string& component : entity.components)
+    {
+        if (!m_componentIds.contains(component))
+            throw LuaRuntimeError(node, "Component " + component + " is not recognized by the system");
+        components.emplace_back(m_componentIds[component]);
+    }
+
+    unsigned termCount = 0;
+    ecs_query_desc_t query{};
+    for (const ecs_id_t id : components)
+    {
+        query.terms[termCount] = { id };
+        ++termCount;
+    }
+
+    ecs_system_desc_t sysDesc = {};
+    static const ecs_id_t addons[] = {(ECS_PAIR | (((static_cast<uint64_t>(EcsDependsOn)) << 32) + (static_cast<uint32_t>(
+                             EcsOnUpdate)))), 0};
+    ecs_entity_desc_t systemEntityDesc{
+        .name = "Move",
+        .add = addons,
+    };
+    sysDesc.entity = ecs_entity_init(m_world->c_ptr(), &systemEntityDesc);
+    sysDesc.callback = system_action;
+    sysDesc.query = query;
+
+    ecs_entity_t sys = ecs_system_init(m_world->c_ptr(), &sysDesc);
+    if (!ecs_is_valid(m_world->c_ptr(), sys) || !ecs_is_alive(m_world->c_ptr(), sys))
+        throw LuaRuntimeError(node, "Failed to create system");
+
+    std::cout << "Created system " << sys << std::endl;
+
+    // // TODO: Implement
+    // assert(false && "NOT IMPLEMENTED");
 }
 
 void Interpreter::visit(ast::WhileLoop& node)

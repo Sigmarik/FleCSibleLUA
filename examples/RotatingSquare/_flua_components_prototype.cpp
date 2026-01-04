@@ -26,4 +26,12 @@ extern const std::unordered_map<std::string, EntityComponentChecker> ENTITY_COMP
     {"Rotation", [](flecs::entity entity){ return entity.has<Rotation>(); }},
     {"Position", [](flecs::entity entity){ return entity.has<Position>(); }},
 };
+
+extern std::unordered_map<std::string, ecs_id_t> get_component_ids(const flecs::world& world)
+{
+    std::unordered_map<std::string, ecs_id_t> componentIds;
+    componentIds["Rotation"] = flecs::component<Rotation>(world).id();
+    componentIds["Position"] = flecs::component<Position>(world).id();
+    return componentIds;
+}
 }
