@@ -11,7 +11,7 @@ void id2entity(FluaState* state)
 
     flecs::entity_t id = static_cast<flecs::entity_t>(state->getNumber(0));
     flecs::entity entity(*state->getWorld(), id);
-    if (entity.is_alive())
+    if (ecs_is_valid(state->getWorld()->c_ptr(), id))
     {
         state->pushValue(entity);
     }
