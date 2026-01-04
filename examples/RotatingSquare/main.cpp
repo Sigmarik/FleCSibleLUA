@@ -37,7 +37,7 @@ int main()
     flua::Script script = flua::Script::Load("examples/RotatingSquare/script.lua");
     script.overrideGlobal("ROTATION_SPEED", 7.0);
     script.overrideGlobal("BOX_ENTITY_ID", static_cast<double>(boxEntity.id()));
-    script.deploy(world);
+    flua::DeployedScript deployment = script.deploy(world);
 
     sf::Clock clock;
 

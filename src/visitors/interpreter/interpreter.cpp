@@ -14,6 +14,16 @@ namespace flua::vst
 {
 using namespace flua;
 
+std::map<flecs::entity_t, Interpreter::RegisteredSystemInfo> Interpreter::s_interpreterSystems{};
+
+Interpreter::~Interpreter()
+{
+    for (ecs_entity_t entity : m_ownedSystems)
+    {
+        s_interpreterSystems.erase(entity);
+    }
+    Visitor::~Visitor();
+}
 
 void Interpreter::overrideGlobal(const std::string& name, const std::function<void(FluaState*)>& function)
 {
@@ -76,11 +86,6 @@ void Interpreter::visit(ast::Function& node)
     };
 }
 
-static void system_action(ecs_iter_t *it)
-{
-    std::cout << "Hello, world!" << std::endl;
-}
-
 void Interpreter::visit(ast::System& node)
 {
     if (node.entities.size() != 1)
@@ -107,24 +112,22 @@ void Interpreter::visit(ast::System& node)
     }
 
     ecs_system_desc_t sysDesc = {};
-    static const ecs_id_t addons[] = {(ECS_PAIR | (((static_cast<uint64_t>(EcsDependsOn)) << 32) + (static_cast<uint32_t>(
-                             EcsOnUpdate)))), 0};
+    static const ecs_id_t addons[] = {(ECS_PAIR | (static_cast<uint64_t>(EcsDependsOn) << 32) + static_cast<uint32_t>(
+                             EcsOnUpdate)), 0};
     ecs_entity_desc_t systemEntityDesc{
         .name = "Move",
         .add = addons,
     };
     sysDesc.entity = ecs_entity_init(m_world->c_ptr(), &systemEntityDesc);
-    sysDesc.callback = system_action;
+    sysDesc.callback = system_runner;
     sysDesc.query = query;
 
     ecs_entity_t sys = ecs_system_init(m_world->c_ptr(), &sysDesc);
     if (!ecs_is_valid(m_world->c_ptr(), sys) || !ecs_is_alive(m_world->c_ptr(), sys))
         throw LuaRuntimeError(node, "Failed to create system");
 
-    std::cout << "Created system " << sys << std::endl;
-
-    // // TODO: Implement
-    // assert(false && "NOT IMPLEMENTED");
+    s_interpreterSystems[sys] = { .interpreter = this, .luaSystem = &node };
+    m_ownedSystems.emplace(sys);
 }
 
 void Interpreter::visit(ast::WhileLoop& node)
@@ -775,5 +778,20 @@ void Interpreter::runLuaFunction(data::LuaFunction& luaFunction, std::vector<dat
 FluaState Interpreter::generatePublicState()
 {
     return {this, m_world};
+}
+
+void Interpreter::system_runner(ecs_iter_t *it)
+{
+    auto found = s_interpreterSystems.find(it->system);
+    if (found == s_interpreterSystems.end())
+    {
+        ecs_delete(it->world, it->system);
+        return;
+    }
+    RegisteredSystemInfo& registration = found->second;
+    ast::System& node = *registration.luaSystem;
+    Interpreter& interpreter = *registration.interpreter;
+    std::cout << "Ran system at line " << node.getPos().line << std::endl;
+    // TODO: Actually run the system
 }
 }

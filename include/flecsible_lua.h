@@ -5,6 +5,7 @@
 #include <flecs.h>
 #include <vector>
 #include <functional>
+#include <memory>
 #include <variant>
 
 namespace flua
@@ -12,10 +13,35 @@ namespace flua
 
 class FluaState;
 
+namespace vst
+{
+    class Interpreter;
+}
+
 namespace ast
 {
     class Ast;
 }
+
+struct DeployedScript
+{
+    ~DeployedScript();
+    DeployedScript(const DeployedScript&) = delete;
+    DeployedScript(DeployedScript&&) noexcept ;
+    DeployedScript& operator=(const DeployedScript&) = delete;
+    DeployedScript& operator=(DeployedScript&&) noexcept ;
+
+    void overrideGlobal(const std::string& name, const std::function<void(FluaState*)>& function);
+    void overrideGlobal(const std::string& name, double value);
+    void overrideGlobal(const std::string& name, const std::string& value);
+
+    friend class Script;
+
+private:
+    DeployedScript() = default;
+
+    vst::Interpreter* m_interpreter = nullptr;
+};
 
 class Script
 {
@@ -35,7 +61,7 @@ public:
     void overrideGlobal(const std::string& name, double value);
     void overrideGlobal(const std::string& name, const std::string& value);
 
-    std::vector<flecs::system> deploy(flecs::world& world);
+    [[nodiscard]] DeployedScript deploy(flecs::world& world);
 
 private:
     Script() = default;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <set>
 
 #include "ast/visitor.h"
 #include "ast/data_types.h"
@@ -33,6 +34,8 @@ public:
         m_stack.emplace_back();
         m_componentIds = cmp_info::get_component_ids(*world);
     }
+
+    ~Interpreter() override;
 
     void overrideGlobal(const std::string& name, const std::function<void(FluaState*)>& function);
 
@@ -89,6 +92,8 @@ private:
 
     FluaState generatePublicState();
 
+    static void system_runner(ecs_iter_t *it);
+
     struct Frame
     {
         Frame() = default;
@@ -116,6 +121,14 @@ private:
         std::vector<Frame>* m_stack;
     };
 
+    struct RegisteredSystemInfo
+    {
+        Interpreter* interpreter = nullptr;
+        ast::System* luaSystem = nullptr;
+    };
+
+    static std::map<flecs::entity_t, RegisteredSystemInfo> s_interpreterSystems;
+
     std::vector<Frame> m_stack{};
 
     data::ValueSequence m_returnedValue{};
@@ -136,5 +149,7 @@ private:
     flecs::world* m_world{};
 
     std::unordered_map<std::string, ecs_id_t> m_componentIds{};
+
+    std::set<ecs_entity_t> m_ownedSystems{};
 };
 }

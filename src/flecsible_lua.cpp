@@ -12,6 +12,43 @@
 
 namespace flua
 {
+DeployedScript::~DeployedScript()
+{
+    delete m_interpreter;
+    m_interpreter = nullptr;
+}
+
+DeployedScript::DeployedScript(DeployedScript&& other) noexcept
+{
+    m_interpreter = other.m_interpreter;
+    other.m_interpreter = nullptr;
+}
+
+DeployedScript& DeployedScript::operator=(DeployedScript&& other) noexcept
+{
+    m_interpreter = other.m_interpreter;
+    other.m_interpreter = nullptr;
+    return *this;
+}
+
+void DeployedScript::overrideGlobal(const std::string& name, const std::function<void(FluaState*)>& function)
+{
+    assert(m_interpreter);
+    m_interpreter->overrideGlobal(name, function);
+}
+
+void DeployedScript::overrideGlobal(const std::string& name, double value)
+{
+    assert(m_interpreter);
+    m_interpreter->overrideGlobal(name, value);
+}
+
+void DeployedScript::overrideGlobal(const std::string& name, const std::string& value)
+{
+    assert(m_interpreter);
+    m_interpreter->overrideGlobal(name, value);
+}
+
 Script::Script(const Script& other)
 {
     m_ast = other.m_ast ? new ast::Ast(*other.m_ast) : nullptr;
@@ -125,7 +162,7 @@ void Script::overrideGlobal(const std::string& name, const std::string& value)
     m_globalOverrides[name] = value;
 }
 
-std::vector<flecs::system> Script::deploy(flecs::world& world)
+DeployedScript Script::deploy(flecs::world& world)
 {
     if (m_ast == nullptr)
     {
@@ -135,7 +172,9 @@ std::vector<flecs::system> Script::deploy(flecs::world& world)
     vst::AstDebugger dbg(std::cout);
     dbg.process(*m_ast);
 
-    vst::Interpreter interpreter(std::cout, std::cerr, &world);
+    DeployedScript script;
+    script.m_interpreter = new vst::Interpreter(std::cout, std::cerr, &world);
+    vst::Interpreter& interpreter = *script.m_interpreter;
 
     for (const auto& [name, function] : lib::STANDARD_LIBRARY)
     {
@@ -149,7 +188,7 @@ std::vector<flecs::system> Script::deploy(flecs::world& world)
 
     interpreter.process(*m_ast);
 
-    return {};
+    return script;
 }
 
 }
