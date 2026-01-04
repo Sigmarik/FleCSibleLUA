@@ -15,6 +15,7 @@ using Parser = parser::CompleteParser<Program, lualex::LuaLexer, lualex::LuaIgno
 
 struct Function;
 struct ParamNames;
+struct System;
 struct Block;
 struct Action;
 struct Return;
@@ -60,7 +61,8 @@ struct ProgramBody : parser::Grammar
     ProgramBody, ast::Program,
 
     parser::Sequence<>,
-    parser::Sequence<ProgramBody, Action>
+    parser::Sequence<ProgramBody, Action>,
+    parser::Sequence<ProgramBody, System>
 >
 {
     static ast::Program visit()
@@ -69,6 +71,12 @@ struct ProgramBody : parser::Grammar
     }
 
     static ast::Program visit(ast::Program& program, ast::NodePtr& node)
+    {
+        program.components.emplace_back(std::move(node));
+        return std::move(program);
+    }
+
+    static ast::Program visit(ast::Program& program, ast::System& node)
     {
         program.components.emplace_back(std::move(node));
         return std::move(program);
@@ -195,6 +203,74 @@ struct ParamNames : parser::Grammar
         std::deque<ids::ResolvableName> newParams = std::move(params);
         newParams.emplace_front(name.name);
         return newParams;
+    }
+};
+
+struct QueryEntity;
+struct QueryEntitySet;
+struct System : parser::Grammar
+<
+    System, ast::System,
+
+    parser::Sequence<
+        parser::Lex<lualex::System>,
+        parser::Lex<lualex::BracketRoundOp>,
+        QueryEntitySet,
+        parser::Lex<lualex::BracketRoundCl>,
+        parser::Lex<lualex::Do>,
+        Block,
+        parser::Lex<lualex::End>
+    >
+>
+{
+    static ast::System visit(lualex::System lex, lualex::BracketRoundOp, std::deque<ast::System::SystemEntity>& entities,
+        lualex::BracketRoundCl, lualex::Do, std::deque<ast::NodePtr>& body, lualex::End)
+    {
+        ast::System system(lex.startingPos);
+        system.entities = std::move(entities);
+        system.body = std::move(body);
+        return system;
+    }
+};
+
+struct QueryEntitySet : parser::Repeating<ast::System::SystemEntity, QueryEntity, lualex::Comma> {};
+
+struct QueryEntity : parser::Grammar
+<
+    QueryEntity, ast::System::SystemEntity,
+
+    parser::Sequence<
+        parser::Lex<lualex::Name>,
+        parser::Lex<lualex::BracketRoundOp>,
+        parser::Repeating<lualex::Name, parser::Lex<lualex::Name>, lualex::Comma>,
+        parser::Lex<lualex::BracketRoundCl>
+    >,
+    parser::Sequence<
+        parser::Lex<lualex::Name>,
+        parser::Lex<lualex::BracketRoundOp>,
+        parser::Lex<lualex::BracketRoundCl>
+    >
+>
+{
+    static ast::System::SystemEntity visit(lualex::Name& entityName, lualex::BracketRoundOp,
+        std::deque<lualex::Name>& components, lualex::BracketRoundCl)
+    {
+        ast::System::SystemEntity entity;
+        entity.entityName = entityName.name;
+        entity.components = {};
+        for (lualex::Name& component : components)
+        {
+            entity.components.emplace_back(component.name);
+        }
+        return entity;
+    }
+
+    static ast::System::SystemEntity visit(lualex::Name& entityName, lualex::BracketRoundOp, lualex::BracketRoundCl)
+    {
+        ast::System::SystemEntity entity;
+        entity.entityName = entityName.name;
+        entity.components = {};
+        return entity;
     }
 };
 
