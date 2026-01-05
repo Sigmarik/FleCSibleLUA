@@ -30,21 +30,16 @@ int main()
     flecs::world world;
     register_rendering_system(world, window, box);
 
-    flecs::entity boxEntity = world.entity()
+    world.entity()
         .set<Position>({ 400.0f, 300.0f })
         .set<Rotation>({ 12.3f });
 
     flua::Script script = flua::Script::Load("examples/RotatingSquare/script.lua");
     script.overrideGlobal("ROTATION_SPEED", 7.0);
-    script.overrideGlobal("BOX_ENTITY_ID", static_cast<double>(boxEntity.id()));
     flua::DeployedScript deployment = script.deploy(world);
-
-    sf::Clock clock;
 
     while (window.isOpen())
     {
-        float dt = clock.restart().asSeconds();
-
         while (const std::optional event = window.pollEvent())
         {
             if (event->is<sf::Event::Closed>())
