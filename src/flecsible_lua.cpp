@@ -169,8 +169,8 @@ DeployedScript Script::deploy(flecs::world& world)
         return {};
     }
 
-    vst::AstDebugger dbg(std::cout);
-    dbg.process(*m_ast);
+    // vst::AstDebugger dbg(std::cout);
+    // dbg.process(*m_ast);
 
     DeployedScript script;
     script.m_interpreter = new vst::Interpreter(std::cout, std::cerr, &world);

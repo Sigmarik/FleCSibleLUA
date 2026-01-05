@@ -92,6 +92,12 @@ private:
 
     FluaState generatePublicState();
 
+    void printError(const LuaRuntimeError& err);
+
+    void runSystemUsingIterators(ast::System& system, unsigned iterId);
+
+    void prepareAndRunSystem(ast::System& system, ecs_iter_t* systemIt);
+
     static void system_runner(ecs_iter_t *it);
 
     struct Frame
@@ -149,6 +155,9 @@ private:
     flecs::world* m_world{};
 
     std::unordered_map<std::string, ecs_id_t> m_componentIds{};
+
+    using SystemQueryArray = std::vector<ecs_query_t*>;
+    std::map<ast::System*, SystemQueryArray> m_systemQueries{};
 
     std::set<ecs_entity_t> m_ownedSystems{};
 };

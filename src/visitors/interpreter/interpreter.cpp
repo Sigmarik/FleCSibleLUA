@@ -22,6 +22,13 @@ Interpreter::~Interpreter()
     {
         s_interpreterSystems.erase(entity);
     }
+    for (auto& [key, queries] : m_systemQueries)
+    {
+        for (ecs_query_t* query : queries)
+        {
+            ecs_query_fini(query);
+        }
+    }
     Visitor::~Visitor();
 }
 
@@ -56,8 +63,7 @@ void Interpreter::visit(ast::Program& node)
     catch (const LuaRuntimeError& err)
     {
         m_fallen = true;
-        m_errStream << "FLua runtime ERROR at line " << err.where.line << " column " << err.where.column << ":\n\t" <<
-                err.what << std::endl;
+        printError(err);
     }
 }
 
@@ -88,14 +94,14 @@ void Interpreter::visit(ast::Function& node)
 
 void Interpreter::visit(ast::System& node)
 {
-    if (node.entities.size() != 1)
-        throw LuaRuntimeError(node, "Multiple entity systems are not yet implemented");
+    if (node.entities.empty())
+        throw LuaRuntimeError(node, "Attempt to create a system with no entities");
 
     auto entity = node.entities.front();
     std::vector<ecs_id_t> components;
     if (entity.components.size() > FLECS_TERM_COUNT_MAX)
         throw LuaRuntimeError(node, "System entity " + entity.entityName.string +
-            " cannot have more than " + std::to_string(FLECS_TERM_COUNT_MAX) + " components");
+                                    " cannot have more than " + std::to_string(FLECS_TERM_COUNT_MAX) + " components");
     for (const std::string& component : entity.components)
     {
         if (!m_componentIds.contains(component))
@@ -103,17 +109,37 @@ void Interpreter::visit(ast::System& node)
         components.emplace_back(m_componentIds[component]);
     }
 
+    std::vector<ecs_query_t*>& queries = m_systemQueries[&node] = std::vector<ecs_query_t*>(
+                                             node.entities.size() - 1, nullptr);
+    for (unsigned entityId = 1; entityId < node.entities.size(); ++entityId)
+    {
+        ecs_query_desc_t desc{};
+        ecs_query_t*& query = queries[entityId - 1];
+        unsigned termIdx = 0;
+        for (const std::string& component : node.entities[entityId].components)
+        {
+            auto found = m_componentIds.find(component);
+            if (found == m_componentIds.end())
+                throw LuaRuntimeError(node, "Component " + component + " is not recognized by the system");
+            desc.terms[termIdx] = {found->second};
+        }
+        query = ecs_query_init(m_world->c_ptr(), &desc);
+    }
+
     unsigned termCount = 0;
     ecs_query_desc_t query{};
     for (const ecs_id_t id : components)
     {
-        query.terms[termCount] = { id };
+        query.terms[termCount] = {id};
         ++termCount;
     }
 
     ecs_system_desc_t sysDesc = {};
-    static const ecs_id_t addons[] = {(ECS_PAIR | (static_cast<uint64_t>(EcsDependsOn) << 32) + static_cast<uint32_t>(
-                             EcsOnUpdate)), 0};
+    static const ecs_id_t addons[] = {
+        (ECS_PAIR | (static_cast<uint64_t>(EcsDependsOn) << 32) + static_cast<uint32_t>(
+             EcsOnUpdate)),
+        0
+    };
     ecs_entity_desc_t systemEntityDesc{
         .name = "Move",
         .add = addons,
@@ -126,7 +152,7 @@ void Interpreter::visit(ast::System& node)
     if (!ecs_is_valid(m_world->c_ptr(), sys) || !ecs_is_alive(m_world->c_ptr(), sys))
         throw LuaRuntimeError(node, "Failed to create system");
 
-    s_interpreterSystems[sys] = { .interpreter = this, .luaSystem = &node };
+    s_interpreterSystems[sys] = {.interpreter = this, .luaSystem = &node};
     m_ownedSystems.emplace(sys);
 }
 
@@ -780,7 +806,51 @@ FluaState Interpreter::generatePublicState()
     return {this, m_world};
 }
 
-void Interpreter::system_runner(ecs_iter_t *it)
+void Interpreter::printError(const LuaRuntimeError& err)
+{
+    m_errStream << "FLua runtime ERROR at line " << err.where.line << " column " << err.where.column << ":\n\t" <<
+            err.what << std::endl;
+}
+
+void Interpreter::runSystemUsingIterators(ast::System& node, unsigned iterId)
+{
+    std::vector<ecs_query_t*>& queries = m_systemQueries[&node];
+    if (iterId >= queries.size())
+    {
+        visitTransparentBlock(node.body);
+        return;
+    }
+
+    ecs_query_t* query = queries[iterId];
+    ecs_iter_t iter = ecs_query_iter(m_world->c_ptr(), query);
+    while (ecs_query_next(&iter))
+    {
+        const std::string& entityName = node.entities[iterId + 1].entityName.string;
+        for (long long iterEntityIdx = 0; iterEntityIdx < iter.count; ++iterEntityIdx)
+        {
+            ecs_entity_t ecsEntity = iter.entities[iterEntityIdx];
+            m_stack.back().varNameMap[entityName] = mem_utils::CopyMovePtr<data::GenericValue>(
+                flecs::entity(iter.world, ecsEntity));
+            runSystemUsingIterators(node, iterId + 1);
+        }
+    }
+}
+
+void Interpreter::prepareAndRunSystem(ast::System& node, ecs_iter_t* systemIt)
+{
+    NamespaceHolder systemNamespace(m_stack, false);
+
+    const std::string& entityName = node.entities.front().entityName.string;
+    for (long long iterEntityIdx = 0; iterEntityIdx < systemIt->count; ++iterEntityIdx)
+    {
+        ecs_entity_t ecsEntity = systemIt->entities[iterEntityIdx];
+        m_stack.back().varNameMap[entityName] = mem_utils::CopyMovePtr<data::GenericValue>(
+            flecs::entity(systemIt->world, ecsEntity));
+        runSystemUsingIterators(node, 0);
+    }
+}
+
+void Interpreter::system_runner(ecs_iter_t* it)
 {
     auto found = s_interpreterSystems.find(it->system);
     if (found == s_interpreterSystems.end())
@@ -791,7 +861,16 @@ void Interpreter::system_runner(ecs_iter_t *it)
     RegisteredSystemInfo& registration = found->second;
     ast::System& node = *registration.luaSystem;
     Interpreter& interpreter = *registration.interpreter;
-    std::cout << "Ran system at line " << node.getPos().line << std::endl;
-    // TODO: Actually run the system
+
+    try
+    {
+        interpreter.prepareAndRunSystem(node, it);
+    }
+    catch (LuaRuntimeError& err)
+    {
+        interpreter.m_fallen = true;
+        interpreter.printError(err);
+        ecs_delete(it->world, it->system);
+    }
 }
 }
