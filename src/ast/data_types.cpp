@@ -107,6 +107,186 @@ std::string get_type_name(const GenericValue& value)
     return result;
 }
 
+template <UnaryOpType>
+static std::optional<GenericValue> perform_unary(const GenericValue&) { assert(false); return {}; }
+
+template <>
+std::optional<GenericValue> perform_unary<UnaryOpType::Not>(const GenericValue& value)
+{
+    return !to_bool(value);
+}
+
+template <>
+std::optional<GenericValue> perform_unary<UnaryOpType::Negate>(const GenericValue& value)
+{
+    if (std::holds_alternative<double>(value)) return -std::get<double>(value);
+    return std::nullopt;
+}
+
+template <>
+std::optional<GenericValue> perform_unary<UnaryOpType::Length>(const GenericValue& value)
+{
+    if (std::holds_alternative<std::string>(value)) return static_cast<double>(std::get<std::string>(value).size());
+    if (std::holds_alternative<Table>(value)) return static_cast<double>(std::get<Table>(value)->size());
+    return std::nullopt;
+}
+
+std::optional<GenericValue> perform_unary_operation(UnaryOpType op, const GenericValue& value)
+{
+    switch (op)
+    {
+        case UnaryOpType::Not: return perform_unary<UnaryOpType::Not>(value);
+        case UnaryOpType::Length: return perform_unary<UnaryOpType::Length>(value);
+        case UnaryOpType::Negate: return perform_unary<UnaryOpType::Negate>(value);
+        default: assert(false && "Undefined unary operator type"); return {};
+    }
+}
+
+template <BinaryOpType>
+static std::optional<GenericValue> perform_binary(const GenericValue&, const GenericValue&)
+{
+    assert(false); return {};
+}
+
+template <>
+std::optional<GenericValue> perform_binary<BinaryOpType::Add>(const GenericValue& alpha, const GenericValue& beta)
+{
+    if (!std::holds_alternative<double>(alpha) || !std::holds_alternative<double>(beta)) return std::nullopt;
+    return std::get<double>(alpha) + std::get<double>(beta);
+}
+
+template <>
+std::optional<GenericValue> perform_binary<BinaryOpType::Subtract>(const GenericValue& alpha, const GenericValue& beta)
+{
+    if (!std::holds_alternative<double>(alpha) || !std::holds_alternative<double>(beta)) return std::nullopt;
+    return std::get<double>(alpha) - std::get<double>(beta);
+}
+
+template <>
+std::optional<GenericValue> perform_binary<BinaryOpType::Multiply>(const GenericValue& alpha, const GenericValue& beta)
+{
+    if (!std::holds_alternative<double>(alpha) || !std::holds_alternative<double>(beta)) return std::nullopt;
+    return std::get<double>(alpha) * std::get<double>(beta);
+}
+
+template <>
+std::optional<GenericValue> perform_binary<BinaryOpType::Divide>(const GenericValue& alpha, const GenericValue& beta)
+{
+    if (!std::holds_alternative<double>(alpha) || !std::holds_alternative<double>(beta)) return std::nullopt;
+    return std::get<double>(alpha) / std::get<double>(beta);
+}
+
+template <>
+std::optional<GenericValue> perform_binary<BinaryOpType::Mod>(const GenericValue& alpha, const GenericValue& beta)
+{
+    if (!std::holds_alternative<double>(alpha) || !std::holds_alternative<double>(beta)) return std::nullopt;
+    double whole = std::get<double>(alpha) / std::get<double>(beta);
+    return std::get<double>(alpha) - std::floor(whole) * std::get<double>(beta);
+}
+
+template <>
+std::optional<GenericValue> perform_binary<BinaryOpType::Pow>(const GenericValue& alpha, const GenericValue& beta)
+{
+    if (!std::holds_alternative<double>(alpha) || !std::holds_alternative<double>(beta)) return std::nullopt;
+    return std::pow(std::get<double>(alpha), std::get<double>(beta));
+}
+template <>
+std::optional<GenericValue> perform_binary<BinaryOpType::And>(const GenericValue& alpha, const GenericValue& beta)
+{
+    return to_bool(alpha) && to_bool(beta);
+}
+template <>
+std::optional<GenericValue> perform_binary<BinaryOpType::Or>(const GenericValue& alpha, const GenericValue& beta)
+{
+    return to_bool(alpha) || to_bool(beta);
+}
+template <>
+std::optional<GenericValue> perform_binary<BinaryOpType::Xor>(const GenericValue& alpha, const GenericValue& beta)
+{
+    return to_bool(alpha) != to_bool(beta);
+}
+template <>
+std::optional<GenericValue> perform_binary<BinaryOpType::Concatenate>(const GenericValue& alpha, const GenericValue& beta)
+{
+    return to_string(alpha) + to_string(beta);
+}
+
+static constexpr double CMP_EPS = 1e-6;
+
+template <>
+std::optional<GenericValue> perform_binary<BinaryOpType::CmpEq>(const GenericValue& alpha, const GenericValue& beta)
+{
+    if (alpha.index() != beta.index()) return false;
+    bool result = false;
+    const auto comparators = meta::Overloads
+    {
+        [&](Nil) { result = true; },
+        [&](bool) { result = std::get<bool>(alpha) == std::get<bool>(beta); },
+        // [&](long long) { result = std::get<long long>(alpha) == std::get<long long>(beta); },
+        [&](double) { result = std::abs(std::get<double>(alpha) - std::get<double>(beta)) < CMP_EPS; },
+        [&](const Entity&) { result = std::get<Entity>(alpha).id() == std::get<Entity>(beta).id(); },
+        [&](const std::string&) { result = std::get<std::string>(alpha) == std::get<std::string>(beta); },
+        [&](const Table&) { result = &std::get<Table>(alpha) == &std::get<Table>(beta); },
+        [&](const auto&) { result = to_string(alpha) == to_string(beta); },
+    };
+    std::visit(comparators, alpha);
+    return result;
+}
+template <>
+std::optional<GenericValue> perform_binary<BinaryOpType::CmpLt>(const GenericValue& alpha, const GenericValue& beta)
+{
+    if (!std::holds_alternative<double>(alpha) || !std::holds_alternative<double>(beta)) return std::nullopt;
+    return std::get<double>(alpha) < std::get<double>(beta);
+}
+template <>
+std::optional<GenericValue> perform_binary<BinaryOpType::CmpLe>(const GenericValue& alpha, const GenericValue& beta)
+{
+    if (!std::holds_alternative<double>(alpha) || !std::holds_alternative<double>(beta)) return std::nullopt;
+    return std::get<double>(alpha) - std::get<double>(beta) < CMP_EPS;
+}
+template <>
+std::optional<GenericValue> perform_binary<BinaryOpType::CmpGt>(const GenericValue& alpha, const GenericValue& beta)
+{
+    if (!std::holds_alternative<double>(alpha) || !std::holds_alternative<double>(beta)) return std::nullopt;
+    return std::get<double>(alpha) < std::get<double>(beta);
+}
+template <>
+std::optional<GenericValue> perform_binary<BinaryOpType::CmpGe>(const GenericValue& alpha, const GenericValue& beta)
+{
+    if (!std::holds_alternative<double>(alpha) || !std::holds_alternative<double>(beta)) return std::nullopt;
+    return std::get<double>(alpha) - std::get<double>(beta) > -CMP_EPS;
+}
+template <>
+std::optional<GenericValue> perform_binary<BinaryOpType::CmpNeq>(const GenericValue& alpha, const GenericValue& beta)
+{
+    return !std::get<bool>(*perform_binary<BinaryOpType::CmpEq>(alpha, beta));
+}
+
+std::optional<GenericValue> perform_binary_operation(BinaryOpType op, const GenericValue& alpha,
+    const GenericValue& beta)
+{
+    switch (op)
+    {
+        case BinaryOpType::Add:         return perform_binary<BinaryOpType::Add>(alpha, beta);
+        case BinaryOpType::Subtract:    return perform_binary<BinaryOpType::Subtract>(alpha, beta);
+        case BinaryOpType::Multiply:    return perform_binary<BinaryOpType::Multiply>(alpha, beta);
+        case BinaryOpType::Divide:      return perform_binary<BinaryOpType::Divide>(alpha, beta);
+        case BinaryOpType::Mod:         return perform_binary<BinaryOpType::Mod>(alpha, beta);
+        case BinaryOpType::Pow:         return perform_binary<BinaryOpType::Pow>(alpha, beta);
+        case BinaryOpType::And:         return perform_binary<BinaryOpType::And>(alpha, beta);
+        case BinaryOpType::Or:          return perform_binary<BinaryOpType::Or>(alpha, beta);
+        case BinaryOpType::Xor:         return perform_binary<BinaryOpType::Xor>(alpha, beta);
+        case BinaryOpType::Concatenate: return perform_binary<BinaryOpType::Concatenate>(alpha, beta);
+        case BinaryOpType::CmpEq:       return perform_binary<BinaryOpType::CmpEq>(alpha, beta);
+        case BinaryOpType::CmpLt:       return perform_binary<BinaryOpType::CmpLt>(alpha, beta);
+        case BinaryOpType::CmpLe:       return perform_binary<BinaryOpType::CmpLe>(alpha, beta);
+        case BinaryOpType::CmpGt:       return perform_binary<BinaryOpType::CmpGt>(alpha, beta);
+        case BinaryOpType::CmpGe:       return perform_binary<BinaryOpType::CmpGe>(alpha, beta);
+        case BinaryOpType::CmpNeq:      return perform_binary<BinaryOpType::CmpNeq>(alpha, beta);
+        default: assert(false); return std::nullopt;
+    }
+}
+
 void ValueSequence::add(const GenericValue& value)
 {
     sequence.emplace_back(ValueBackrefPair{.value = value, .reference = nullptr});

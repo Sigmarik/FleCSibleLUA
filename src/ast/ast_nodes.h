@@ -145,52 +145,19 @@ struct Branch : INode
 
 struct UnaryOperator : INode
 {
-    enum class Type
-    {
-        Negate,
-        Not,
-        Length,
-    };
-
-    UnaryOperator(const parser::CharacterPos& pos, Type type, NodePtr&& node)
+    UnaryOperator(const parser::CharacterPos& pos, data::UnaryOpType type, NodePtr&& node)
         : INode(pos), type(type), node(std::move(node)) {}
 
-    Type type;
+    data::UnaryOpType type;
     NodePtr node;
 };
 
 struct BinaryOperator : INode
 {
-    enum class Type
-    {
-        Add,
-        Subtract,
-        Multiply,
-        Divide,
-
-        Mod,
-        Pow,
-
-        And,
-        Or,
-        Xor,
-
-        Concatenate,
-        
-        CmpEq,
-        CmpLt,
-        CmpLe,
-        CmpGt,
-        CmpGe,
-        CmpNeq
-    };
-
-    static const std::map<Type, std::string> kTypeNames;
-
-    BinaryOperator(const parser::CharacterPos& pos, Type type, NodePtr&& left, NodePtr&& right)
+    BinaryOperator(const parser::CharacterPos& pos, data::BinaryOpType type, NodePtr&& left, NodePtr&& right)
         : INode(pos), type(type), left(std::move(left)), right(std::move(right)) {}
 
-    Type type;
+    data::BinaryOpType type;
     NodePtr left, right;
 };
 

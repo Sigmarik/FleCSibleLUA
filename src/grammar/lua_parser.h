@@ -366,30 +366,30 @@ struct Return : parser::Grammar
 struct ExprLogical;
 
 template <class Lex>
-constexpr ast::BinaryOperator::Type lex2bin_v = ast::BinaryOperator::Type::Add;
+constexpr data::BinaryOpType lex2bin_v = data::BinaryOpType::Add;
 
-template <> constexpr ast::BinaryOperator::Type lex2bin_v<lualex::CmpEq> = ast::BinaryOperator::Type::CmpEq;
-template <> constexpr ast::BinaryOperator::Type lex2bin_v<lualex::CmpNeq> = ast::BinaryOperator::Type::CmpNeq;
-template <> constexpr ast::BinaryOperator::Type lex2bin_v<lualex::CmpGe> = ast::BinaryOperator::Type::CmpGe;
-template <> constexpr ast::BinaryOperator::Type lex2bin_v<lualex::CmpLe> = ast::BinaryOperator::Type::CmpLe;
-template <> constexpr ast::BinaryOperator::Type lex2bin_v<lualex::CmpGt> = ast::BinaryOperator::Type::CmpGt;
-template <> constexpr ast::BinaryOperator::Type lex2bin_v<lualex::CmpLt> = ast::BinaryOperator::Type::CmpLt;
-template <> constexpr ast::BinaryOperator::Type lex2bin_v<lualex::Plus> = ast::BinaryOperator::Type::Add;
-template <> constexpr ast::BinaryOperator::Type lex2bin_v<lualex::Minus> = ast::BinaryOperator::Type::Subtract;
-template <> constexpr ast::BinaryOperator::Type lex2bin_v<lualex::Multiply> = ast::BinaryOperator::Type::Multiply;
-template <> constexpr ast::BinaryOperator::Type lex2bin_v<lualex::Divide> = ast::BinaryOperator::Type::Divide;
-template <> constexpr ast::BinaryOperator::Type lex2bin_v<lualex::Mod> = ast::BinaryOperator::Type::Mod;
-template <> constexpr ast::BinaryOperator::Type lex2bin_v<lualex::Pow> = ast::BinaryOperator::Type::Pow;
-template <> constexpr ast::BinaryOperator::Type lex2bin_v<lualex::And> = ast::BinaryOperator::Type::And;
-template <> constexpr ast::BinaryOperator::Type lex2bin_v<lualex::Or> = ast::BinaryOperator::Type::Or;
-template <> constexpr ast::BinaryOperator::Type lex2bin_v<lualex::Concat> = ast::BinaryOperator::Type::Concatenate;
+template <> constexpr data::BinaryOpType lex2bin_v<lualex::CmpEq> = data::BinaryOpType::CmpEq;
+template <> constexpr data::BinaryOpType lex2bin_v<lualex::CmpNeq> = data::BinaryOpType::CmpNeq;
+template <> constexpr data::BinaryOpType lex2bin_v<lualex::CmpGe> = data::BinaryOpType::CmpGe;
+template <> constexpr data::BinaryOpType lex2bin_v<lualex::CmpLe> = data::BinaryOpType::CmpLe;
+template <> constexpr data::BinaryOpType lex2bin_v<lualex::CmpGt> = data::BinaryOpType::CmpGt;
+template <> constexpr data::BinaryOpType lex2bin_v<lualex::CmpLt> = data::BinaryOpType::CmpLt;
+template <> constexpr data::BinaryOpType lex2bin_v<lualex::Plus> = data::BinaryOpType::Add;
+template <> constexpr data::BinaryOpType lex2bin_v<lualex::Minus> = data::BinaryOpType::Subtract;
+template <> constexpr data::BinaryOpType lex2bin_v<lualex::Multiply> = data::BinaryOpType::Multiply;
+template <> constexpr data::BinaryOpType lex2bin_v<lualex::Divide> = data::BinaryOpType::Divide;
+template <> constexpr data::BinaryOpType lex2bin_v<lualex::Mod> = data::BinaryOpType::Mod;
+template <> constexpr data::BinaryOpType lex2bin_v<lualex::Pow> = data::BinaryOpType::Pow;
+template <> constexpr data::BinaryOpType lex2bin_v<lualex::And> = data::BinaryOpType::And;
+template <> constexpr data::BinaryOpType lex2bin_v<lualex::Or> = data::BinaryOpType::Or;
+template <> constexpr data::BinaryOpType lex2bin_v<lualex::Concat> = data::BinaryOpType::Concatenate;
 
 template <class Lex>
-constexpr ast::UnaryOperator::Type lex2un_v = ast::UnaryOperator::Type::Length;
+constexpr data::UnaryOpType lex2un_v = data::UnaryOpType::Length;
 
-template <> constexpr ast::UnaryOperator::Type lex2un_v<lualex::Length> = ast::UnaryOperator::Type::Length;
-template <> constexpr ast::UnaryOperator::Type lex2un_v<lualex::Not> = ast::UnaryOperator::Type::Not;
-template <> constexpr ast::UnaryOperator::Type lex2un_v<lualex::Minus> = ast::UnaryOperator::Type::Negate;
+template <> constexpr data::UnaryOpType lex2un_v<lualex::Length> = data::UnaryOpType::Length;
+template <> constexpr data::UnaryOpType lex2un_v<lualex::Not> = data::UnaryOpType::Not;
+template <> constexpr data::UnaryOpType lex2un_v<lualex::Minus> = data::UnaryOpType::Negate;
 
 template <class ...Descriptors>
 struct OperatorLike : parser::Grammar<Descriptors...>

@@ -142,19 +142,7 @@ void AstDebugger::visit(ast::FunctionCall& node)
 
 void AstDebugger::visit(ast::UnaryOperator& node)
 {
-    m_stream << m_indent << "Unary ";
-    switch (node.type)
-    {
-        case ast::UnaryOperator::Type::Length:
-            m_stream << "len";
-            break;
-        case ast::UnaryOperator::Type::Negate:
-            m_stream << "negation";
-            break;
-        case ast::UnaryOperator::Type::Not:
-            m_stream << "not";
-            break;
-    }
+    m_stream << m_indent << "Unary " + data::UNARY_OP_TYPE_NAMES.at(node.type);
     m_stream << "(\n";
     increaseIndent();
     Visitor::visit(node.node);
@@ -164,7 +152,7 @@ void AstDebugger::visit(ast::UnaryOperator& node)
 
 void AstDebugger::visit(ast::BinaryOperator& node)
 {
-    m_stream << m_indent << "Binary " << ast::BinaryOperator::kTypeNames.at(node.type) << "(\n";
+    m_stream << m_indent << "Binary " << data::BINARY_OP_TYPE_NAMES.at(node.type) << "(\n";
     increaseIndent();
     Visitor::visit(node.left);
     decreaseIndent();

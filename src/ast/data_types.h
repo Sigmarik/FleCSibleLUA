@@ -6,6 +6,8 @@
 #include <variant>
 #include <vector>
 #include <functional>
+#include <map>
+#include <optional>
 
 #include "flecs.h"
 #include "mem_utils/copyable_ptr.h"
@@ -37,6 +39,62 @@ class GenericValue;
 
 std::string to_string(const GenericValue& value);
 bool to_bool(const GenericValue& value);
+
+enum class UnaryOpType
+{
+    Negate,
+    Not,
+    Length,
+};
+
+static const std::map<UnaryOpType, std::string> UNARY_OP_TYPE_NAMES {
+    {UnaryOpType::Negate, "-"},
+    {UnaryOpType::Not, "~"},
+    {UnaryOpType::Length, "#"},
+};
+
+enum class BinaryOpType
+{
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
+
+    Mod,
+    Pow,
+
+    And,
+    Or,
+    Xor,
+
+    Concatenate,
+
+    CmpEq,
+    CmpLt,
+    CmpLe,
+    CmpGt,
+    CmpGe,
+    CmpNeq
+};
+
+static const std::map<BinaryOpType, std::string> BINARY_OP_TYPE_NAMES {
+    {BinaryOpType::Add, "+"},
+    {BinaryOpType::Subtract, "-"},
+    {BinaryOpType::Multiply, "*"},
+    {BinaryOpType::Divide, "/"},
+    {BinaryOpType::Mod, "%"},
+    {BinaryOpType::Pow, "^"},
+    {BinaryOpType::And, "and"},
+    {BinaryOpType::Or, "or"},
+    {BinaryOpType::Xor, "xor"},
+    {BinaryOpType::Concatenate, ".."},
+    {BinaryOpType::CmpEq, "=="},
+    {BinaryOpType::CmpLt, "<"},
+    {BinaryOpType::CmpLe, "<="},
+    {BinaryOpType::CmpGt, ">"},
+    {BinaryOpType::CmpGe, ">="},
+    {BinaryOpType::CmpNeq, "~="},
+};
 
 struct LuaFunction
 {
@@ -72,6 +130,10 @@ class GenericValue : public std::variant<Nil, bool, double, std::string, Table, 
 };
 
 std::string get_type_name(const GenericValue& value);
+
+std::optional<GenericValue> perform_unary_operation(UnaryOpType op, const GenericValue& value);
+std::optional<GenericValue> perform_binary_operation(BinaryOpType op,
+    const GenericValue& alpha, const GenericValue& beta);
 
 using MaybeFixedValuePtr = std::variant<GenericValue*, cmp_info::GenericComponentPtr>;
 

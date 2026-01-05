@@ -309,35 +309,11 @@ void Interpreter::visit(ast::UnaryOperator& node)
 {
     Visitor::visit(node.node);
     data::GenericValue operand = m_returnedValue.spit();
-    switch (node.type)
-    {
-        case ast::UnaryOperator::Type::Not:
-        {
-            m_returnedValue = !data::to_bool(operand);
-        }
-        break;
-        case ast::UnaryOperator::Type::Negate:
-        {
-            if (std::holds_alternative<double>(operand))
-            {
-                m_returnedValue = -std::get<double>(operand);
-            }
-            else if (std::holds_alternative<bool>(operand))
-            {
-                m_returnedValue = !data::to_bool(operand);
-            }
-            else
-            {
-                throw LuaRuntimeError(node, "Cannot negate value of type " + data::get_type_name(operand));
-            }
-        }
-        break;
-        case ast::UnaryOperator::Type::Length:
-        {
-            m_returnedValue = static_cast<double>(data::to_string(operand).length());
-        }
-        break;
-    }
+    std::optional<data::GenericValue> maybeResult = data::perform_unary_operation(node.type, operand);
+    if (!maybeResult)
+        throw LuaRuntimeError(node, "Cannot apply operator " + data::UNARY_OP_TYPE_NAMES.at(node.type) +
+            " to a value of type " + data::get_type_name(operand));
+    m_returnedValue = *maybeResult;
 }
 
 void Interpreter::visit(ast::BinaryOperator& node)
@@ -345,12 +321,12 @@ void Interpreter::visit(ast::BinaryOperator& node)
     Visitor::visit(node.left);
     data::GenericValue leftOperand = m_returnedValue.spit();
 
-    if (node.type == ast::BinaryOperator::Type::And && !data::to_bool(leftOperand))
+    if (node.type == data::BinaryOpType::And && !data::to_bool(leftOperand))
     {
         m_returnedValue = false;
         return;
     }
-    if (node.type == ast::BinaryOperator::Type::Or && data::to_bool(leftOperand))
+    if (node.type == data::BinaryOpType::Or && data::to_bool(leftOperand))
     {
         m_returnedValue = true;
         return;
@@ -359,81 +335,12 @@ void Interpreter::visit(ast::BinaryOperator& node)
     Visitor::visit(node.right);
     data::GenericValue rightOperand = m_returnedValue.spit();
 
-    if (node.type == ast::BinaryOperator::Type::Concatenate)
-    {
-        m_returnedValue = data::to_string(leftOperand) + data::to_string(rightOperand);
-        return;
-    }
-
-    if (node.type == ast::BinaryOperator::Type::CmpEq)
-    {
-        m_returnedValue = data::to_string(leftOperand) == data::to_string(rightOperand);
-        return;
-    }
-
-    if (node.type == ast::BinaryOperator::Type::CmpNeq)
-    {
-        m_returnedValue = data::to_string(leftOperand) != data::to_string(rightOperand);
-        return;
-    }
-
-    switch (node.type)
-    {
-        case ast::BinaryOperator::Type::And:
-            m_returnedValue = data::to_bool(leftOperand) && data::to_bool(rightOperand);
-            return;
-        case ast::BinaryOperator::Type::Or:
-            m_returnedValue = data::to_bool(leftOperand) || data::to_bool(rightOperand);
-            return;
-        case ast::BinaryOperator::Type::Xor:
-            m_returnedValue = data::to_bool(leftOperand) != data::to_bool(rightOperand);
-            return;
-        default: ;
-    }
-
-    if (!std::holds_alternative<double>(leftOperand) || !std::holds_alternative<double>(rightOperand))
-    {
-        throw LuaRuntimeError(node, "Attempt to perform arithmetics on values of types " +
-            data::get_type_name(leftOperand) + " and " + data::get_type_name(rightOperand));
-    }
-
-    double alpha = std::get<double>(leftOperand);
-    double beta = std::get<double>(rightOperand);
-
-    switch (node.type)
-    {
-        case ast::BinaryOperator::Type::Add:
-            m_returnedValue = alpha + beta;
-            break;
-        case ast::BinaryOperator::Type::Subtract:
-            m_returnedValue = alpha - beta;
-            break;
-        case ast::BinaryOperator::Type::Multiply:
-            m_returnedValue = alpha * beta;
-            break;
-        case ast::BinaryOperator::Type::Divide:
-            m_returnedValue = alpha / beta;
-            break;
-        case ast::BinaryOperator::Type::Mod:
-            m_returnedValue = alpha - std::floor(alpha / beta) * beta;
-            break;
-        case ast::BinaryOperator::Type::Pow:
-            m_returnedValue = std::pow(alpha, beta);
-            break;
-        case ast::BinaryOperator::Type::CmpGe:
-            m_returnedValue = alpha >= beta;
-            break;
-        case ast::BinaryOperator::Type::CmpGt:
-            m_returnedValue = alpha > beta;
-            break;
-        case ast::BinaryOperator::Type::CmpLe:
-            m_returnedValue = alpha <= beta;
-            break;
-        case ast::BinaryOperator::Type::CmpLt:
-            m_returnedValue = alpha < beta;
-            break;
-        default: ;
-    }
+    std::optional<data::GenericValue> maybeResult =
+            data::perform_binary_operation(node.type, leftOperand, rightOperand);
+    if (!maybeResult)
+        throw LuaRuntimeError(node, "Cannot apply operator " + data::BINARY_OP_TYPE_NAMES.at(node.type) +
+            " to values of types " + data::get_type_name(leftOperand) + " and " + data::get_type_name(rightOperand));
+    m_returnedValue = *maybeResult;
 }
 
 void Interpreter::visit(ast::FieldRequest& node)
@@ -659,28 +566,28 @@ void Interpreter::performFixedTypeAssignment(ast::Assignment& node, cmp_info::Ge
         {
             if (!std::holds_alternative<double>(value))
                 throw LuaRuntimeError(node, "Cannot assign a value of type " + data::get_type_name(value) +
-                    " to numeric component field");
+                                            " to numeric component field");
             *ptr = static_cast<int>(std::get<double>(value));
         },
         [&](unsigned* ptr)
         {
             if (!std::holds_alternative<double>(value))
                 throw LuaRuntimeError(node, "Cannot assign a value of type " + data::get_type_name(value) +
-                    " to numeric component field");
+                                            " to numeric component field");
             *ptr = static_cast<unsigned>(std::get<double>(value));
         },
         [&](float* ptr)
         {
             if (!std::holds_alternative<double>(value))
                 throw LuaRuntimeError(node, "Cannot assign a value of type " + data::get_type_name(value) +
-                    " to numeric component field");
+                                            " to numeric component field");
             *ptr = static_cast<float>(std::get<double>(value));
         },
         [&](double* ptr)
         {
             if (!std::holds_alternative<double>(value))
                 throw LuaRuntimeError(node, "Cannot assign a value of type " + data::get_type_name(value) +
-                    " to numeric component field");
+                                            " to numeric component field");
             *ptr = std::get<double>(value);
         },
         [&](auto* ptr)
@@ -688,7 +595,7 @@ void Interpreter::performFixedTypeAssignment(ast::Assignment& node, cmp_info::Ge
             using UnderlyingType = std::remove_reference_t<decltype(*ptr)>;
             if (!std::holds_alternative<UnderlyingType>(value))
                 throw LuaRuntimeError(node, "Cannot assign a value of type " + data::get_type_name(value) +
-                    " to the component field");
+                                            " to the component field");
             *ptr = std::get<UnderlyingType>(value);
         },
     };
