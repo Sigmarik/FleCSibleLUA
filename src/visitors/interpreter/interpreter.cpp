@@ -834,6 +834,22 @@ ecs_query_t* Interpreter::makeEcsQuery(const ast::EcsEntityFilter& filter, ast::
     return ecs_query_init(m_world->c_ptr(), &desc);
 }
 
+struct GuardedEcsIterator
+{
+    explicit GuardedEcsIterator(const ecs_iter_t& iterator) : m_iterator(iterator) {}
+    ~GuardedEcsIterator() { if (!m_finished) ecs_iter_fini(&m_iterator); }
+
+    void finish() { m_finished = true; }
+    ecs_iter_t* operator->() { return &m_iterator; }
+    const ecs_iter_t* operator->() const { return &m_iterator; }
+    ecs_iter_t& operator*() { return m_iterator; }
+    const ecs_iter_t& operator*() const { return m_iterator; }
+
+private:
+    ecs_iter_t m_iterator;
+    bool m_finished = false;
+};
+
 void Interpreter::runBodyWithinQueries(std::vector<NameQueryPair>& queries, std::deque<ast::NodePtr>& body,
                                        unsigned iterId)
 {
@@ -845,18 +861,19 @@ void Interpreter::runBodyWithinQueries(std::vector<NameQueryPair>& queries, std:
 
     auto& queryPair = queries[iterId];
     ecs_query_t* query = queryPair.query;
-    ecs_iter_t iter = ecs_query_iter(m_world->c_ptr(), query);
-    while (ecs_query_next(&iter))
+    GuardedEcsIterator iter(ecs_query_iter(m_world->c_ptr(), query));
+    while (ecs_query_next(&*iter))
     {
         const std::string& entityName = queryPair.entityName;
-        for (long long iterEntityIdx = 0; iterEntityIdx < iter.count; ++iterEntityIdx)
+        for (long long iterEntityIdx = 0; iterEntityIdx < iter->count; ++iterEntityIdx)
         {
-            ecs_entity_t ecsEntity = iter.entities[iterEntityIdx];
+            ecs_entity_t ecsEntity = iter->entities[iterEntityIdx];
             m_stack.back().varNameMap[entityName] = mem_utils::CopyMovePtr<data::GenericValue>(
-                flecs::entity(iter.world, ecsEntity));
+                flecs::entity(iter->world, ecsEntity));
             runBodyWithinQueries(queries, body, iterId + 1);
         }
     }
+    iter.finish();
 }
 
 void Interpreter::prepareAndRunSystem(ast::System& node, ecs_iter_t* systemIt)
