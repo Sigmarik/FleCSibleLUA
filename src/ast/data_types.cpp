@@ -2,6 +2,7 @@
 
 #include <ios>
 #include <sstream>
+#include <format>
 
 namespace flua::data
 {
@@ -18,7 +19,7 @@ static std::string to_string(bool value)
 
 static std::string to_string(double value)
 {
-    return std::to_string(value);
+    return std::format("{:.6}", value);
 }
 
 static std::string to_string(const std::string& value)
