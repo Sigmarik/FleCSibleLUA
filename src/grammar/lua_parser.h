@@ -218,14 +218,13 @@ struct System : parser::Grammar
         parser::Lex<lualex::BracketRoundOp>,
         QueryEntitySet,
         parser::Lex<lualex::BracketRoundCl>,
-        parser::Lex<lualex::Do>,
         Block,
         parser::Lex<lualex::End>
     >
 >
 {
     static ast::System visit(lualex::System lex, lualex::BracketRoundOp, std::deque<ast::EcsEntityFilter>& entities,
-        lualex::BracketRoundCl, lualex::Do, std::deque<ast::NodePtr>& body, lualex::End)
+        lualex::BracketRoundCl, std::deque<ast::NodePtr>& body, lualex::End)
     {
         ast::System system(lex.startingPos);
         system.entities = std::move(entities);

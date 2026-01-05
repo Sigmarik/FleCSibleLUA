@@ -141,7 +141,7 @@ void Interpreter::visit(ast::WhileLoop& node)
 
         visitTransparentBlock(node.body);
 
-        if (m_continuing) m_continuing = false;
+        m_continuing = false;
         if (m_returning || m_breaking) break;
     }
 
@@ -174,7 +174,7 @@ void Interpreter::visit(ast::ForLoopNumeric& node)
     {
         visitTransparentBlock(node.body);
 
-        if (m_continuing) m_continuing = false;
+        m_continuing = false;
         if (m_returning || m_breaking) break;
 
         *counterPtr += *stepPtr;
@@ -212,7 +212,7 @@ void Interpreter::visit(ast::ForLoopGeneric& node)
 
         visitTransparentBlock(node.body);
 
-        if (m_continuing) m_continuing = false;
+        m_continuing = false;
         if (m_returning || m_breaking) break;
     }
 
@@ -241,6 +241,9 @@ void Interpreter::visit(ast::Query& node)
     }
 
     runBodyWithinQueries(queries, node.body, 0);
+
+    m_breaking = false;
+    if (!m_returning) m_returnedValue.clear();
 }
 
 void Interpreter::visit(ast::RepeatUntil& node)
@@ -251,7 +254,7 @@ void Interpreter::visit(ast::RepeatUntil& node)
 
         visitTransparentBlock(node.body);
 
-        if (m_continuing) m_continuing = false;
+        m_continuing = false;
         if (m_returning || m_breaking) break;
 
         Visitor::visit(node.condition);
@@ -813,6 +816,9 @@ ecs_query_desc_t Interpreter::makeEcsQueryDesc(const ast::EcsEntityFilter& filte
 {
     ecs_query_desc_t desc{};
 
+    if (filter.components.empty())
+        throw LuaRuntimeError(node, "Entity filter " + filter.entityName.string +
+                                    " should have at least on component requirement");
     if (filter.components.size() > FLECS_TERM_COUNT_MAX)
         throw LuaRuntimeError(node, "Entity filter " + filter.entityName.string +
                                     " cannot have more than " + std::to_string(FLECS_TERM_COUNT_MAX) + " components");
@@ -871,6 +877,9 @@ void Interpreter::runBodyWithinQueries(std::vector<NameQueryPair>& queries, std:
             m_stack.back().varNameMap[entityName] = mem_utils::CopyMovePtr<data::GenericValue>(
                 flecs::entity(iter->world, ecsEntity));
             runBodyWithinQueries(queries, body, iterId + 1);
+            
+            m_continuing = false;
+            if (m_returning || m_breaking) break;
         }
     }
     iter.finish();
@@ -887,7 +896,11 @@ void Interpreter::prepareAndRunSystem(ast::System& node, ecs_iter_t* systemIt)
         m_stack.back().varNameMap[entityName] = mem_utils::CopyMovePtr<data::GenericValue>(
             flecs::entity(systemIt->world, ecsEntity));
         runBodyWithinQueries(m_nodeQueries[&node], node.body, 0);
+        if (m_returning || m_breaking) break;
     }
+    m_returning = false;
+    m_breaking = false;
+    m_returnedValue.clear();
 }
 
 void Interpreter::system_runner(ecs_iter_t* it)
