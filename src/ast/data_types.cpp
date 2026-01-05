@@ -4,6 +4,8 @@
 #include <sstream>
 #include <format>
 
+#include "meta/variant_helper.h"
+
 namespace flua::data
 {
 
@@ -66,11 +68,6 @@ static std::string to_string(const Function& function)
     return "[UNKNOWN FUNCTION TYPE]";
 }
 
-static std::string to_string(const GenericClass& generic)
-{
-    return "generic of type " + std::to_string(generic.typeId) + ": " + pointer_to_hex_string(generic.ptr);
-}
-
 std::string to_string(const GenericValue& value)
 {
     std::string result;
@@ -91,6 +88,23 @@ bool to_bool(const GenericValue& value)
     }
 
     return true;
+}
+
+const char* get_type_name(const GenericValue& value)
+{
+    const char* result = nullptr;
+    const auto opNameGetter = meta::Overloads{
+        [&](const Nil&) { result = "Nil"; },
+        [&](const bool&) { result = "Boolean"; },
+        [&](const double&) { result = "Numeric"; },
+        [&](const std::string&) { result = "String"; },
+        [&](const Table&) { result = "Table"; },
+        [&](const Entity&) { result = "Entity"; },
+        [&](const EntityComponent&) { result = "Component"; },
+        [&](const Function&) { result = "Function"; },
+    };
+    std::visit(opNameGetter, value);
+    return result;
 }
 
 void ValueSequence::add(const GenericValue& value)

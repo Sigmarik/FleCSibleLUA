@@ -27,12 +27,6 @@ using namespace flua;
 
 struct Table;
 
-struct GenericClass
-{
-    void* ptr = nullptr;
-    uint32_t typeId = 0;
-};
-
 using Entity = flecs::entity;
 
 struct Nil {};
@@ -72,10 +66,12 @@ struct EntityComponent
     std::string name;
 };
 
-class GenericValue : public std::variant<Nil, bool, double, std::string, Table, Entity, EntityComponent, GenericClass, Function>
+class GenericValue : public std::variant<Nil, bool, double, std::string, Table, Entity, EntityComponent, Function>
 {
-    using std::variant<Nil, bool, double, std::string, Table, Entity, EntityComponent, GenericClass, Function>::variant;
+    using std::variant<Nil, bool, double, std::string, Table, Entity, EntityComponent, Function>::variant;
 };
+
+const char* get_type_name(const GenericValue& value);
 
 using MaybeFixedValuePtr = std::variant<GenericValue*, cmp_info::GenericComponentPtr>;
 
