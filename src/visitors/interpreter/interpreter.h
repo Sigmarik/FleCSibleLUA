@@ -95,7 +95,17 @@ private:
 
     void printError(const LuaRuntimeError& err);
 
-    void runSystemUsingIterators(ast::System& system, unsigned iterId);
+    ecs_query_desc_t makeEcsQueryDesc(const ast::EcsEntityFilter& filter, ast::INode& node);
+    ecs_query_t* makeEcsQuery(const ast::EcsEntityFilter& filter, ast::INode& node);
+
+    struct NameQueryPair
+    {
+        std::string entityName{};
+        ecs_query_t* query = nullptr;
+    };
+
+    void runBodyWithinQueries(std::vector<NameQueryPair>& queries, std::deque<ast::NodePtr>& body,
+        unsigned iterId);
 
     void prepareAndRunSystem(ast::System& system, ecs_iter_t* systemIt);
 
@@ -157,8 +167,8 @@ private:
 
     std::unordered_map<std::string, ecs_id_t> m_componentIds{};
 
-    using SystemQueryArray = std::vector<ecs_query_t*>;
-    std::map<ast::System*, SystemQueryArray> m_systemQueries{};
+    using QueryArray = std::vector<NameQueryPair>;
+    std::map<ast::INode*, QueryArray> m_nodeQueries{};
 
     std::set<ecs_entity_t> m_ownedSystems{};
 };

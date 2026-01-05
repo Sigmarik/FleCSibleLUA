@@ -165,9 +165,7 @@ void Script::overrideGlobal(const std::string& name, const std::string& value)
 DeployedScript Script::deploy(flecs::world& world)
 {
     if (m_ast == nullptr)
-    {
         return {};
-    }
 
     // vst::AstDebugger dbg(std::cout);
     // dbg.process(*m_ast);

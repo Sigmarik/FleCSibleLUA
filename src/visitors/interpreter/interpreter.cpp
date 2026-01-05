@@ -22,11 +22,11 @@ Interpreter::~Interpreter()
     {
         s_interpreterSystems.erase(entity);
     }
-    for (auto& [key, queries] : m_systemQueries)
+    for (auto& [key, queries] : m_nodeQueries)
     {
-        for (ecs_query_t* query : queries)
+        for (auto& queryPair : queries)
         {
-            ecs_query_fini(query);
+            ecs_query_fini(queryPair.query);
         }
     }
     Visitor::~Visitor();
@@ -69,7 +69,7 @@ void Interpreter::visit(ast::Program& node)
 
 void Interpreter::visit(ast::Function& node)
 {
-    using VariableMap = std::unordered_map<std::string, mem_utils::CopyMovePtr<data::GenericValue> >;
+    using VariableMap = std::unordered_map<std::string, mem_utils::CopyMovePtr<data::GenericValue>>;
     VariableMap bakedFrame;
     if (m_stack.size() > 1)
     {
@@ -98,40 +98,14 @@ void Interpreter::visit(ast::System& node)
         throw LuaRuntimeError(node, "Attempt to create a system with no entities");
 
     auto entity = node.entities.front();
-    std::vector<ecs_id_t> components;
-    if (entity.components.size() > FLECS_TERM_COUNT_MAX)
-        throw LuaRuntimeError(node, "System entity " + entity.entityName.string +
-                                    " cannot have more than " + std::to_string(FLECS_TERM_COUNT_MAX) + " components");
-    for (const std::string& component : entity.components)
-    {
-        if (!m_componentIds.contains(component))
-            throw LuaRuntimeError(node, "Component " + component + " is not recognized by the system");
-        components.emplace_back(m_componentIds[component]);
-    }
+    ecs_query_desc_t query = makeEcsQueryDesc(entity, node);
 
-    std::vector<ecs_query_t*>& queries = m_systemQueries[&node] = std::vector<ecs_query_t*>(
-                                             node.entities.size() - 1, nullptr);
+    std::vector<NameQueryPair>& queries = m_nodeQueries[&node] =
+        std::vector<NameQueryPair>(node.entities.size() - 1, {});
     for (unsigned entityId = 1; entityId < node.entities.size(); ++entityId)
     {
-        ecs_query_desc_t desc{};
-        ecs_query_t*& query = queries[entityId - 1];
-        unsigned termIdx = 0;
-        for (const std::string& component : node.entities[entityId].components)
-        {
-            auto found = m_componentIds.find(component);
-            if (found == m_componentIds.end())
-                throw LuaRuntimeError(node, "Component " + component + " is not recognized by the system");
-            desc.terms[termIdx] = {found->second};
-        }
-        query = ecs_query_init(m_world->c_ptr(), &desc);
-    }
-
-    unsigned termCount = 0;
-    ecs_query_desc_t query{};
-    for (const ecs_id_t id : components)
-    {
-        query.terms[termCount] = {id};
-        ++termCount;
+        queries[entityId - 1].entityName = node.entities[entityId].entityName.string;
+        queries[entityId - 1].query = makeEcsQuery(node.entities[entityId], node);
     }
 
     ecs_system_desc_t sysDesc = {};
@@ -248,8 +222,25 @@ void Interpreter::visit(ast::ForLoopGeneric& node)
 
 void Interpreter::visit(ast::Query& node)
 {
-    // TODO: Implement
-    assert(false && "NOT IMPLEMENTED");
+    NamespaceHolder queryNamespace(m_stack);
+
+    if (m_nodeQueries.contains(&node))
+    {
+        runBodyWithinQueries(m_nodeQueries.at(&node), node.body, 0);
+        return;
+    }
+    if (node.filters.empty())
+        throw LuaRuntimeError(node, "Attempt to create a query with no entities");
+
+    std::vector<NameQueryPair>& queries = m_nodeQueries[&node] =
+        std::vector<NameQueryPair>(node.filters.size(), {});
+    for (unsigned entityId = 0; entityId < node.filters.size(); ++entityId)
+    {
+        queries[entityId].entityName = node.filters[entityId].entityName.string;
+        queries[entityId].query = makeEcsQuery(node.filters[entityId], node);
+    }
+
+    runBodyWithinQueries(queries, node.body, 0);
 }
 
 void Interpreter::visit(ast::RepeatUntil& node)
@@ -818,26 +809,52 @@ void Interpreter::printError(const LuaRuntimeError& err)
             err.what << std::endl;
 }
 
-void Interpreter::runSystemUsingIterators(ast::System& node, unsigned iterId)
+ecs_query_desc_t Interpreter::makeEcsQueryDesc(const ast::EcsEntityFilter& filter, ast::INode& node)
 {
-    std::vector<ecs_query_t*>& queries = m_systemQueries[&node];
+    ecs_query_desc_t desc{};
+
+    if (filter.components.size() > FLECS_TERM_COUNT_MAX)
+        throw LuaRuntimeError(node, "Entity filter " + filter.entityName.string +
+                                    " cannot have more than " + std::to_string(FLECS_TERM_COUNT_MAX) + " components");
+
+    unsigned termIdx = 0;
+    for (const std::string& component : filter.components)
+    {
+        auto found = m_componentIds.find(component);
+        if (found == m_componentIds.end())
+            throw LuaRuntimeError(node, "Component " + component + " is not recognized by the system");
+        desc.terms[termIdx] = {found->second};
+    }
+    return desc;
+}
+
+ecs_query_t* Interpreter::makeEcsQuery(const ast::EcsEntityFilter& filter, ast::INode& node)
+{
+    ecs_query_desc_t desc = makeEcsQueryDesc(filter, node);
+    return ecs_query_init(m_world->c_ptr(), &desc);
+}
+
+void Interpreter::runBodyWithinQueries(std::vector<NameQueryPair>& queries, std::deque<ast::NodePtr>& body,
+                                       unsigned iterId)
+{
     if (iterId >= queries.size())
     {
-        visitTransparentBlock(node.body);
+        visitTransparentBlock(body);
         return;
     }
 
-    ecs_query_t* query = queries[iterId];
+    auto& queryPair = queries[iterId];
+    ecs_query_t* query = queryPair.query;
     ecs_iter_t iter = ecs_query_iter(m_world->c_ptr(), query);
     while (ecs_query_next(&iter))
     {
-        const std::string& entityName = node.entities[iterId + 1].entityName.string;
+        const std::string& entityName = queryPair.entityName;
         for (long long iterEntityIdx = 0; iterEntityIdx < iter.count; ++iterEntityIdx)
         {
             ecs_entity_t ecsEntity = iter.entities[iterEntityIdx];
             m_stack.back().varNameMap[entityName] = mem_utils::CopyMovePtr<data::GenericValue>(
                 flecs::entity(iter.world, ecsEntity));
-            runSystemUsingIterators(node, iterId + 1);
+            runBodyWithinQueries(queries, body, iterId + 1);
         }
     }
 }
@@ -852,7 +869,7 @@ void Interpreter::prepareAndRunSystem(ast::System& node, ecs_iter_t* systemIt)
         ecs_entity_t ecsEntity = systemIt->entities[iterEntityIdx];
         m_stack.back().varNameMap[entityName] = mem_utils::CopyMovePtr<data::GenericValue>(
             flecs::entity(systemIt->world, ecsEntity));
-        runSystemUsingIterators(node, 0);
+        runBodyWithinQueries(m_nodeQueries[&node], node.body, 0);
     }
 }
 
