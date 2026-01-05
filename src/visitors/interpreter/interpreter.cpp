@@ -26,6 +26,7 @@ Interpreter::~Interpreter()
     {
         for (auto& queryPair : queries)
         {
+            if (!queryPair.query) break;
             ecs_query_fini(queryPair.query);
         }
     }
