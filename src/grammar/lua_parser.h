@@ -657,13 +657,41 @@ struct ExprSingleton : parser::Grammar
     }
 };
 
+using AssignmentLeft = parser::Repeating<ast::NodePtr, ExprSingleton, lualex::Comma>;
+using AssignmentRight = parser::Repeating<ast::NodePtr, HighLevelExpression, lualex::Comma>;
+
+struct AnyBinaryOperator : parser::Grammar
+<
+    AnyBinaryOperator, data::BinaryOpType,
+
+    parser::Sequence<parser::Lex<lualex::CmpEq>>,
+    parser::Sequence<parser::Lex<lualex::CmpNeq>>,
+    parser::Sequence<parser::Lex<lualex::CmpGe>>,
+    parser::Sequence<parser::Lex<lualex::CmpLe>>,
+    parser::Sequence<parser::Lex<lualex::CmpGt>>,
+    parser::Sequence<parser::Lex<lualex::CmpLt>>,
+    parser::Sequence<parser::Lex<lualex::Plus>>,
+    parser::Sequence<parser::Lex<lualex::Minus>>,
+    parser::Sequence<parser::Lex<lualex::Multiply>>,
+    parser::Sequence<parser::Lex<lualex::Divide>>,
+    parser::Sequence<parser::Lex<lualex::Mod>>,
+    parser::Sequence<parser::Lex<lualex::Pow>>,
+    parser::Sequence<parser::Lex<lualex::And>>,
+    parser::Sequence<parser::Lex<lualex::Or>>,
+    parser::Sequence<parser::Lex<lualex::Concat>>
+>
+{
+    template <class GenericLexeme>
+    static data::BinaryOpType visit(GenericLexeme) { return lex2bin_v<GenericLexeme>; }
+};
+
 struct Assignment : parser::Grammar
 <
     Assignment, ast::Assignment,
 
-    // TODO: Implement op= assignment
-    parser::Sequence<parser::Repeating<ast::NodePtr, ExprSingleton, lualex::Comma>,
-        parser::Lex<lualex::Assignment>, parser::Repeating<ast::NodePtr, HighLevelExpression, lualex::Comma>>
+
+    parser::Sequence<AssignmentLeft, parser::Lex<lualex::Assignment>, AssignmentRight>,
+    parser::Sequence<AssignmentLeft, AnyBinaryOperator, parser::Lex<lualex::Assignment>, AssignmentRight>
 >
 {
     static ast::Assignment visit(std::deque<ast::NodePtr>& subjects, lualex::Assignment lex, std::deque<ast::NodePtr>& values)
@@ -671,6 +699,15 @@ struct Assignment : parser::Grammar
         ast::Assignment assignment(lex.startingPos);
         assignment.subjects = std::move(subjects);
         assignment.data = std::move(values);
+        return assignment;
+    }
+
+    static ast::Assignment visit(std::deque<ast::NodePtr>& subjects, data::BinaryOpType op, lualex::Assignment lex, std::deque<ast::NodePtr>& values)
+    {
+        ast::Assignment assignment(lex.startingPos);
+        assignment.subjects = std::move(subjects);
+        assignment.data = std::move(values);
+        assignment.op = op;
         return assignment;
     }
 };

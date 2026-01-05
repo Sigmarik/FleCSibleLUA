@@ -450,6 +450,7 @@ void Interpreter::visit(ast::Variable& node)
 
 void Interpreter::visit(ast::Assignment& node)
 {
+    std::vector<data::GenericValue> subjectValues;
     std::vector<data::MaybeFixedValuePtr> subjects;
     std::vector<data::GenericValue> values;
     subjects.reserve(node.subjects.size());
@@ -462,6 +463,7 @@ void Interpreter::visit(ast::Assignment& node)
             throw LuaRuntimeError(node, "Attempt to assign a value to a non-assignable variable");
         }
         subjects.emplace_back(m_returnedValue.sequence.front().reference);
+        if (node.op) subjectValues.emplace_back(m_returnedValue.sequence.front().value);
     }
 
     for (ast::NodePtr& value : node.data)
@@ -477,15 +479,26 @@ void Interpreter::visit(ast::Assignment& node)
     for (size_t idx = 0; idx < subjects.size(); ++idx)
     {
         data::MaybeFixedValuePtr& subject = subjects[idx];
+        data::GenericValue value = idx < values.size() ? std::move(values[idx]) : data::Nil();
+        if (node.op)
+        {
+            std::optional<data::GenericValue> maybeValue =
+                data::perform_binary_operation(*node.op, subjectValues[idx], value);
+            if (!maybeValue)
+                throw LuaRuntimeError(node, "Attempt to apply operator " +
+                    data::BINARY_OP_TYPE_NAMES.at(*node.op) + " to values of types " +
+                    data::get_type_name(subjectValues[idx]) + " and " + data::get_type_name(value) +
+                    " during assignment");
+            value = *maybeValue;
+        }
         if (auto genericSubject = std::get_if<data::GenericValue*>(&subject))
         {
-            **genericSubject = idx < values.size() ? std::move(values[idx]) : data::Nil();
+            **genericSubject = value;
         }
         else
         {
             if (idx >= values.size())
                 throw LuaRuntimeError(node, "Not enough arguments to satisfy entity component field assignment");
-            data::GenericValue& value = values[idx];
             performFixedTypeAssignment(node, std::get<cmp_info::GenericComponentPtr>(subject), value);
         }
     }

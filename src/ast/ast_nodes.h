@@ -221,6 +221,8 @@ struct Assignment : INode
 {
     using INode::INode;
 
+    std::optional<data::BinaryOpType> op{};
+
     std::deque<NodePtr> subjects{};
     std::deque<NodePtr> data{};
 };
