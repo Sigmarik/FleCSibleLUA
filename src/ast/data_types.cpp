@@ -90,7 +90,7 @@ bool to_bool(const GenericValue& value)
     return true;
 }
 
-const char* get_type_name(const GenericValue& value)
+std::string get_type_name(const GenericValue& value)
 {
     const char* result = nullptr;
     const auto opNameGetter = meta::Overloads{

@@ -70,7 +70,7 @@ void Interpreter::visit(ast::Program& node)
 
 void Interpreter::visit(ast::Function& node)
 {
-    using VariableMap = std::unordered_map<std::string, mem_utils::CopyMovePtr<data::GenericValue>>;
+    using VariableMap = std::unordered_map<std::string, mem_utils::CopyMovePtr<data::GenericValue> >;
     VariableMap bakedFrame;
     if (m_stack.size() > 1)
     {
@@ -102,7 +102,7 @@ void Interpreter::visit(ast::System& node)
     ecs_query_desc_t query = makeEcsQueryDesc(entity, node);
 
     std::vector<NameQueryPair>& queries = m_nodeQueries[&node] =
-        std::vector<NameQueryPair>(node.entities.size() - 1, {});
+                                          std::vector<NameQueryPair>(node.entities.size() - 1, {});
     for (unsigned entityId = 1; entityId < node.entities.size(); ++entityId)
     {
         queries[entityId - 1].entityName = node.entities[entityId].entityName.string;
@@ -125,7 +125,7 @@ void Interpreter::visit(ast::System& node)
 
     ecs_entity_t sys = ecs_system_init(m_world->c_ptr(), &sysDesc);
     if (!ecs_is_valid(m_world->c_ptr(), sys) || !ecs_is_alive(m_world->c_ptr(), sys))
-        throw LuaRuntimeError(node, "Failed to create system");
+        throw LuaRuntimeError(node, "Failed to create the system");
 
     s_interpreterSystems[sys] = {.interpreter = this, .luaSystem = &node};
     m_ownedSystems.emplace(sys);
@@ -191,7 +191,7 @@ void Interpreter::visit(ast::ForLoopGeneric& node)
     data::GenericValue functor = m_returnedValue.spit();
 
     if (!std::holds_alternative<data::Function>(functor))
-        throw LuaRuntimeError(node, "Attempt to call a non-functional value");
+        throw LuaRuntimeError(node, "Attempt to call a non-functional value of type " + data::get_type_name(functor));
 
     while (true)
     {
@@ -234,7 +234,7 @@ void Interpreter::visit(ast::Query& node)
         throw LuaRuntimeError(node, "Attempt to create a query with no entities");
 
     std::vector<NameQueryPair>& queries = m_nodeQueries[&node] =
-        std::vector<NameQueryPair>(node.filters.size(), {});
+                                          std::vector<NameQueryPair>(node.filters.size(), {});
     for (unsigned entityId = 0; entityId < node.filters.size(); ++entityId)
     {
         queries[entityId].entityName = node.filters[entityId].entityName.string;
@@ -297,7 +297,8 @@ void Interpreter::visit(ast::FunctionCall& node)
     data::GenericValue maybeFunction = m_returnedValue.spit();
 
     if (!std::holds_alternative<data::Function>(maybeFunction))
-        throw LuaRuntimeError(node, "Cannot execute a non-functional object");
+        throw LuaRuntimeError(
+            node, "Cannot execute a non-functional object of type " + data::get_type_name(maybeFunction));
 
     data::Function func = std::get<data::Function>(maybeFunction);
 
@@ -327,7 +328,7 @@ void Interpreter::visit(ast::UnaryOperator& node)
             }
             else
             {
-                throw LuaRuntimeError(node, "Cannot negate a non-numerical and non-logical type");
+                throw LuaRuntimeError(node, "Cannot negate value of type " + data::get_type_name(operand));
             }
         }
         break;
@@ -392,7 +393,8 @@ void Interpreter::visit(ast::BinaryOperator& node)
 
     if (!std::holds_alternative<double>(leftOperand) || !std::holds_alternative<double>(rightOperand))
     {
-        throw LuaRuntimeError(node, "Attempt to perform arithmetics on a non-numeric value");
+        throw LuaRuntimeError(node, "Attempt to perform arithmetics on values of types " +
+            data::get_type_name(leftOperand) + " and " + data::get_type_name(rightOperand));
     }
 
     double alpha = std::get<double>(leftOperand);
@@ -460,7 +462,7 @@ void Interpreter::visit(ast::IndexRequest& node)
 
     if (!std::holds_alternative<data::Table>(dict))
     {
-        throw LuaRuntimeError(node, "Attempt to index a non-dictionary value");
+        throw LuaRuntimeError(node, "Attempt to index value of type " + data::get_type_name(dict));
     }
 
     auto& dct = std::get<data::Table>(dict);
@@ -656,32 +658,37 @@ void Interpreter::performFixedTypeAssignment(ast::Assignment& node, cmp_info::Ge
         [&](int* ptr)
         {
             if (!std::holds_alternative<double>(value))
-                throw LuaRuntimeError(node, "Cannot assign a non-numeric value to numeric component field");
+                throw LuaRuntimeError(node, "Cannot assign a value of type " + data::get_type_name(value) +
+                    " to numeric component field");
             *ptr = static_cast<int>(std::get<double>(value));
         },
         [&](unsigned* ptr)
         {
             if (!std::holds_alternative<double>(value))
-                throw LuaRuntimeError(node, "Cannot assign a non-numeric value to numeric component field");
+                throw LuaRuntimeError(node, "Cannot assign a value of type " + data::get_type_name(value) +
+                    " to numeric component field");
             *ptr = static_cast<unsigned>(std::get<double>(value));
         },
         [&](float* ptr)
         {
             if (!std::holds_alternative<double>(value))
-                throw LuaRuntimeError(node, "Cannot assign a non-numeric value to numeric component field");
+                throw LuaRuntimeError(node, "Cannot assign a value of type " + data::get_type_name(value) +
+                    " to numeric component field");
             *ptr = static_cast<float>(std::get<double>(value));
         },
         [&](double* ptr)
         {
             if (!std::holds_alternative<double>(value))
-                throw LuaRuntimeError(node, "Cannot assign a non-numeric value to numeric component field");
+                throw LuaRuntimeError(node, "Cannot assign a value of type " + data::get_type_name(value) +
+                    " to numeric component field");
             *ptr = std::get<double>(value);
         },
         [&](auto* ptr)
         {
             using UnderlyingType = std::remove_reference_t<decltype(*ptr)>;
             if (!std::holds_alternative<UnderlyingType>(value))
-                throw LuaRuntimeError(node, "Cannot assign a value of another type to a component field");
+                throw LuaRuntimeError(node, "Cannot assign a value of type " + data::get_type_name(value) +
+                    " to the component field");
             *ptr = std::get<UnderlyingType>(value);
         },
     };
@@ -878,7 +885,7 @@ void Interpreter::runBodyWithinQueries(std::vector<NameQueryPair>& queries, std:
             m_stack.back().varNameMap[entityName] = mem_utils::CopyMovePtr<data::GenericValue>(
                 flecs::entity(iter->world, ecsEntity));
             runBodyWithinQueries(queries, body, iterId + 1);
-            
+
             m_continuing = false;
             if (m_returning || m_breaking) break;
         }

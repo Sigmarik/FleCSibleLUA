@@ -71,7 +71,7 @@ class GenericValue : public std::variant<Nil, bool, double, std::string, Table, 
     using std::variant<Nil, bool, double, std::string, Table, Entity, EntityComponent, Function>::variant;
 };
 
-const char* get_type_name(const GenericValue& value);
+std::string get_type_name(const GenericValue& value);
 
 using MaybeFixedValuePtr = std::variant<GenericValue*, cmp_info::GenericComponentPtr>;
 
