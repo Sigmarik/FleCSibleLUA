@@ -41,6 +41,7 @@ struct WhileLoop;
 struct RepeatUntil;
 struct NumericFor;
 struct GenericFor;
+struct Query;
 
 struct ProgramBody;
 struct Program : parser::Grammar
@@ -223,7 +224,7 @@ struct System : parser::Grammar
     >
 >
 {
-    static ast::System visit(lualex::System lex, lualex::BracketRoundOp, std::deque<ast::System::SystemEntity>& entities,
+    static ast::System visit(lualex::System lex, lualex::BracketRoundOp, std::deque<ast::EcsEntityFilter>& entities,
         lualex::BracketRoundCl, lualex::Do, std::deque<ast::NodePtr>& body, lualex::End)
     {
         ast::System system(lex.startingPos);
@@ -233,11 +234,11 @@ struct System : parser::Grammar
     }
 };
 
-struct QueryEntitySet : parser::Repeating<ast::System::SystemEntity, QueryEntity, lualex::Comma> {};
+struct QueryEntitySet : parser::Repeating<ast::EcsEntityFilter, QueryEntity, lualex::Comma> {};
 
 struct QueryEntity : parser::Grammar
 <
-    QueryEntity, ast::System::SystemEntity,
+    QueryEntity, ast::EcsEntityFilter,
 
     parser::Sequence<
         parser::Lex<lualex::Name>,
@@ -252,10 +253,10 @@ struct QueryEntity : parser::Grammar
     >
 >
 {
-    static ast::System::SystemEntity visit(lualex::Name& entityName, lualex::BracketRoundOp,
+    static ast::EcsEntityFilter visit(lualex::Name& entityName, lualex::BracketRoundOp,
         std::deque<lualex::Name>& components, lualex::BracketRoundCl)
     {
-        ast::System::SystemEntity entity;
+        ast::EcsEntityFilter entity;
         entity.entityName = entityName.name;
         entity.components = {};
         for (lualex::Name& component : components)
@@ -265,9 +266,9 @@ struct QueryEntity : parser::Grammar
         return entity;
     }
 
-    static ast::System::SystemEntity visit(lualex::Name& entityName, lualex::BracketRoundOp, lualex::BracketRoundCl)
+    static ast::EcsEntityFilter visit(lualex::Name& entityName, lualex::BracketRoundOp, lualex::BracketRoundCl)
     {
-        ast::System::SystemEntity entity;
+        ast::EcsEntityFilter entity;
         entity.entityName = entityName.name;
         entity.components = {};
         return entity;
@@ -328,6 +329,7 @@ struct Action : parser::Grammar
     parser::Sequence<RepeatUntil>,
     parser::Sequence<NumericFor>,
     parser::Sequence<GenericFor>,
+    parser::Sequence<Query>,
     parser::Sequence<Function>,
     parser::Sequence<LocalAssignment>,
     parser::Sequence<Break>,
@@ -895,6 +897,29 @@ struct GenericFor : parser::Grammar
         ast::ForLoopNumeric loop(lex.startingPos, name.name, std::move(start), std::move(limit), std::move(step));
         loop.body = std::move(body);
         return loop;
+    }
+};
+
+struct Query : parser::Grammar
+<
+    Query, ast::Query,
+
+    parser::Sequence<
+        parser::Lex<lualex::For>,
+        QueryEntitySet,
+        parser::Lex<lualex::Do>,
+        Block,
+        parser::Lex<lualex::End>
+    >
+>
+{
+    static ast::Query visit(lualex::For lex, std::deque<ast::EcsEntityFilter>& filters, lualex::Do,
+        std::deque<ast::NodePtr>& body, lualex::End)
+    {
+        ast::Query query(lex.startingPos);
+        query.filters = std::move(filters);
+        query.body = std::move(body);
+        return query;
     }
 };
 

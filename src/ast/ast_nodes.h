@@ -60,17 +60,17 @@ struct Function : INode
     std::deque<NodePtr> body{};
 };
 
+struct EcsEntityFilter
+{
+    ids::ResolvableName entityName{"UNDEFINED_SYSTEM_PARAMETER"};
+    std::deque<std::string> components{};
+};
+
 struct System : INode
 {
     using INode::INode;
 
-    struct SystemEntity
-    {
-        ids::ResolvableName entityName{"UNDEFINED_SYSTEM_PARAMETER"};
-        std::deque<std::string> components{};
-    };
-
-    std::deque<SystemEntity> entities{};
+    std::deque<EcsEntityFilter> entities{};
     std::deque<NodePtr> body{};
 };
 
@@ -105,6 +105,14 @@ struct ForLoopGeneric : INode
     std::vector<ids::ResolvableName> names{};
     NodePtr iterator;
 
+    std::deque<NodePtr> body{};
+};
+
+struct Query : INode
+{
+    using INode::INode;
+
+    std::deque<EcsEntityFilter> filters{};
     std::deque<NodePtr> body{};
 };
 
@@ -283,6 +291,7 @@ namespace
         WhileLoop,
         ForLoopNumeric,
         ForLoopGeneric,
+        Query,
         RepeatUntil,
         Branch,
         UnaryOperator,

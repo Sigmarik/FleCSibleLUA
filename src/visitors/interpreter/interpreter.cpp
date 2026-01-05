@@ -246,6 +246,12 @@ void Interpreter::visit(ast::ForLoopGeneric& node)
     if (!m_returning) m_returnedValue.clear();
 }
 
+void Interpreter::visit(ast::Query& node)
+{
+    // TODO: Implement
+    assert(false && "NOT IMPLEMENTED");
+}
+
 void Interpreter::visit(ast::RepeatUntil& node)
 {
     while (true)

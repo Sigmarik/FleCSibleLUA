@@ -25,7 +25,7 @@ void AstDebugger::visit(ast::Function& node)
 void AstDebugger::visit(ast::System& node)
 {
     m_stream << m_indent << "System ( ";
-    for (const ast::System::SystemEntity& entity : node.entities)
+    for (const ast::EcsEntityFilter& entity : node.entities)
     {
         m_stream << entity.entityName.string << " ( ";
         for (const std::string& component : entity.components)
@@ -81,6 +81,23 @@ void AstDebugger::visit(ast::ForLoopGeneric& node)
     Visitor::visit(node.iterator);
     decreaseIndent();
     m_stream << m_indent << "{\n";
+    visitList(node.body);
+    m_stream << m_indent << "}\n";
+}
+
+void AstDebugger::visit(ast::Query& node)
+{
+    m_stream << m_indent << "Query ";
+    for (const ast::EcsEntityFilter& entity : node.filters)
+    {
+        m_stream << entity.entityName.string << " ( ";
+        for (const std::string& component : entity.components)
+        {
+            m_stream << component << " ";
+        }
+        m_stream << ") ";
+    }
+    m_stream << "{\n";
     visitList(node.body);
     m_stream << m_indent << "}\n";
 }
