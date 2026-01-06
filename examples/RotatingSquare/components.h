@@ -1,3 +1,5 @@
+namespace ecs
+{
 struct Position
 {
     float x = 0;
@@ -8,3 +10,4 @@ struct Rotation
 {
     float angle = 0;
 };
+}

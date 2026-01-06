@@ -1,8 +1,11 @@
+//! WARNING: This document is a VIBE CODED TEMPORARY solution. It is subject to be rewritten in the future.
+
 #include <clang-c/Index.h>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 namespace fs = std::filesystem;
@@ -17,6 +20,7 @@ struct fieldInfo
 struct structInfo
 {
     std::string name;
+    std::string fullName;
     std::vector<fieldInfo> fields;
 };
 
@@ -77,6 +81,15 @@ static bool extract_initializer_from_file(const std::string& filePath,
     return true;
 }
 
+static bool is_type_name_allowed(const std::string& typeName)
+{
+    static const std::unordered_set<std::string> kAllowedTypes = {
+        "int", "unsigned", "float", "double", "std::string", "bool", "flecs::entity"
+    };
+
+    return kAllowedTypes.contains(typeName);
+}
+
 static CXChildVisitResult collect_struct_fields(CXCursor cursor, CXCursor, CXClientData clientData)
 {
     auto* fieldList = reinterpret_cast<std::vector<fieldInfo>*>(clientData);
@@ -85,6 +98,12 @@ static CXChildVisitResult collect_struct_fields(CXCursor cursor, CXCursor, CXCli
     fieldInfo field;
     field.name = to_std_string(clang_getCursorSpelling(cursor));
     field.type = to_std_string(clang_getTypeSpelling(clang_getCursorType(cursor)));
+    if (!is_type_name_allowed(field.type))
+    {
+        std::cerr << "Warning: Ignoring field " << field.name <<
+                ", type " << field.type << " is not allowed." << std::endl;
+        return CXChildVisit_Continue;
+    }
 
     CXSourceRange extent = clang_getCursorExtent(cursor);
     CXSourceLocation startLoc = clang_getRangeStart(extent);
@@ -105,6 +124,30 @@ static CXChildVisitResult collect_struct_fields(CXCursor cursor, CXCursor, CXCli
     return CXChildVisit_Continue;
 }
 
+static std::string get_full_name(CXCursor cursor)
+{
+    std::string name = to_std_string(clang_getCursorSpelling(cursor));
+    CXCursor parent = clang_getCursorSemanticParent(cursor);
+
+    while (!clang_equalCursors(parent, clang_getNullCursor()))
+    {
+        CXCursorKind pk = clang_getCursorKind(parent);
+        if (pk == CXCursor_Namespace ||
+            pk == CXCursor_StructDecl ||
+            pk == CXCursor_ClassDecl ||
+            pk == CXCursor_EnumDecl ||
+            pk == CXCursor_ClassTemplate ||
+            pk == CXCursor_NamespaceAlias)
+        {
+            std::string p = to_std_string(clang_getCursorSpelling(parent));
+            if (!p.empty()) name = p + "::" + name;
+        }
+        parent = clang_getCursorSemanticParent(parent);
+    }
+
+    return name;
+}
+
 static CXChildVisitResult collect_top_level_structs(CXCursor cursor, CXCursor, CXClientData clientData)
 {
     auto* structList = reinterpret_cast<std::vector<structInfo>*>(clientData);
@@ -112,8 +155,11 @@ static CXChildVisitResult collect_top_level_structs(CXCursor cursor, CXCursor, C
     if (!(kind == CXCursor_StructDecl || kind == CXCursor_ClassDecl)) return CXChildVisit_Recurse;
     if (!clang_isCursorDefinition(cursor)) return CXChildVisit_Recurse;
 
+    clang_getCursorPrintingPolicy(cursor);
+
     structInfo info;
     info.name = to_std_string(clang_getCursorSpelling(cursor));
+    info.fullName = get_full_name(cursor);
     clang_visitChildren(cursor, collect_struct_fields, &info.fields);
     if (!info.fields.empty()) structList->push_back(std::move(info));
     return CXChildVisit_Recurse;
@@ -172,7 +218,7 @@ static void write_entity_member_map(std::ofstream& out, const std::vector<struct
             wroteAny = true;
             out << "    {\"" << structEntry.name << " " << fieldEntry.name <<
                     "\", [](flecs::entity entity)->GenericComponentPtr{ return &entity.get_mut<"
-                    << structEntry.name << ">()." << fieldEntry.name << "; }}";
+                    << structEntry.fullName << ">()." << fieldEntry.name << "; }}";
         }
     }
     out << "\n};\n\n";
@@ -186,8 +232,8 @@ static void write_entity_component_checkers(std::ofstream& out, const std::vecto
     {
         if (wroteAny) out << ",\n";
         wroteAny = true;
-        out << "    {\"" << structEntry.name << "\", [](flecs::entity entity){ return entity.has<" << structEntry.name
-                << ">(); }}";
+        out << "    {\"" << structEntry.name << "\", [](flecs::entity entity){ return entity.has<" << structEntry.
+                fullName << ">(); }}";
     }
     out << "\n};\n\n";
 }
@@ -197,7 +243,7 @@ static void write_get_component_ids_function(std::ofstream& out, const std::vect
     out << "extern std::unordered_map<std::string, ecs_id_t> get_component_ids(const flecs::world& world)\n{\n";
     out << "    std::unordered_map<std::string, ecs_id_t> componentIds;\n";
     for (auto const& structEntry : structs)
-        out << "    componentIds[\"" << structEntry.name << "\"] = flecs::component<" << structEntry.name <<
+        out << "    componentIds[\"" << structEntry.name << "\"] = flecs::component<" << structEntry.fullName <<
                 ">(world).id();\n";
     out << "    return componentIds;\n}\n}\n";
 }

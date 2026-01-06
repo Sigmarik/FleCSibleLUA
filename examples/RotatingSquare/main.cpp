@@ -31,8 +31,8 @@ int main()
     register_rendering_system(world, window, box);
 
     world.entity()
-        .set<Position>({ 400.0f, 300.0f })
-        .set<Rotation>({ 12.3f });
+        .set<ecs::Position>({ 400.0f, 300.0f })
+        .set<ecs::Rotation>({ 12.3f });
 
     flua::Script script = flua::Script::Load("examples/RotatingSquare/script.lua");
     script.overrideGlobal("ROTATION_SPEED", 7.0);

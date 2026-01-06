@@ -14,22 +14,22 @@ using EntityComponentChecker = std::function<bool(flecs::entity)>;
 
 extern const std::unordered_map<std::string, EntityMemberAccessor> ENTITY_MEMBER_MAP
 {
-    {"Position x", [](flecs::entity entity)->GenericComponentPtr{ return &entity.get_mut<Position>().x; }},
-    {"Position y", [](flecs::entity entity)->GenericComponentPtr{ return &entity.get_mut<Position>().y; }},
-    {"Rotation angle", [](flecs::entity entity)->GenericComponentPtr{ return &entity.get_mut<Rotation>().angle; }}
+    {"Position x", [](flecs::entity entity)->GenericComponentPtr{ return &entity.get_mut<ecs::Position>().x; }},
+    {"Position y", [](flecs::entity entity)->GenericComponentPtr{ return &entity.get_mut<ecs::Position>().y; }},
+    {"Rotation angle", [](flecs::entity entity)->GenericComponentPtr{ return &entity.get_mut<ecs::Rotation>().angle; }}
 };
 
 extern const std::unordered_map<std::string, EntityComponentChecker> ENTITY_COMPONENT_CHECKERS
 {
-    {"Position", [](flecs::entity entity){ return entity.has<Position>(); }},
-    {"Rotation", [](flecs::entity entity){ return entity.has<Rotation>(); }}
+    {"Position", [](flecs::entity entity){ return entity.has<ecs::Position>(); }},
+    {"Rotation", [](flecs::entity entity){ return entity.has<ecs::Rotation>(); }}
 };
 
 extern std::unordered_map<std::string, ecs_id_t> get_component_ids(const flecs::world& world)
 {
     std::unordered_map<std::string, ecs_id_t> componentIds;
-    componentIds["Position"] = flecs::component<Position>(world).id();
-    componentIds["Rotation"] = flecs::component<Rotation>(world).id();
+    componentIds["Position"] = flecs::component<ecs::Position>(world).id();
+    componentIds["Rotation"] = flecs::component<ecs::Rotation>(world).id();
     return componentIds;
 }
 }
