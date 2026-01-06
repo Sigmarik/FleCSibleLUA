@@ -252,6 +252,69 @@ static void write_get_component_ids_function(std::ofstream& out, const std::vect
     out << "    return componentIds;\n}\n}\n";
 }
 
+static std::string trim_surrounding_quotes(std::string s) {
+    if (s.size() >= 2) {
+        // remove matching surrounding double quotes
+        if (s.front() == '"' && s.back() == '"') {
+            return s.substr(1, s.size() - 2);
+        }
+        // optionally handle single quotes
+        if (s.front() == '\'' && s.back() == '\'') {
+            return s.substr(1, s.size() - 2);
+        }
+    }
+    return s;
+}
+
+static fs::path expand_tilde(const std::string &s) {
+    if (s.empty() || s[0] != '~') return s;
+#if defined(_WIN32)
+    return fs::path(s);
+#else
+    const char *home = std::getenv("HOME");
+    if (!home || std::string(home).empty()) {
+        return fs::path(s); // leave as-is if HOME unavailable
+    }
+    if (s.size() == 1) return fs::path(home);
+    if (s[1] == '/') return fs::path(home) / s.substr(2);
+    return fs::path(s);
+#endif
+}
+
+fs::path path_from_string(const std::string& input)
+{
+    fs::path candidate = expand_tilde(trim_surrounding_quotes(input));
+
+    if (candidate.is_absolute()) {
+        try {
+            return candidate.lexically_normal();
+        } catch (...) {
+            return candidate;
+        }
+    }
+
+#if defined(_WIN32)
+    if (candidate.string().size() >= 2 && std::isalpha(static_cast<unsigned char>(candidate.string()[0]))
+        && candidate.string()[1] == ':') {
+        if (candidate.string().size() >= 3 && (candidate.string()[2] == '\\' || candidate.string()[2] == '/')) {
+            try {
+                return candidate.lexically_normal();
+            } catch (...) {
+                return candidate;
+            }
+        }
+    }
+#endif
+
+    try {
+        fs::path cwd = fs::current_path();
+        fs::path full = cwd / candidate;
+        return full.lexically_normal();
+    } catch (...) {
+        return candidate;
+    }
+}
+
 int main(int argc, char** argv)
 {
     if (argc < 3)
@@ -260,36 +323,43 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
-    const char* outputPathStr = argv[1];
-    std::vector<const char*> inputPathStrings = {};
-    for (int inputId = 2; inputId < argc; ++inputId)
-        inputPathStrings.push_back(argv[inputId]);
-    fs::path outputPath(outputPathStr);
+    fs::path outputPath(path_from_string(argv[1]));
+
     std::vector<fs::path> inputPaths;
-    for (const char* path : inputPathStrings)
-        inputPaths.push_back(path);
+    for (int inputId = 2; inputId < argc; ++inputId)
+        inputPaths.push_back(path_from_string(argv[inputId]));
 
     std::vector<structInfo> discoveredStructs;
     std::vector<fs::path> relativeIncludes;
 
+    bool failed = false;
+
     for (unsigned inputIdx = 0; inputIdx < inputPaths.size(); ++inputIdx)
     {
-        const char* inputPathStr = inputPathStrings[inputIdx];
         const fs::path& inputPath = inputPaths[inputIdx];
+        std::string inputPathStr = inputPath.string();
+
+        if (!std::filesystem::exists(inputPath) || std::filesystem::is_directory(inputPath))
+        {
+            std::cerr << "Input file " << inputPath.string() << " does not exist\n";
+            failed = true;
+            continue;
+        }
 
         CXIndex clangIndex = clang_createIndex(0, 0);
         const char* clangArgs[] = {"-x", "c++", "-std=c++17"};
         CXTranslationUnit translationUnit = nullptr;
         CXErrorCode parseResult = clang_parseTranslationUnit2(clangIndex,
-                                                              inputPathStr,
+                                                              inputPathStr.c_str(),
                                                               clangArgs, 3,
                                                               nullptr, 0,
                                                               CXTranslationUnit_None,
                                                               &translationUnit);
         if (parseResult != CXError_Success)
         {
-            std::cerr << "Failed to parse " << inputPathStr << std::endl;
+            std::cerr << "Failed to parse " << inputPath << std::endl;
             clang_disposeIndex(clangIndex);
+            failed = true;
             continue;
         }
 
@@ -300,8 +370,9 @@ int main(int argc, char** argv)
 
         clang_disposeTranslationUnit(translationUnit);
         clang_disposeIndex(clangIndex);
-
     }
+
+    if (failed) return EXIT_FAILURE;
 
     std::ofstream outFile(outputPath);
     if (!outFile)

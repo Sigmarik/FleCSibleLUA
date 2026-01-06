@@ -1,3 +1,5 @@
+include(${CMK_INCLUDE_FOLDER}/flua.cmake)
+
 add_executable(RotatingSquare)
 
 target_compile_definitions(RotatingSquare
@@ -36,8 +38,9 @@ endif()
 target_sources(RotatingSquare
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
 	PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/systems.cpp
-	PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/_flua_components_prototype.cpp
 )
+
+target_flua_components(RotatingSquare FluaComponentParser components.h)
 
 target_include_directories(RotatingSquare
 	PRIVATE ${CMAKE_LIBRARY_PATH}/sfml/include
