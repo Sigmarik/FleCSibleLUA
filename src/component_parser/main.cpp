@@ -94,6 +94,7 @@ static CXChildVisitResult collect_struct_fields(CXCursor cursor, CXCursor, CXCli
 {
     auto* fieldList = reinterpret_cast<std::vector<fieldInfo>*>(clientData);
     if (clang_getCursorKind(cursor) != CXCursor_FieldDecl) return CXChildVisit_Continue;
+    if (clang_getCXXAccessSpecifier(cursor) != CX_CXXPublic) return CXChildVisit_Continue;
 
     fieldInfo field;
     field.name = to_std_string(clang_getCursorSpelling(cursor));
