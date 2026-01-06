@@ -571,3 +571,6 @@ http-client.private.env.json
 .idea/ApifoxUploaderProjectSetting.xml
 
 .idea/
+
+# Flua component files
+_flua_**.cpp
