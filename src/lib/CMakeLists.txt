@@ -22,9 +22,7 @@ target_include_directories(FlecsibleLua PRIVATE ../..)
 target_include_directories(FlecsibleLua PRIVATE ${CMAKE_INCLUDE_PATH})
 target_include_directories(FlecsibleLua PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
-target_include_directories(FlecsibleLua
-	PRIVATE ${CMAKE_LIBRARY_PATH}/flecs/include
-)
+target_include_directories(FlecsibleLua SYSTEM PRIVATE ${CMAKE_LIBRARY_PATH}/flecs/include)
 
 target_link_libraries(FlecsibleLua PRIVATE
 	${FLECS_LIBRARIES}

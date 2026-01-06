@@ -1,4 +1,4 @@
-//! WARNING: This document is a VIBE CODED TEMPORARY solution. It is subject to be rewritten in the future.
+//! WARNING: This file is a VIBE CODED TEMPORARY solution. It is subject to be rewritten in the future.
 
 #include <clang-c/Index.h>
 #include <filesystem>
@@ -187,7 +187,7 @@ static fs::path make_lexical_relative(const fs::path& fromPath, const fs::path& 
     return resultPath;
 }
 
-static void write_header_and_namespace(std::ofstream& out, const fs::path& relativeInclude)
+static void write_header_and_namespace(std::ofstream& out, const std::vector<fs::path>& relativeIncludes)
 {
     out << R"(#include <unordered_map>
 #include <string>
@@ -195,8 +195,11 @@ static void write_header_and_namespace(std::ofstream& out, const fs::path& relat
 #include <variant>
 #include <flecs.h>
 
-#include )" << relativeInclude << R"(
+)";
+    for (const fs::path& path : relativeIncludes)
+        out << "#include " << path << "\n";
 
+    out << R"(
 namespace flua::cmp_info
 {
 using GenericComponentPtr = std::variant<int*, unsigned*, float*, double*, std::string*, bool*, flecs::entity*>;
@@ -253,53 +256,64 @@ int main(int argc, char** argv)
 {
     if (argc < 3)
     {
-        std::cerr << "Usage: " << argv[0] << " <input.cpp> <output.cpp>\n";
-        return 1;
+        std::cerr << "Usage: " << argv[0] << " <output.cpp> <inputs.h>...\n";
+        return EXIT_FAILURE;
     }
 
-    std::string inputPathStr = argv[1];
-    std::string outputPathStr = argv[2];
-    fs::path inputPath(inputPathStr);
+    const char* outputPathStr = argv[1];
+    std::vector<const char*> inputPathStrings = {};
+    for (int inputId = 2; inputId < argc; ++inputId)
+        inputPathStrings.push_back(argv[inputId]);
     fs::path outputPath(outputPathStr);
+    std::vector<fs::path> inputPaths;
+    for (const char* path : inputPathStrings)
+        inputPaths.push_back(path);
 
-    CXIndex clangIndex = clang_createIndex(0, 0);
-    const char* clangArgs[] = {"-x", "c++", "-std=c++17"};
-    CXTranslationUnit translationUnit = nullptr;
-    CXErrorCode parseResult = clang_parseTranslationUnit2(clangIndex,
-                                                          inputPathStr.c_str(),
-                                                          clangArgs, 3,
-                                                          nullptr, 0,
-                                                          CXTranslationUnit_None,
-                                                          &translationUnit);
-    if (parseResult != CXError_Success)
-    {
-        std::cerr << "Failed to parse: " << parseResult << "\n";
-        clang_disposeIndex(clangIndex);
-        return 1;
-    }
-
-    CXCursor rootCursor = clang_getTranslationUnitCursor(translationUnit);
     std::vector<structInfo> discoveredStructs;
-    clang_visitChildren(rootCursor, collect_top_level_structs, &discoveredStructs);
+    std::vector<fs::path> relativeIncludes;
 
-    fs::path relativeInclude = make_lexical_relative(outputPath, inputPath);
+    for (unsigned inputIdx = 0; inputIdx < inputPaths.size(); ++inputIdx)
+    {
+        const char* inputPathStr = inputPathStrings[inputIdx];
+        const fs::path& inputPath = inputPaths[inputIdx];
+
+        CXIndex clangIndex = clang_createIndex(0, 0);
+        const char* clangArgs[] = {"-x", "c++", "-std=c++17"};
+        CXTranslationUnit translationUnit = nullptr;
+        CXErrorCode parseResult = clang_parseTranslationUnit2(clangIndex,
+                                                              inputPathStr,
+                                                              clangArgs, 3,
+                                                              nullptr, 0,
+                                                              CXTranslationUnit_None,
+                                                              &translationUnit);
+        if (parseResult != CXError_Success)
+        {
+            std::cerr << "Failed to parse " << inputPathStr << std::endl;
+            clang_disposeIndex(clangIndex);
+            continue;
+        }
+
+        CXCursor rootCursor = clang_getTranslationUnitCursor(translationUnit);
+        clang_visitChildren(rootCursor, collect_top_level_structs, &discoveredStructs);
+
+        relativeIncludes.push_back(make_lexical_relative(outputPath, inputPath));
+
+        clang_disposeTranslationUnit(translationUnit);
+        clang_disposeIndex(clangIndex);
+
+    }
 
     std::ofstream outFile(outputPath);
     if (!outFile)
     {
         std::cerr << "Failed to open output file: " << outputPath << "\n";
-        clang_disposeTranslationUnit(translationUnit);
-        clang_disposeIndex(clangIndex);
-        return 1;
+        return EXIT_FAILURE;
     }
 
-    write_header_and_namespace(outFile, relativeInclude);
+    write_header_and_namespace(outFile, relativeIncludes);
     write_entity_member_map(outFile, discoveredStructs);
     write_entity_component_checkers(outFile, discoveredStructs);
     write_get_component_ids_function(outFile, discoveredStructs);
 
-    clang_disposeTranslationUnit(translationUnit);
-    clang_disposeIndex(clangIndex);
-
-    return 0;
+    return EXIT_SUCCESS;
 }

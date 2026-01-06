@@ -9,7 +9,7 @@ target_include_directories(FluaComponentParser PRIVATE ../..)
 set(CLANG_ROOT "${CMAKE_LIBRARY_PATH}/clang")
 
 # Add clang headers
-target_include_directories(FluaComponentParser PRIVATE
+target_include_directories(FluaComponentParser SYSTEM PRIVATE
         "${CLANG_ROOT}/include"
 )
 
