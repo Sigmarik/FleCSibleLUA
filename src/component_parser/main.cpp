@@ -1,4 +1,4 @@
-//! WARNING: This file is a VIBE CODED TEMPORARY solution. It is subject to be rewritten in the future.
+//! WARNING: This file is a TEMPORARY VIBE CODED solution. It is subject to be rewritten in the future.
 
 #include <clang-c/Index.h>
 #include <filesystem>

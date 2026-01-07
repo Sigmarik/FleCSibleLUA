@@ -8,6 +8,8 @@
 #include <string>
 #include <deque>
 
+#include "meta/tuple_helper.h"
+
 #include "char_pos.h"
 #include "error.h"
 
@@ -29,10 +31,10 @@ namespace
     };
 }
 
-template <class RootGrammar>
+template<class RootGrammar>
 struct Parser : IParser
 {
-    template <class LexemeVariantPtr>
+    template<class LexemeVariantPtr>
     static std::expected<typename RootGrammar::RetType, ParsingError> tryParse(
         LexemeVariantPtr& start, const LexemeVariantPtr& end)
     {
@@ -52,109 +54,165 @@ namespace
 {
     struct EmptyType {};
 
-    template <class Tuple>
+    template<class Tuple>
     struct get_first_type
     {
         using type = std::tuple_element_t<0, Tuple>;
     };
 
-    template <>
-    struct get_first_type<std::tuple<>>
+    template<>
+    struct get_first_type<std::tuple<> >
     {
         using type = EmptyType;
     };
 
-    template <class Tuple>
+    template<class Tuple>
     using get_first_type_t = get_first_type<Tuple>::type;
 }
 
-template <class ThisType, class ReturnType, class... Variants>
-struct Grammar
+template<class KeyT, class ForestT>
+struct Tree
 {
-    using RetType = ReturnType;
+    using Key = KeyT;
+    using Forest = ForestT;
+};
 
-    template <class ParserT, class LexemeVariantPtr>
-    static std::optional<RetType> tryParse(ParserT& parser, LexemeVariantPtr& start, const LexemeVariantPtr& end)
+namespace
+{
+    template<class Grammar, class Tuple, std::size_t... I>
+    auto call_with_tuple(Tuple& tuple, std::index_sequence<I...>)
     {
-        std::optional<ReturnType> head = tryParseVariant<0, ParserT, LexemeVariantPtr>(parser, start, end);
-        if (!head.has_value())
-        {
-            return head;
-        }
-
-        while (tryGrowHead<0, ParserT, LexemeVariantPtr>(head.value(), parser, start, end)) {}
-
-        return head;
+        return Grammar::visit(std::get<I>(tuple)...);
     }
 
-private:
-    using VariantTuple = std::tuple<Variants...>;
-
-    template <unsigned VariantIndex, class ParserT, class LexemeVariantPtr>
-    static std::optional<ReturnType> tryParseVariant(ParserT& parser, LexemeVariantPtr& start, const LexemeVariantPtr& end)
+    template<class Grammar, class Tuple>
+    auto call_with_tuple(Tuple& tuple)
     {
-        if constexpr (VariantIndex < std::tuple_size_v<VariantTuple>)
-        {
-            LexemeVariantPtr formerStart = start;
-            std::optional<ReturnType> result =
-                std::tuple_element_t<VariantIndex, VariantTuple>::template tryParse<
-                    ReturnType, ThisType, ParserT, LexemeVariantPtr
-                >(parser, start, end);
-            if (result.has_value())
-            {
-                return result;
-            }
-
-            start = formerStart;
-
-            if constexpr (VariantIndex + 1 < std::tuple_size_v<VariantTuple>)
-            {
-                return tryParseVariant<VariantIndex + 1, ParserT, LexemeVariantPtr>(parser, start, end);
-            }
-
-            return result;
-        }
-
-        auto what = "All options failed";
-        parser.trySetError(ParsingError{.what = what, .where = posFromVariant(*start)});
-        return std::nullopt;
+        return call_with_tuple<Grammar>(tuple, std::make_index_sequence<std::tuple_size_v<std::decay_t<Tuple> > >{});
     }
+}
 
-    template <unsigned VariantIndex, class ParserT, class LexemeVariantPtr>
-    static bool tryGrowHead(ReturnType& head, ParserT& parser, LexemeVariantPtr& start, const LexemeVariantPtr& end)
+template<bool HasEmptyTreeV, class... TreesT>
+struct Forest
+{
+    static constexpr bool kHasEmptyTree = HasEmptyTreeV;
+
+    using TreesTuple = std::tuple<TreesT...>;
+
+    template<class RetType, class CurrentGrmr, class ParserT, class LexemeVariantPtr, unsigned treeN>
+    static bool tryExtend(RetType& current, ParserT& parser, LexemeVariantPtr& start, const LexemeVariantPtr& end)
     {
-        if (start == end)
+        if constexpr (treeN >= std::tuple_size_v<TreesTuple>)
         {
             return false;
         }
-
-        if constexpr (VariantIndex < std::tuple_size_v<VariantTuple>)
+        else
         {
-            LexemeVariantPtr formerStart = start;
-            bool result =
-                std::tuple_element_t<VariantIndex, VariantTuple>::template tryExtend<
-                    ReturnType, ThisType, ParserT, LexemeVariantPtr
-                >(head, parser, start, end);
-            if (result)
+            using CurrentTree = std::tuple_element_t<treeN, TreesTuple>;
+
+            if constexpr (!std::is_same_v<CurrentGrmr, typename CurrentTree::Key>)
             {
+                return tryExtend
+                        <RetType, CurrentGrmr, ParserT, LexemeVariantPtr, treeN + 1>
+                        (current, parser, start, end);
+            }
+            else
+            {
+                LexemeVariantPtr formerStart = start;
+                std::tuple<RetType> headTuple = std::make_tuple(current);
+                auto stageResult = CurrentTree::Forest::template tryParse
+                        <RetType, CurrentGrmr, true, ParserT, std::tuple<RetType>, LexemeVariantPtr, 0>
+                        (parser, start, end, headTuple);
+                if (!stageResult)
+                {
+                    start = formerStart;
+                    return tryExtend
+                        <RetType, CurrentGrmr, ParserT, LexemeVariantPtr, treeN + 1>
+                        (current, parser, start, end);
+                }
+
+                current = std::move(*stageResult);
+
                 return true;
             }
-
-            start = formerStart;
-
-            return tryGrowHead<VariantIndex + 1, ParserT, LexemeVariantPtr>(head, parser, start, end);
         }
+    }
 
-        return false;
+    template<class RetType, class CurrentGrmr, bool ignoreCurrentGrmrKeysV, class ParserT, class PreviousIterationsTuple, class LexemeVariantPtr, unsigned treeN>
+    static std::optional<RetType> tryParse(ParserT& parser, LexemeVariantPtr& start, const LexemeVariantPtr& end,
+                                           PreviousIterationsTuple& args)
+    {
+        if constexpr (treeN >= std::tuple_size_v<TreesTuple>)
+        {
+            if constexpr (kHasEmptyTree) return call_with_tuple<CurrentGrmr, PreviousIterationsTuple>(args);
+            else return std::nullopt;
+        }
+        else
+        {
+            using CurrentTree = std::tuple_element_t<treeN, TreesTuple>;
+
+            if constexpr (ignoreCurrentGrmrKeysV && std::is_same_v<CurrentGrmr, typename CurrentTree::Key>)
+            {
+                return tryParse
+                    <RetType, CurrentGrmr, true, ParserT, PreviousIterationsTuple, LexemeVariantPtr, treeN + 1>
+                    (parser, start, end, args);
+            }
+            else
+            {
+                LexemeVariantPtr formerStart = start;
+                auto stageResult = CurrentTree::Key::tryParse(parser, start, end);
+                if (!stageResult)
+                {
+                    start = formerStart;
+                    return tryParse
+                        <RetType, CurrentGrmr, true, ParserT, PreviousIterationsTuple, LexemeVariantPtr, treeN + 1>
+                        (parser, start, end, args);
+                }
+                auto expanded = meta::expand(args, std::move(*stageResult));
+
+                return CurrentTree::Forest::template tryParse
+                        <RetType, CurrentGrmr, false, ParserT, decltype(expanded), LexemeVariantPtr, 0>
+                        (parser, start, end, expanded);
+            }
+        }
     }
 };
 
-template <class Lexeme>
+template<class...>
+struct Sequence {};
+
+#include "parser_borificator.h"
+
+template<class ThisType, class ReturnType, class... Variants>
+struct Grammar
+{
+    using RetType = ReturnType;
+    using BorForest = make_forest_t<Variants...>;
+
+    template<class ParserT, class LexemeVariantPtr>
+    static std::optional<RetType> tryParse(ParserT& parser, LexemeVariantPtr& start, const LexemeVariantPtr& end)
+    {
+        std::tuple<> emptyTuple;
+        std::optional<ReturnType> head = BorForest::template tryParse
+            <RetType, ThisType, true, ParserT, std::tuple<>, LexemeVariantPtr, 0>
+            (parser, start, end, emptyTuple);
+
+        if (!head.has_value()) return head;
+
+        while (BorForest::template tryExtend
+            <RetType, ThisType, ParserT, LexemeVariantPtr, 0>
+            (*head, parser, start, end)) {}
+
+        return head;
+    }
+};
+
+template<class Lexeme>
 struct Lex final
 {
     using RetType = Lexeme;
 
-    template <class ParserT, class LexemeVariantPtr>
+    template<class ParserT, class LexemeVariantPtr>
     static std::optional<Lexeme> tryParse(ParserT& parser, LexemeVariantPtr& start, const LexemeVariantPtr& end)
     {
         if (start != end && std::holds_alternative<Lexeme>(*start))
@@ -165,124 +223,34 @@ struct Lex final
         }
 
         std::string what = std::string(Lexeme::kName.value) + " expected near ";
-        std::visit([&](const auto& specificLexeme){ what += specificLexeme.kName.value; }, *start);
+        std::visit([&](const auto& specificLexeme) { what += specificLexeme.kName.value; }, *start);
         parser.trySetError(ParsingError{.what = what, .where = posFromVariant(*start)});
         return std::nullopt;
     }
 };
 
-namespace
-{
-    template<class Grammar, class Tuple, std::size_t... I>
-    auto call_with_tuple(Tuple& tuple, std::index_sequence<I...>) {
-        return Grammar::visit(std::get<I>(tuple).value()...);
-    }
-
-    template<class Grammar, class Tuple>
-    auto call_with_tuple(Tuple& tuple) {
-        return call_with_tuple<Grammar>(tuple, std::make_index_sequence<std::tuple_size_v<std::decay_t<Tuple>>>{});
-    }
-}
-
-template <class... Elements>
-struct Sequence
-{
-    using SequenceTuple = std::tuple<Elements...>;
-
-    template <class ReturnType, class Lexeme, class ParserT, class LexemeVariantPtr>
-    static std::optional<ReturnType> tryParse(ParserT& parser,
-        LexemeVariantPtr& start, const LexemeVariantPtr& end)
-    {
-        if constexpr (std::is_same_v<get_first_type_t<SequenceTuple>, Lexeme>)
-        {
-            return std::nullopt;
-        }
-        else
-        {
-            using ArgumentTypeTuple = std::tuple<std::optional<typename Elements::RetType>...>;
-
-            ArgumentTypeTuple args;
-            bool success = fillArgumentTuple<0, ArgumentTypeTuple, ParserT, LexemeVariantPtr>(args, parser, start, end);
-            if (!success)
-            {
-                return std::nullopt;
-            }
-
-            return call_with_tuple<Lexeme, ArgumentTypeTuple>(args);
-        }
-    }
-
-    template <class ReturnType, class Lexeme, class ParserT, class LexemeVariantPtr>
-    static bool tryExtend(ReturnType& head, ParserT& parser, LexemeVariantPtr& start,
-        const LexemeVariantPtr& end)
-    {
-        if constexpr (!std::is_same_v<get_first_type_t<SequenceTuple>, Lexeme>)
-        {
-            return false;
-        }
-        else
-        {
-            using ArgumentTypeTuple = std::tuple<std::optional<typename Elements::RetType>...>;
-
-            ArgumentTypeTuple args;
-            std::get<0>(args) = std::move(head);
-            bool success =
-                fillArgumentTuple<1, ArgumentTypeTuple, ParserT, LexemeVariantPtr>(args,parser, start, end);
-            if (!success)
-            {
-                head = std::move(*std::get<0>(args));
-                return false;
-            }
-
-            head = call_with_tuple<Lexeme, ArgumentTypeTuple>(args);
-            return true;
-        }
-    }
-
-private:
-    template <unsigned Index, class Tuple, class ParserT, class LexemeVariantPtr>
-    static bool fillArgumentTuple(Tuple& tuple, ParserT& parser, LexemeVariantPtr& start, const LexemeVariantPtr& end)
-    {
-        if constexpr (Index < std::tuple_size_v<SequenceTuple>)
-        {
-            using CurrentGrammar = std::tuple_element_t<Index, SequenceTuple>;
-            auto result = CurrentGrammar::tryParse(parser, start, end);
-            if (!result.has_value())
-            {
-                return false;
-            }
-
-            std::get<Index>(tuple) = result.value();
-
-            return fillArgumentTuple<Index + 1, Tuple, ParserT, LexemeVariantPtr>(tuple, parser, start, end);
-        }
-
-        return true;
-    }
-};
-
-template <class Part, class ...OpTypes>
+template<class Part, class... OpTypes>
 struct Alternating
 {
     std::deque<Part> parts{};
-    std::deque<std::variant<OpTypes...>> ops{};
+    std::deque<std::variant<OpTypes...> > ops{};
 };
 
-template <class PartRt, class Part, class ...OpLexemes>
+template<class PartRt, class Part, class... OpLexemes>
 struct Repeating : Grammar
-<
-    Repeating<PartRt, Part, OpLexemes...>, std::deque<PartRt>,
+        <
+            Repeating<PartRt, Part, OpLexemes...>, std::deque<PartRt>,
 
-    Sequence<Repeating<PartRt, Part, OpLexemes...>, Lex<OpLexemes>, Part>...,
-    Sequence<Part>
->
+            Sequence<Repeating<PartRt, Part, OpLexemes...>, Lex<OpLexemes>, Part>...,
+            Sequence<Part>
+        >
 {
     static std::deque<PartRt> visit(PartRt& part)
     {
         return {std::move(part)};
     }
 
-    template <class OpLexeme>
+    template<class OpLexeme>
     static std::deque<PartRt> visit(std::deque<PartRt>& sequence, OpLexeme&&, PartRt& part)
     {
         sequence.emplace_back(std::move(part));
@@ -290,14 +258,14 @@ struct Repeating : Grammar
     }
 };
 
-template <class PartRt, class Part>
+template<class PartRt, class Part>
 struct Repeating<PartRt, Part> : Grammar
-<
-    Repeating<PartRt, Part>, std::deque<PartRt>,
+        <
+            Repeating<PartRt, Part>, std::deque<PartRt>,
 
-    Sequence<Repeating<PartRt, Part>, Part>,
-    Sequence<>
->
+            Sequence<Repeating<PartRt, Part>, Part>,
+            Sequence<>
+        >
 {
     static std::deque<PartRt> visit()
     {
@@ -310,5 +278,4 @@ struct Repeating<PartRt, Part> : Grammar
         return std::move(sequence);
     }
 };
-
 }
