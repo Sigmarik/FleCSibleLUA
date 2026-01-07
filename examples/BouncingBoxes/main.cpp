@@ -38,6 +38,8 @@ int main()
         .set<ecs::Coloration>({{255, 151, 30}, {230, 107, 18}});
 
     flua::Script script = flua::Script::Load("examples/BouncingBoxes/script.lua");
+    script.overrideGlobal("SCREEN_X", window.getSize().x);
+    script.overrideGlobal("SCREEN_Y", window.getSize().y);
     flua::DeployedScript deployment = script.deploy(world);
 
     while (window.isOpen())
