@@ -154,15 +154,14 @@ static CXChildVisitResult collect_top_level_structs(CXCursor cursor, CXCursor, C
     auto* structList = reinterpret_cast<std::vector<structInfo>*>(clientData);
     CXCursorKind kind = clang_getCursorKind(cursor);
     if (!(kind == CXCursor_StructDecl || kind == CXCursor_ClassDecl)) return CXChildVisit_Recurse;
-    if (!clang_isCursorDefinition(cursor)) return CXChildVisit_Recurse;
 
     clang_getCursorPrintingPolicy(cursor);
 
     structInfo info;
     info.name = to_std_string(clang_getCursorSpelling(cursor));
     info.fullName = get_full_name(cursor);
-    clang_visitChildren(cursor, collect_struct_fields, &info.fields);
-    if (!info.fields.empty()) structList->push_back(std::move(info));
+    if (clang_isCursorDefinition(cursor)) clang_visitChildren(cursor, collect_struct_fields, &info.fields);
+    structList->push_back(std::move(info));
     return CXChildVisit_Recurse;
 }
 
