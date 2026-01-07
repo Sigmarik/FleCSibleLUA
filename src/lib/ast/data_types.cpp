@@ -248,7 +248,7 @@ template <>
 std::optional<GenericValue> perform_binary<BinaryOpType::CmpGt>(const GenericValue& alpha, const GenericValue& beta)
 {
     if (!std::holds_alternative<double>(alpha) || !std::holds_alternative<double>(beta)) return std::nullopt;
-    return std::get<double>(alpha) < std::get<double>(beta);
+    return std::get<double>(alpha) > std::get<double>(beta);
 }
 template <>
 std::optional<GenericValue> perform_binary<BinaryOpType::CmpGe>(const GenericValue& alpha, const GenericValue& beta)
