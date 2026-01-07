@@ -116,7 +116,6 @@ void Interpreter::visit(ast::System& node)
         0
     };
     ecs_entity_desc_t systemEntityDesc{
-        .name = "Move",
         .add = addons,
     };
     sysDesc.entity = ecs_entity_init(m_world->c_ptr(), &systemEntityDesc);
