@@ -12,6 +12,7 @@ add_library(FlecsibleLua
         library/output.cpp
         library/tables.cpp
         library/ecs.cpp
+		library/lua_math.cpp
         visitors/interpreter/interpreter.cpp)
 
 if (WINDOWS)

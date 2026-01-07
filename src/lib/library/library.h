@@ -1,6 +1,4 @@
-#include "output.h"
-#include "tables.h"
-#include "ecs.h"
+#include "flecsible_lua_api.h"
 
 #include <functional>
 
