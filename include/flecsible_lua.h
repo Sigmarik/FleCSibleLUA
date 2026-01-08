@@ -3,9 +3,7 @@
 #include <string>
 
 #include <flecs.h>
-#include <vector>
 #include <functional>
-#include <memory>
 #include <optional>
 #include <variant>
 
