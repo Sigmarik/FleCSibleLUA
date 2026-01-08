@@ -246,7 +246,7 @@ This project represents the culmination of my bachelor's thesis research at **Mo
 
 <div align="center">
 
-### 🚀 Ready to transform your Flecs development?
+### Ready to transform your Flecs development?
 
 *Star the repository to stay updated on the release!*
 
