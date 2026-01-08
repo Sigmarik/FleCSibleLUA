@@ -131,7 +131,7 @@ You will need three files to integrate FLua into your project:
 # Include flua.cmake to have access to `target_flua_components` 
 include(flua.cmake)
 
-# Tell FLua where your component structs are defined
+# Tell FLua where your components are defined
 target_flua_components(YourProject ${PATH_TO_PROJECT_TOOLS}/FluaComponentParser.exe
         components1.h components2.h ...)
 
