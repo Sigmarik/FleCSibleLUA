@@ -37,11 +37,25 @@ public:
 
     ~Interpreter() override;
 
-    void overrideGlobal(const std::string& name, const std::function<void(FluaState*)>& function);
+    template <class ValueT>
+    void setGlobal(const std::string& name, const ValueT& value)
+    {
+        m_stack.front().varNameMap[name] = mem_utils::CopyMovePtr<data::GenericValue>(value);
+    }
 
-    void overrideGlobal(const std::string& name, double value);
+    template <class ValueT>
+    ValueT getGlobal(const std::string& name)
+    {
+        return std::get<ValueT>(m_stack.front().varNameMap.at(name));
+    }
 
-    void overrideGlobal(const std::string& name, const std::string& value);
+    template <class ValueT>
+    ValueT isGlobalOfType(const std::string& name)
+    {
+        auto found = m_stack.front().varNameMap.find(name);
+        if (found == m_stack.front().varNameMap.end()) return false;
+        return std::holds_alternative<ValueT>(found->second);
+    }
 
     [[nodiscard]] bool fallen() const { return m_fallen; }
 

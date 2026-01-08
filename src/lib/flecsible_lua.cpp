@@ -34,19 +34,19 @@ DeployedScript& DeployedScript::operator=(DeployedScript&& other) noexcept
 void DeployedScript::overrideGlobal(const std::string& name, const std::function<void(FluaState*)>& function)
 {
     assert(m_interpreter);
-    m_interpreter->overrideGlobal(name, function);
+    m_interpreter->setGlobal(name, data::Function(function));
 }
 
 void DeployedScript::overrideGlobal(const std::string& name, double value)
 {
     assert(m_interpreter);
-    m_interpreter->overrideGlobal(name, value);
+    m_interpreter->setGlobal(name, value);
 }
 
 void DeployedScript::overrideGlobal(const std::string& name, const std::string& value)
 {
     assert(m_interpreter);
-    m_interpreter->overrideGlobal(name, value);
+    m_interpreter->setGlobal(name, value);
 }
 
 Script::Script(const Script& other)
@@ -176,12 +176,12 @@ DeployedScript Script::deploy(flecs::world& world)
 
     for (const auto& [name, function] : lib::STANDARD_LIBRARY)
     {
-        interpreter.overrideGlobal(name, function);
+        script.overrideGlobal(name, function);
     }
 
     for (const auto& [name, genericValue] : m_globalOverrides)
     {
-        std::visit([&](const auto& value) { interpreter.overrideGlobal(name, value); }, genericValue);
+        std::visit([&](const auto& value) { script.overrideGlobal(name, value); }, genericValue);
     }
 
     interpreter.process(*m_ast);
