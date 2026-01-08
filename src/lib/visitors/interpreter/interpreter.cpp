@@ -98,7 +98,7 @@ void Interpreter::visit(ast::System& node)
     if (node.entities.empty())
         throw LuaRuntimeError(node, "Attempt to create a system with no entities");
 
-    auto entity = node.entities.front();
+    const ast::EcsEntityFilter& entity = node.entities.front();
     ecs_query_desc_t query = makeEcsQueryDesc(entity, node);
 
     std::vector<NameQueryPair>& queries = m_nodeQueries[&node] =
@@ -757,6 +757,7 @@ ecs_query_desc_t Interpreter::makeEcsQueryDesc(const ast::EcsEntityFilter& filte
         if (found == m_componentIds.end())
             throw LuaRuntimeError(node, "Component " + component + " is not recognized by the system");
         desc.terms[termIdx] = {found->second};
+        ++termIdx;
     }
     return desc;
 }
