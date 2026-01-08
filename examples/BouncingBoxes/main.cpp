@@ -17,7 +17,7 @@ int main()
     float boxSize = 200;
     sf::RectangleShape box(sf::Vector2f(boxSize, boxSize));
     box.setOrigin(sf::Vector2f(boxSize / 2.0f, boxSize / 2.0f));
-    box.setOutlineThickness(10);
+    box.setOutlineThickness(-10);
 
     flecs::world world;
     register_rendering_system(world, window, box);
