@@ -44,17 +44,17 @@ public:
     }
 
     template <class ValueT>
-    ValueT getGlobal(const std::string& name)
+    ValueT getGlobal(const std::string& name) const
     {
-        return std::get<ValueT>(m_stack.front().varNameMap.at(name));
+        return std::get<ValueT>(*m_stack.front().varNameMap.at(name));
     }
 
     template <class ValueT>
-    ValueT isGlobalOfType(const std::string& name)
+    bool isGlobalOfType(const std::string& name) const
     {
         auto found = m_stack.front().varNameMap.find(name);
         if (found == m_stack.front().varNameMap.end()) return false;
-        return std::holds_alternative<ValueT>(found->second);
+        return std::holds_alternative<ValueT>(*found->second);
     }
 
     [[nodiscard]] bool fallen() const { return m_fallen; }

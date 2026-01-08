@@ -12,7 +12,7 @@ int main()
 {
     sf::ContextSettings settings;
     settings.antiAliasingLevel = 8;
-    sf::RenderWindow window(sf::VideoMode({800, 600}), "Bouncing Boxes", sf::Style::Default, sf::State::Windowed, settings);
+    sf::RenderWindow window(sf::VideoMode({800, 600}), "Parsing...", sf::Style::Default, sf::State::Windowed, settings);
 
     float boxSize = 200;
     sf::RectangleShape box(sf::Vector2f(boxSize, boxSize));
@@ -23,19 +23,19 @@ int main()
     register_rendering_system(world, window, box);
 
     world.entity()
-        .set<ecs::Position>({ 200.0f, 300.0f })
-        .set<ecs::BoxCollider>({ 100.0f, 100.0f })
-        .set<ecs::Velocity>({ 100, 100 })
-        .set<ecs::Mass>({ 50.0f })
-        .set<ecs::Gravity>({})
-        .set<ecs::Coloration>({{255, 151, 30}, {230, 107, 18}});
+            .set<ecs::Position>({200.0f, 300.0f})
+            .set<ecs::BoxCollider>({100.0f, 100.0f})
+            .set<ecs::Velocity>({100, 100})
+            .set<ecs::Mass>({50.0f})
+            .set<ecs::Gravity>({})
+            .set<ecs::Coloration>({{255, 151, 30}, {230, 107, 18}});
 
     world.entity()
-        .set<ecs::Position>({ 600.0f, 200.0f })
-        .set<ecs::BoxCollider>({ 150.0f, 150.0f })
-        .set<ecs::Mass>({ 100.0f })
-        .set<ecs::Velocity>({ 300, 123 })
-        .set<ecs::Coloration>({{255, 151, 30}, {230, 107, 18}});
+            .set<ecs::Position>({600.0f, 200.0f})
+            .set<ecs::BoxCollider>({150.0f, 150.0f})
+            .set<ecs::Mass>({100.0f})
+            .set<ecs::Velocity>({300, 123})
+            .set<ecs::Coloration>({{255, 151, 30}, {230, 107, 18}});
 
     flua::Script script = flua::Script::Load("examples/BouncingBoxes/script.lua");
     script.overrideGlobal("SCREEN_X", window.getSize().x);
@@ -55,5 +55,8 @@ int main()
         world.progress();
 
         window.display();
+
+        unsigned collisionCount = static_cast<unsigned>(*deployment.getGlobalNumber("gCollisions"));
+        window.setTitle("Bouncing Boxes [" + std::to_string(collisionCount) + " collisions]");
     }
 }

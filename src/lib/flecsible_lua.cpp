@@ -49,6 +49,20 @@ void DeployedScript::overrideGlobal(const std::string& name, const std::string& 
     m_interpreter->setGlobal(name, value);
 }
 
+std::optional<double> DeployedScript::getGlobalNumber(const std::string& name)
+{
+    assert(m_interpreter);
+    if (!m_interpreter->isGlobalOfType<double>(name)) return std::nullopt;
+    return m_interpreter->getGlobal<double>(name);
+}
+
+std::optional<std::string> DeployedScript::getGlobalString(const std::string& name)
+{
+    assert(m_interpreter);
+    if (!m_interpreter->isGlobalOfType<std::string>(name)) return std::nullopt;
+    return m_interpreter->getGlobal<std::string>(name);
+}
+
 Script::Script(const Script& other)
 {
     m_ast = other.m_ast ? new ast::Ast(*other.m_ast) : nullptr;

@@ -1,3 +1,5 @@
+gCollisions = 0
+
 system(entity(Position, Velocity))
     entity.Position.x += entity.Velocity.x * deltaTime()
     entity.Position.y += entity.Velocity.y * deltaTime()
@@ -8,9 +10,9 @@ system(entity(Velocity, Gravity))
 end
 
 system(entity(Position, Velocity, BoxCollider))
-    pos = entity.Position
-    vel = entity.Velocity
-    col = entity.BoxCollider
+    local pos = entity.Position
+    local vel = entity.Velocity
+    local col = entity.BoxCollider
 
     if (pos.x - col.sizeX / 2 < 0 and vel.x < 0) then vel.x *= -1 end
     if (pos.y - col.sizeY / 2 < 0 and vel.y < 0) then vel.y *= -1 end
@@ -53,6 +55,7 @@ system(
         if (deltaX * relativeX < 0) then
             aVel.x += relativeX * bMass / (aMass + bMass) * 2
             bVel.x -= relativeX * aMass / (aMass + bMass) * 2
+            gCollisions += 1
         end
     else
         local shift = (allowanceY - abs(deltaY)) * deltaY / abs(deltaY) / 2
@@ -61,6 +64,7 @@ system(
         if (deltaY * relativeY < 0) then
             aVel.y += relativeY * bMass / (aMass + bMass) * 2
             bVel.y -= relativeY * aMass / (aMass + bMass) * 2
+            gCollisions += 1
         end
     end
 end

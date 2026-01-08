@@ -6,6 +6,7 @@
 #include <vector>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <variant>
 
 namespace flua
@@ -34,6 +35,9 @@ struct DeployedScript
     void overrideGlobal(const std::string& name, const std::function<void(FluaState*)>& function);
     void overrideGlobal(const std::string& name, double value);
     void overrideGlobal(const std::string& name, const std::string& value);
+
+    std::optional<double> getGlobalNumber(const std::string& name);
+    std::optional<std::string> getGlobalString(const std::string& name);
 
     friend class Script;
 
