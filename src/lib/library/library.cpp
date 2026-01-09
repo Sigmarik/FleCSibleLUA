@@ -9,7 +9,7 @@
 
 namespace flua::lib
 {
-const std::unordered_map<std::string, std::function<void(FluaState*)> > STANDARD_LIBRARY
+const std::unordered_map<std::string, std::function<void(FluaState&)> > STANDARD_LIBRARY
 {
     {"print", print},
     {"assert", lua_assert},

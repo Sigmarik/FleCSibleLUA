@@ -30,7 +30,7 @@ struct DeployedScript
     DeployedScript& operator=(const DeployedScript&) = delete;
     DeployedScript& operator=(DeployedScript&&) noexcept ;
 
-    void overrideGlobal(const std::string& name, const std::function<void(FluaState*)>& function);
+    void overrideGlobal(const std::string& name, const std::function<void(FluaState&)>& function);
     void overrideGlobal(const std::string& name, double value);
     void overrideGlobal(const std::string& name, const std::string& value);
 
@@ -59,7 +59,7 @@ public:
 
     static Script Load(const std::string& path);
 
-    void overrideGlobal(const std::string& name, const std::function<void(FluaState*)>& function);
+    void overrideGlobal(const std::string& name, const std::function<void(FluaState&)>& function);
     void overrideGlobal(const std::string& name, double value);
     void overrideGlobal(const std::string& name, const std::string& value);
 
@@ -73,7 +73,7 @@ private:
 
     std::string m_sourcePath{};
 
-    using PrimitiveGeneric = std::variant<std::function<void(FluaState*)>, std::string, double>;
+    using PrimitiveGeneric = std::variant<std::function<void(FluaState&)>, std::string, double>;
     std::unordered_map<std::string, PrimitiveGeneric> m_globalOverrides{};
 };
 

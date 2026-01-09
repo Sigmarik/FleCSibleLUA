@@ -115,7 +115,7 @@ void FluaState::pushValue(flecs::entity value) const
     m_interpreter->m_externalFunctionOutputs.emplace_back(value);
 }
 
-void FluaState::pushValue(const std::function<void(FluaState*)>& value) const
+void FluaState::pushValue(const std::function<void(FluaState&)>& value) const
 {
     m_interpreter->m_externalFunctionOutputs.emplace_back(data::Function(value));
 }
@@ -140,7 +140,7 @@ void FluaState::setGlobal(const std::string& name, flecs::entity value) const
     m_interpreter->setGlobal(name, value);
 }
 
-void FluaState::setGlobal(const std::string& name, const std::function<void(FluaState*)>& value) const
+void FluaState::setGlobal(const std::string& name, const std::function<void(FluaState&)>& value) const
 {
     m_interpreter->setGlobal(name, value);
 }

@@ -48,13 +48,13 @@ namespace vst
 
 namespace lib
 {
-    void print(FluaState*);
+    void print(FluaState&);
 }
 
 namespace lib::misc
 {
-    void pcall(FluaState*);
-    void error(FluaState*);
+    void pcall(FluaState&);
+    void error(FluaState&);
 }
 
 class FluaState
@@ -62,9 +62,9 @@ class FluaState
 public:
     friend class vst::Interpreter;
 
-    friend void lib::print(FluaState*);
-    friend void lib::misc::pcall(FluaState*);
-    friend void lib::misc::error(FluaState*);
+    friend void lib::print(FluaState&);
+    friend void lib::misc::pcall(FluaState&);
+    friend void lib::misc::error(FluaState&);
 
     flecs::world* getWorld() const
     {
@@ -96,13 +96,13 @@ public:
     void pushValue(double value) const;
     void pushValue(const std::string& value) const;
     void pushValue(flecs::entity value) const;
-    void pushValue(const std::function<void(FluaState*)>& value) const;
+    void pushValue(const std::function<void(FluaState&)>& value) const;
 
     void setGlobal(const std::string& name, bool value) const;
     void setGlobal(const std::string& name, double value) const;
     void setGlobal(const std::string& name, const std::string& value) const;
     void setGlobal(const std::string& name, flecs::entity value) const;
-    void setGlobal(const std::string& name, const std::function<void(FluaState*)>& value) const;
+    void setGlobal(const std::string& name, const std::function<void(FluaState&)>& value) const;
 
 private:
     FluaState(vst::Interpreter* interpreter, flecs::world* world) : m_interpreter(interpreter), m_world(world) {}

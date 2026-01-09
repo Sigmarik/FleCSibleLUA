@@ -2,5 +2,5 @@
 
 namespace flua::lib
 {
-    void ipairs(FluaState* state);
+    void ipairs(FluaState& state);
 }

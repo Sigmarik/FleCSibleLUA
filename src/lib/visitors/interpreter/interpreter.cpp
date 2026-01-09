@@ -696,7 +696,7 @@ void Interpreter::runAnyFunction(data::Function& func, std::vector<data::Generic
 
         try
         {
-            libFunction(&state);
+            libFunction(state);
         }
         catch (Error& userError)
         {

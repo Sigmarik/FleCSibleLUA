@@ -8,21 +8,21 @@ namespace flua::lib
 {
 using namespace flua;
 
-void print(FluaState* lua)
+void print(FluaState& state)
 {
-    unsigned argCount = lua->getArgumentCount();
+    unsigned argCount = state.getArgumentCount();
     for (unsigned id = 0; id < argCount; ++id)
     {
-        lua->m_interpreter->m_outStream << lua->asString(id) << "\t";
+        state.m_interpreter->m_outStream << state.asString(id) << "\t";
     }
-    lua->m_interpreter->m_outStream << std::endl;
+    state.m_interpreter->m_outStream << std::endl;
 }
 
-void lua_assert(FluaState* state)
+void lua_assert(FluaState& state)
 {
-    if (state->getArgumentCount() == 0)
+    if (state.getArgumentCount() == 0)
         throw Error("Assertion failed, no arguments received");
-    if (!data::to_bool(*state->getRaw(0)))
+    if (!data::to_bool(*state.getRaw(0)))
         throw Error("Assertion failed, expression evaluated to FALSE");
 }
 }

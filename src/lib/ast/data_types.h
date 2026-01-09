@@ -102,7 +102,7 @@ struct LuaFunction
     std::shared_ptr<std::unordered_map<std::string, mem_utils::CopyMovePtr<GenericValue>>> frame{};
 };
 
-using LibraryFunction = std::function<void(FluaState*)>;
+using LibraryFunction = std::function<void(FluaState&)>;
 
 struct Function : std::variant<LuaFunction, LibraryFunction>
 {

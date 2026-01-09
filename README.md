@@ -100,15 +100,15 @@ with FleCSibleLua systems.
 ```cpp
 #include <flecsible_lua_api.h>
 
-void increment(FluaState* state)
+void increment(FluaState& state)
 {
     // Validate argument type (Lua stack position 0 = first argument)
-    if (!state->isNumber(0))
+    if (!state.isNumber(0))
         throw Error("Attempt to increment a non-numeric value");
 
     // Retrieve, increment, and push result back to Lua stack
-    double value = state->getNumber(0);
-    state->pushValue(value + 1.0);
+    double value = state.getNumber(0);
+    state.pushValue(value + 1.0);
 }
 
 // Later, during script initialization:

@@ -15,148 +15,148 @@
 
 namespace flua::lib::string
 {
-void tostring(FluaState* state)
+void tostring(FluaState& state)
 {
-    if (state->getArgumentCount() < 1)
+    if (state.getArgumentCount() < 1)
         throw Error("Expected at least 1 argument");
-    state->pushValue(state->asString(0));
+    state.pushValue(state.asString(0));
 }
 
 
-void byte(FluaState* state)
+void byte(FluaState& state)
 {
-    if (state->getArgumentCount() < 1)
+    if (state.getArgumentCount() < 1)
         throw Error("string.byte requires at least 1 argument");
 
-    std::string str = state->asString(0);
+    std::string str = state.asString(0);
     int len = static_cast<int>(str.length());
 
 
     int i = 1;
     int j = i;
 
-    if (state->getArgumentCount() >= 2 && !state->isNil(1))
+    if (state.getArgumentCount() >= 2 && !state.isNil(1))
     {
-        i = static_cast<int>(state->getNumber(1));
+        i = static_cast<int>(state.getNumber(1));
         if (i < 0) i = len + i + 1;
         if (i < 1) i = 1;
         j = i;
     }
 
-    if (state->getArgumentCount() >= 3 && !state->isNil(2))
+    if (state.getArgumentCount() >= 3 && !state.isNil(2))
     {
-        j = static_cast<int>(state->getNumber(2));
+        j = static_cast<int>(state.getNumber(2));
         if (j < 0) j = len + j + 1;
         if (j > len) j = len;
     }
 
     if (i > len || i > j)
     {
-        state->pushNil();
+        state.pushNil();
         return;
     }
 
 
     for (int idx = i; idx <= j; ++idx)
     {
-        state->pushValue(static_cast<double>(static_cast<unsigned char>(str[idx - 1])));
+        state.pushValue(static_cast<double>(static_cast<unsigned char>(str[idx - 1])));
     }
 }
 
 
-void to_char(FluaState* state)
+void to_char(FluaState& state)
 {
     std::string result;
-    unsigned argCount = state->getArgumentCount();
+    unsigned argCount = state.getArgumentCount();
 
     for (unsigned i = 0; i < argCount; ++i)
     {
-        if (!state->isNumber(i))
+        if (!state.isNumber(i))
             throw Error("string.char arguments must be numbers");
 
-        int code = static_cast<int>(state->getNumber(i));
+        int code = static_cast<int>(state.getNumber(i));
         if (code < 0 || code > 255)
             throw Error("invalid character code");
 
         result += static_cast<char>(code);
     }
 
-    state->pushValue(result);
+    state.pushValue(result);
 }
 
 
-void len(FluaState* state)
+void len(FluaState& state)
 {
-    if (state->getArgumentCount() < 1)
+    if (state.getArgumentCount() < 1)
         throw Error("string.len requires 1 argument");
 
-    std::string str = state->asString(0);
-    state->pushValue(static_cast<double>(str.length()));
+    std::string str = state.asString(0);
+    state.pushValue(static_cast<double>(str.length()));
 }
 
 
-void lower(FluaState* state)
+void lower(FluaState& state)
 {
-    if (state->getArgumentCount() < 1)
+    if (state.getArgumentCount() < 1)
         throw Error("string.lower requires 1 argument");
 
-    std::string str = state->asString(0);
+    std::string str = state.asString(0);
     std::transform(str.begin(), str.end(), str.begin(),
                    [](unsigned char c) { return std::tolower(c); });
 
-    state->pushValue(str);
+    state.pushValue(str);
 }
 
 
-void upper(FluaState* state)
+void upper(FluaState& state)
 {
-    if (state->getArgumentCount() < 1)
+    if (state.getArgumentCount() < 1)
         throw Error("string.upper requires 1 argument");
 
-    std::string str = state->asString(0);
+    std::string str = state.asString(0);
     std::transform(str.begin(), str.end(), str.begin(),
                    [](unsigned char c) { return std::toupper(c); });
 
-    state->pushValue(str);
+    state.pushValue(str);
 }
 
 
-void reverse(FluaState* state)
+void reverse(FluaState& state)
 {
-    if (state->getArgumentCount() < 1)
+    if (state.getArgumentCount() < 1)
         throw Error("string.reverse requires 1 argument");
 
-    std::string str = state->asString(0);
+    std::string str = state.asString(0);
     std::reverse(str.begin(), str.end());
-    state->pushValue(str);
+    state.pushValue(str);
 }
 
 
-void sub(FluaState* state)
+void sub(FluaState& state)
 {
-    if (state->getArgumentCount() < 2)
+    if (state.getArgumentCount() < 2)
         throw Error("string.sub requires at least 2 arguments");
 
-    std::string str = state->asString(0);
+    std::string str = state.asString(0);
     int len = static_cast<int>(str.length());
 
-    int i = static_cast<int>(state->getNumber(1));
+    int i = static_cast<int>(state.getNumber(1));
     int j = len;
 
 
     if (i < 0) i = len + i + 1;
     if (i < 1) i = 1;
 
-    if (state->getArgumentCount() >= 3 && !state->isNil(2))
+    if (state.getArgumentCount() >= 3 && !state.isNil(2))
     {
-        j = static_cast<int>(state->getNumber(2));
+        j = static_cast<int>(state.getNumber(2));
         if (j < 0) j = len + j + 1;
         if (j > len) j = len;
     }
 
     if (i > j || i > len || j < 1)
     {
-        state->pushValue(std::string(""));
+        state.pushValue(std::string(""));
         return;
     }
 
@@ -165,30 +165,30 @@ void sub(FluaState* state)
     int end = std::min(j, len) - 1;
 
     if (start <= end)
-        state->pushValue(str.substr(start, end - start + 1));
+        state.pushValue(str.substr(start, end - start + 1));
     else
-        state->pushValue(std::string(""));
+        state.pushValue(std::string(""));
 }
 
 
-void rep(FluaState* state)
+void rep(FluaState& state)
 {
-    if (state->getArgumentCount() < 2)
+    if (state.getArgumentCount() < 2)
         throw Error("string.rep requires at least 2 arguments");
 
-    std::string str = state->asString(0);
-    int n = static_cast<int>(state->getNumber(1));
+    std::string str = state.asString(0);
+    int n = static_cast<int>(state.getNumber(1));
 
     if (n <= 0)
     {
-        state->pushValue(std::string(""));
+        state.pushValue(std::string(""));
         return;
     }
 
     std::string sep;
-    if (state->getArgumentCount() >= 3 && !state->isNil(2))
+    if (state.getArgumentCount() >= 3 && !state.isNil(2))
     {
-        sep = state->asString(2);
+        sep = state.asString(2);
     }
 
     std::string result;
@@ -198,16 +198,16 @@ void rep(FluaState* state)
         result += str;
     }
 
-    state->pushValue(result);
+    state.pushValue(result);
 }
 
-void format(FluaState* state)
+void format(FluaState& state)
 {
-    if (state->getArgumentCount() < 1)
+    if (state.getArgumentCount() < 1)
         throw Error("string.format requires at least 1 argument");
 
     std::stringstream output;
-    std::string fmt = state->asString(0);
+    std::string fmt = state.asString(0);
     size_t argIdx = 1;
 
     const char* inputCh = fmt.c_str();
@@ -247,11 +247,11 @@ void format(FluaState* state)
                 case 'x':
                 case 'X':
                 {
-                    if (!state->isNumber(argIdx))
+                    if (!state.isNumber(argIdx))
                         throw Error(
-                            "string.format cannot pass non-numeric argument " + state->asString(argIdx) + " as %" +
+                            "string.format cannot pass non-numeric argument " + state.asString(argIdx) + " as %" +
                             std::string(1, *inputCh));
-                    processFmtFunc(static_cast<long long int>(state->getNumber(argIdx)));
+                    processFmtFunc(static_cast<long long int>(state.getNumber(argIdx)));
                     break;
                 }
                 case 'a':
@@ -262,18 +262,18 @@ void format(FluaState* state)
                 case 'g':
                 case 'G':
                 {
-                    processFmtFunc(state->getNumber(argIdx));
+                    processFmtFunc(state.getNumber(argIdx));
                     break;
                 }
                 case 'p':
                 {
-                    processFmtFunc(state->getRaw(argIdx));
+                    processFmtFunc(state.getRaw(argIdx));
                     break;
                 }
                 case 'q':
                 case 's':
                 {
-                    std::string string = state->asString(argIdx);
+                    std::string string = state.asString(argIdx);
                     processFmtFunc(string.c_str());
                     break;
                 }
@@ -287,34 +287,34 @@ void format(FluaState* state)
         }
     }
 
-    state->pushValue(output.str());
+    state.pushValue(output.str());
 }
 
-void pack(FluaState* state)
+void pack(FluaState& state)
 {
-    if (state->getArgumentCount() < 1)
+    if (state.getArgumentCount() < 1)
         throw Error("string.pack requires at least 1 argument");
 
-    std::string fmt = state->asString(0);
+    std::string fmt = state.asString(0);
     std::string result;
 
     size_t argIndex = 1;
     for (char f : fmt)
     {
-        if (argIndex >= state->getArgumentCount())
+        if (argIndex >= state.getArgumentCount())
             throw Error("not enough arguments for string.pack");
 
         switch (f)
         {
             case 'c':
             {
-                char c = static_cast<char>(state->getNumber(argIndex++));
+                char c = static_cast<char>(state.getNumber(argIndex++));
                 result += c;
                 break;
             }
             case 'i':
             {
-                int32_t val = static_cast<int32_t>(state->getNumber(argIndex++));
+                int32_t val = static_cast<int32_t>(state.getNumber(argIndex++));
                 for (int i = 0; i < 4; ++i)
                 {
                     result += static_cast<char>(val & 0xFF);
@@ -324,7 +324,7 @@ void pack(FluaState* state)
             }
             case 'f':
             {
-                float val = static_cast<float>(state->getNumber(argIndex++));
+                float val = static_cast<float>(state.getNumber(argIndex++));
                 char* bytes = reinterpret_cast<char*>(&val);
                 for (int i = 0; i < 4; ++i)
                     result += bytes[i];
@@ -332,7 +332,7 @@ void pack(FluaState* state)
             }
             case 's':
             {
-                std::string str = state->asString(argIndex++);
+                std::string str = state.asString(argIndex++);
 
                 uint32_t len = static_cast<uint32_t>(str.length());
                 for (int i = 0; i < 4; ++i)
@@ -348,22 +348,22 @@ void pack(FluaState* state)
         }
     }
 
-    state->pushValue(result);
+    state.pushValue(result);
 }
 
 
-void unpack(FluaState* state)
+void unpack(FluaState& state)
 {
-    if (state->getArgumentCount() < 2)
+    if (state.getArgumentCount() < 2)
         throw Error("string.unpack requires at least 2 arguments");
 
-    std::string fmt = state->asString(0);
-    std::string data = state->asString(1);
+    std::string fmt = state.asString(0);
+    std::string data = state.asString(1);
 
     int pos = 1;
-    if (state->getArgumentCount() >= 3 && !state->isNil(2))
+    if (state.getArgumentCount() >= 3 && !state.isNil(2))
     {
-        pos = static_cast<int>(state->getNumber(2));
+        pos = static_cast<int>(state.getNumber(2));
     }
 
     if (pos < 1 || pos > static_cast<int>(data.length()))
@@ -378,7 +378,7 @@ void unpack(FluaState* state)
             case 'c':
                 if (index >= data.length())
                     throw Error("data string too short");
-                state->pushValue(static_cast<double>(static_cast<unsigned char>(data[index++])));
+                state.pushValue(static_cast<double>(static_cast<unsigned char>(data[index++])));
                 break;
 
             case 'i':
@@ -390,7 +390,7 @@ void unpack(FluaState* state)
                     {
                         val |= static_cast<unsigned char>(data[index + i]) << (8 * i);
                     }
-                    state->pushValue(static_cast<double>(val));
+                    state.pushValue(static_cast<double>(val));
                     index += 4;
                 }
                 break;
@@ -403,7 +403,7 @@ void unpack(FluaState* state)
                     char* bytes = reinterpret_cast<char*>(&val);
                     for (int i = 0; i < 4; ++i)
                         bytes[i] = data[index + i];
-                    state->pushValue(static_cast<double>(val));
+                    state.pushValue(static_cast<double>(val));
                     index += 4;
                 }
                 break;
@@ -423,7 +423,7 @@ void unpack(FluaState* state)
                         throw Error("data string too short");
 
                     std::string str = data.substr(index, len);
-                    state->pushValue(str);
+                    state.pushValue(str);
                     index += len;
                 }
                 break;
@@ -434,15 +434,15 @@ void unpack(FluaState* state)
     }
 
 
-    state->pushValue(static_cast<double>(index + 1));
+    state.pushValue(static_cast<double>(index + 1));
 }
 
-void packsize(FluaState* state)
+void packsize(FluaState& state)
 {
-    if (state->getArgumentCount() < 1)
+    if (state.getArgumentCount() < 1)
         throw Error("string.packsize requires 1 argument");
 
-    std::string fmt = state->asString(0);
+    std::string fmt = state.asString(0);
     size_t size = 0;
 
     for (char symbol : fmt)
@@ -464,6 +464,6 @@ void packsize(FluaState* state)
         }
     }
 
-    state->pushValue(static_cast<double>(size));
+    state.pushValue(static_cast<double>(size));
 }
 }

@@ -10,13 +10,13 @@
 
 namespace flua::lib
 {
-void print(FluaState*);
+void print(FluaState&);
 }
 
 namespace flua::lib::misc
 {
-void pcall(FluaState*);
-void error(FluaState*);
+void pcall(FluaState&);
+void error(FluaState&);
 }
 
 namespace flua::vst
@@ -98,9 +98,9 @@ protected:
     friend class FluaState;
 
 private:
-    friend void lib::print(FluaState* lua);
-    friend void lib::misc::pcall(FluaState*);
-    friend void lib::misc::error(FluaState*);
+    friend void lib::print(FluaState& state);
+    friend void lib::misc::pcall(FluaState&);
+    friend void lib::misc::error(FluaState&);
 
     void performFixedTypeAssignment(ast::Assignment& node, cmp_info::GenericComponentPtr ptr,
                                     data::GenericValue& value);

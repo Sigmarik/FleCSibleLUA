@@ -2,5 +2,5 @@
 
 namespace flua::lib
 {
-void abs(FluaState* state);
+void abs(FluaState& state);
 }

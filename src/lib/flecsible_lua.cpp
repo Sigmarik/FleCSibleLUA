@@ -31,7 +31,7 @@ DeployedScript& DeployedScript::operator=(DeployedScript&& other) noexcept
     return *this;
 }
 
-void DeployedScript::overrideGlobal(const std::string& name, const std::function<void(FluaState*)>& function)
+void DeployedScript::overrideGlobal(const std::string& name, const std::function<void(FluaState&)>& function)
 {
     assert(m_interpreter);
     m_interpreter->setGlobal(name, data::Function(function));
@@ -161,7 +161,7 @@ Script Script::Load(const std::string& path)
     return script;
 }
 
-void Script::overrideGlobal(const std::string& name, const std::function<void(FluaState*)>& function)
+void Script::overrideGlobal(const std::string& name, const std::function<void(FluaState&)>& function)
 {
     m_globalOverrides[name] = function;
 }

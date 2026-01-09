@@ -14,22 +14,22 @@ struct PairIterator
     data::Table::MapType::iterator it;
     data::Table::MapType::iterator end;
 
-    void operator()(FluaState* lua)
+    void operator()(FluaState& state)
     {
         if (it == end) return;
 
-        lua->pushValue(it->first);
-        lua->pushRaw(*it->second);
+        state.pushValue(it->first);
+        state.pushRaw(*it->second);
         ++it;
     }
 };
 
-void ipairs(FluaState* lua)
+void ipairs(FluaState& state)
 {
-    auto* raw = lua->getRaw(0);
+    auto* raw = state.getRaw(0);
     if (raw == nullptr || !std::holds_alternative<data::Table>(*raw))
-        throw Error("Attempt to iterate over a non-table object " + lua->asString(0));
+        throw Error("Attempt to iterate over a non-table object " + state.asString(0));
     data::GenericValue iterator = data::Function(data::LibraryFunction(PairIterator(*raw)));
-    lua->pushRaw(iterator);
+    state.pushRaw(iterator);
 }
 }
