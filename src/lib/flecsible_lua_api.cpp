@@ -14,7 +14,7 @@ data::GenericValue* FluaState::getRaw(const ValueAccessor& accessor) const
     data::GenericValue* value = nullptr;
     const auto getter = meta::Overloads
     {
-        [&](unsigned index)
+        [&](size_t index)
         {
             if (index < getArgumentCount()) value = &m_interpreter->m_externalFunctionInputs[index];
             else value = nullptr;

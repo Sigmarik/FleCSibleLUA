@@ -13,7 +13,7 @@ add_library(FlecsibleLua
         library/tables.cpp
         library/ecs.cpp
 		library/lua_math.cpp
-#		library/lua_strings.cpp
+		library/lua_strings.cpp
 		library/lua_misc.cpp
         visitors/interpreter/interpreter.cpp)
 

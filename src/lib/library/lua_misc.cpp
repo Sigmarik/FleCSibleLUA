@@ -42,4 +42,11 @@ void error(FluaState* state)
                                             "error(" + state->asString(0) + ")");
     error.data = std::move(*state->getRaw(0));
 }
+
+void type(FluaState* state)
+{
+    if (state->getArgumentCount() < 1)
+        throw Error("Expected at least 1 argument");
+    state->pushValue(data::get_type_name(*state->getRaw(0)));
+}
 }

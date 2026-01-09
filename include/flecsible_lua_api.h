@@ -29,7 +29,7 @@ class ValueAccessor
 {
 public:
     // NOTE: These should be implicit for convenience
-    ValueAccessor(unsigned argumentIndex) : m_core(argumentIndex) {}
+    ValueAccessor(size_t argumentIndex) : m_core(argumentIndex) {}
     ValueAccessor(const std::string& variableName) : m_core(variableName) {}
 
     void extend(const std::string& field);
@@ -37,7 +37,7 @@ public:
     friend class FluaState;
 
 private:
-    std::variant<unsigned, std::string> m_core{};
+    std::variant<size_t, std::string> m_core{};
     std::vector<std::string> m_internalPath{};
 };
 

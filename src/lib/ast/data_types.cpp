@@ -94,14 +94,14 @@ std::string get_type_name(const GenericValue& value)
 {
     const char* result = nullptr;
     const auto opNameGetter = meta::Overloads{
-        [&](const Nil&) { result = "Nil"; },
-        [&](const bool&) { result = "Boolean"; },
-        [&](const double&) { result = "Numeric"; },
-        [&](const std::string&) { result = "String"; },
-        [&](const Table&) { result = "Table"; },
-        [&](const Entity&) { result = "Entity"; },
-        [&](const EntityComponent&) { result = "Component"; },
-        [&](const Function&) { result = "Function"; },
+        [&](const Nil&) { result = "nil"; },
+        [&](const bool&) { result = "boolean"; },
+        [&](const double&) { result = "number"; },
+        [&](const std::string&) { result = "string"; },
+        [&](const Table&) { result = "table"; },
+        [&](const Entity&) { result = "entity"; },
+        [&](const EntityComponent&) { result = "component"; },
+        [&](const Function&) { result = "function"; },
     };
     std::visit(opNameGetter, value);
     return result;
