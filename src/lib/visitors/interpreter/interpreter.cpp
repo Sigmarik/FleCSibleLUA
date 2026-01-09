@@ -1,5 +1,6 @@
 #include "interpreter.h"
 
+#include <complex>
 #include <iostream>
 #include <memory>
 #include <ranges>
@@ -656,7 +657,18 @@ void Interpreter::executeFunction(const ast::INode& node, data::Function& func, 
     for (ast::NodePtr& argument : args)
     {
         Visitor::visit(argument);
-        arguments.emplace_back(m_returnedValue.spit());
+        if (&argument == &args.back())
+        {
+            for (data::ValueSequence::ValueBackrefPair& arg : m_returnedValue.sequence)
+            {
+                arguments.emplace_back(std::move(arg.value));
+            }
+            m_returnedValue.clear();
+        }
+        else
+        {
+            arguments.emplace_back(m_returnedValue.spit());
+        }
     }
 
     if (data::LuaFunction* luaFunction = std::get_if<data::LuaFunction>(&func))
