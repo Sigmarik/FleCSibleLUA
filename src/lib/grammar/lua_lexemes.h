@@ -34,7 +34,7 @@ using Mod = parser::DefiniteLexeme<"%", "'%'">;
 using Pow = parser::DefiniteLexeme<"^", "'^'">;
 using Concat = parser::DefiniteLexeme<"..", "'..'">;
 using Length = parser::DefiniteLexeme<"#", "'#'">;
-using Not = parser::DefiniteLexeme<"~", "'~'">;  // TODO (optional): Add unary !
+using Not = parser::DefiniteLexeme<"not", "'not'">;  // TODO (optional): Add unary !
 
 using And = parser::DefiniteLexeme<"and", "'and'">;
 using Or = parser::DefiniteLexeme<"or", "'or'">;

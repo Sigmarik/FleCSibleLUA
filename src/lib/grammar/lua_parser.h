@@ -544,14 +544,14 @@ struct ExprSingleton : parser::Grammar
     parser::Sequence<parser::Lex<lualex::BracketCurlyOp>,
         parser::Repeating<ast::MakeTable::KeyValuePair, KeyValuePair, lualex::Comma>,
         parser::Lex<lualex::BracketCurlyCl>>,
+    parser::Sequence<parser::Lex<lualex::BracketCurlyOp>, parser::Lex<lualex::BracketCurlyCl>>,
     parser::Sequence<ExprSingleton, parser::Lex<lualex::Method>, parser::Lex<lualex::Name>,
         parser::Lex<lualex::BracketRoundOp>,
         parser::Repeating<ast::NodePtr, HighLevelExpression, lualex::Comma>,
         parser::Lex<lualex::BracketRoundCl>>,
     parser::Sequence<ExprSingleton, parser::Lex<lualex::Method>, parser::Lex<lualex::Name>,
         parser::Lex<lualex::BracketRoundOp>,
-        parser::Lex<lualex::BracketRoundCl>>,
-    parser::Sequence<parser::Lex<lualex::BracketCurlyOp>, parser::Lex<lualex::BracketCurlyCl>>
+        parser::Lex<lualex::BracketRoundCl>>
 >
 {
     static ast::NodePtr visit(ast::NodePtr& root, lualex::Method, const lualex::Name& name, lualex::BracketRoundOp bOp,
