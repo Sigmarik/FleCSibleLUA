@@ -124,7 +124,7 @@ No macros / lists needed.
 <summary><b>CMake Configuration</b></summary>
 
 You will need three files to integrate FLua into your project:
-- **flua.cmake** can be found in the [examples/cmake](examples/cmake) directory
+- **flua.cmake** can be found in the [cmake](cmake) directory
 - **FluaComponentParser.exe** and **FlecsibleLua.lib** can be built from project's sources (instructions below)
 
 ```cmake
