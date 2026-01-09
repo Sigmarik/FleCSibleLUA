@@ -14,6 +14,7 @@ const std::unordered_map<std::string, std::function<void(FluaState*)> > STANDARD
     {"id2entity", id2entity},
     {"entity2id", entity2id},
     {"deltaTime", getDeltaTime},
-    {"abs", abs},
+
+    {"math.abs", abs},
 };
 }
