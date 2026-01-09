@@ -10,10 +10,13 @@ namespace flua::lib
 const std::unordered_map<std::string, std::function<void(FluaState*)> > STANDARD_LIBRARY
 {
     {"print", print},
+    {"assert", lua_assert},
+    {"pcall", misc::pcall},
+    {"error", misc::error},
     {"ipairs", ipairs},
-    {"id2entity", id2entity},
-    {"entity2id", entity2id},
-    {"deltaTime", getDeltaTime},
+    {"ecs.id2entity", id2entity},
+    {"ecs.entity2id", entity2id},
+    {"ecs.deltaTime", getDeltaTime},
 
     {"math.abs", abs},
 };

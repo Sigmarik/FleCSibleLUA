@@ -13,6 +13,12 @@ namespace flua::lib
 void print(FluaState*);
 }
 
+namespace flua::lib::misc
+{
+void pcall(FluaState*);
+void error(FluaState*);
+}
+
 namespace flua::vst
 {
 using namespace flua;
@@ -26,6 +32,7 @@ public:
 
         std::string what;
         parser::CharacterPos where;
+        std::optional<data::GenericValue> data{};
     };
 
     Interpreter(std::ostream& outStream, std::ostream& errStream, flecs::world* world)
@@ -91,7 +98,9 @@ protected:
     friend class FluaState;
 
 private:
-    friend void lib::print(FluaState* lua);\
+    friend void lib::print(FluaState* lua);
+    friend void lib::misc::pcall(FluaState*);
+    friend void lib::misc::error(FluaState*);
 
     void performFixedTypeAssignment(ast::Assignment& node, cmp_info::GenericComponentPtr ptr,
                                     data::GenericValue& value);
@@ -106,6 +115,7 @@ private:
 
     void executeFunction(ast::Function& function);
 
+    void runAnyFunction(data::Function& func, std::vector<data::GenericValue>& arguments);
     void runLuaFunction(data::LuaFunction& function, std::vector<data::GenericValue>& args);
 
     FluaState generatePublicState();
@@ -191,5 +201,7 @@ private:
     std::map<ast::INode*, QueryArray> m_nodeQueries{};
 
     std::set<ecs_entity_t> m_ownedSystems{};
+
+    const ast::INode* m_functionCaller = nullptr;
 };
 }

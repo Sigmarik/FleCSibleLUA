@@ -17,4 +17,12 @@ void print(FluaState* lua)
     }
     lua->m_interpreter->m_outStream << std::endl;
 }
+
+void lua_assert(FluaState* state)
+{
+    if (state->getArgumentCount() == 0)
+        throw Error("Assertion failed, no arguments received");
+    if (!data::to_bool(*state->getRaw(0)))
+        throw Error("Assertion failed, expression evaluated to FALSE");
+}
 }

@@ -9,7 +9,7 @@ unsigned FluaState::getArgumentCount() const
     return static_cast<unsigned>(m_interpreter->m_externalFunctionInputs.size());
 }
 
-const data::GenericValue* FluaState::getRaw(const ValueAccessor& accessor) const
+data::GenericValue* FluaState::getRaw(const ValueAccessor& accessor) const
 {
     data::GenericValue* value = nullptr;
     const auto getter = meta::Overloads
@@ -35,6 +35,24 @@ bool FluaState::isNil(const ValueAccessor& key) const
 {
     const data::GenericValue* value = getRaw(key);
     return value == nullptr || std::holds_alternative<data::Nil>(*value);
+}
+
+bool FluaState::isBool(const ValueAccessor& key) const
+{
+    const data::GenericValue* value = getRaw(key);
+    return value != nullptr && std::holds_alternative<bool>(*value);
+}
+
+bool FluaState::getBool(const ValueAccessor& key) const
+{
+    const data::GenericValue* value = getRaw(key);
+    return std::get<bool>(*value);
+}
+
+bool FluaState::asBool(const ValueAccessor& key) const
+{
+    const data::GenericValue* value = getRaw(key);
+    return value != nullptr ? data::to_bool(*value) : data::to_bool(data::Nil());
 }
 
 bool FluaState::isNumber(const ValueAccessor& key) const
@@ -67,14 +85,19 @@ std::string FluaState::asString(const ValueAccessor& key) const
     return value != nullptr ? data::to_string(*value) : data::to_string(data::Nil());
 }
 
-void FluaState::pushRaw(data::GenericValue* value)
+void FluaState::pushRaw(data::GenericValue& value)
 {
-    m_interpreter->m_externalFunctionOutputs.emplace_back(std::move(*value));
+    m_interpreter->m_externalFunctionOutputs.emplace_back(std::move(value));
 }
 
 void FluaState::pushNil() const
 {
     m_interpreter->m_externalFunctionOutputs.emplace_back(data::Nil());
+}
+
+void FluaState::pushValue(bool value) const
+{
+    m_interpreter->m_externalFunctionOutputs.emplace_back(value);
 }
 
 void FluaState::pushValue(double value) const
@@ -92,6 +115,16 @@ void FluaState::pushValue(flecs::entity value) const
     m_interpreter->m_externalFunctionOutputs.emplace_back(value);
 }
 
+void FluaState::pushValue(const std::function<void(FluaState*)>& value) const
+{
+    m_interpreter->m_externalFunctionOutputs.emplace_back(data::Function(value));
+}
+
+void FluaState::setGlobal(const std::string& name, bool value) const
+{
+    m_interpreter->setGlobal(name, value);
+}
+
 void FluaState::setGlobal(const std::string& name, double value) const
 {
     m_interpreter->setGlobal(name, value);
@@ -103,6 +136,11 @@ void FluaState::setGlobal(const std::string& name, const std::string& value) con
 }
 
 void FluaState::setGlobal(const std::string& name, flecs::entity value) const
+{
+    m_interpreter->setGlobal(name, value);
+}
+
+void FluaState::setGlobal(const std::string& name, const std::function<void(FluaState*)>& value) const
 {
     m_interpreter->setGlobal(name, value);
 }

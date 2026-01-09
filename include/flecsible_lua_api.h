@@ -6,6 +6,7 @@
 #include <exception>
 
 #include <flecs.h>
+#include <functional>
 
 namespace flua
 {
@@ -50,12 +51,20 @@ namespace lib
     void print(FluaState*);
 }
 
+namespace lib::misc
+{
+    void pcall(FluaState*);
+    void error(FluaState*);
+}
+
 class FluaState
 {
 public:
     friend class vst::Interpreter;
 
     friend void lib::print(FluaState*);
+    friend void lib::misc::pcall(FluaState*);
+    friend void lib::misc::error(FluaState*);
 
     flecs::world* getWorld() const
     {
@@ -64,9 +73,13 @@ public:
 
     unsigned getArgumentCount() const;
 
-    const data::GenericValue* getRaw(const ValueAccessor& accessor) const;
+    data::GenericValue* getRaw(const ValueAccessor& accessor) const;
 
     bool isNil(const ValueAccessor& key) const;
+
+    bool isBool(const ValueAccessor& key) const;
+    bool getBool(const ValueAccessor& key) const;
+    bool asBool(const ValueAccessor& key) const;
 
     bool isNumber(const ValueAccessor& key) const;
     double getNumber(const ValueAccessor& key) const;
@@ -76,16 +89,20 @@ public:
 
     std::string asString(const ValueAccessor& key) const;
 
-    void pushRaw(data::GenericValue* value);
+    void pushRaw(data::GenericValue& value);
 
     void pushNil() const;
+    void pushValue(bool value) const;
     void pushValue(double value) const;
     void pushValue(const std::string& value) const;
     void pushValue(flecs::entity value) const;
+    void pushValue(const std::function<void(FluaState*)>& value) const;
 
+    void setGlobal(const std::string& name, bool value) const;
     void setGlobal(const std::string& name, double value) const;
     void setGlobal(const std::string& name, const std::string& value) const;
     void setGlobal(const std::string& name, flecs::entity value) const;
+    void setGlobal(const std::string& name, const std::function<void(FluaState*)>& value) const;
 
 private:
     FluaState(vst::Interpreter* interpreter, flecs::world* world) : m_interpreter(interpreter), m_world(world) {}

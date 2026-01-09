@@ -671,6 +671,19 @@ void Interpreter::executeFunction(const ast::INode& node, data::Function& func, 
         }
     }
 
+    m_functionCaller = &node;
+    runAnyFunction(func, arguments);
+}
+
+void Interpreter::executeFunction(ast::Function& function)
+{
+    visitTransparentBlock(function.body);
+    if (!m_returning) m_returnedValue.clear();
+    m_returning = m_breaking = m_continuing = false;
+}
+
+void Interpreter::runAnyFunction(data::Function& func, std::vector<data::GenericValue>& arguments)
+{
     if (data::LuaFunction* luaFunction = std::get_if<data::LuaFunction>(&func))
     {
         runLuaFunction(*luaFunction, arguments);
@@ -687,7 +700,7 @@ void Interpreter::executeFunction(const ast::INode& node, data::Function& func, 
         }
         catch (Error& userError)
         {
-            throw LuaRuntimeError(node, userError.message);
+            throw LuaRuntimeError(*m_functionCaller, userError.message);
         }
 
         m_externalFunctionInputs.clear();
@@ -698,13 +711,6 @@ void Interpreter::executeFunction(const ast::INode& node, data::Function& func, 
         }
         m_externalFunctionOutputs.clear();
     }
-}
-
-void Interpreter::executeFunction(ast::Function& function)
-{
-    visitTransparentBlock(function.body);
-    if (!m_returning) m_returnedValue.clear();
-    m_returning = m_breaking = m_continuing = false;
 }
 
 void Interpreter::runLuaFunction(data::LuaFunction& luaFunction, std::vector<data::GenericValue>& args)
