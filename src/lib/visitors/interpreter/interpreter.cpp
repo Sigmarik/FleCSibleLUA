@@ -296,7 +296,7 @@ void Interpreter::visit(ast::UnaryOperator& node)
     std::optional<data::GenericValue> maybeResult = data::perform_unary_operation(node.type, operand);
     if (!maybeResult)
         throw LuaRuntimeError(node, "Cannot apply operator " + data::UNARY_OP_TYPE_NAMES.at(node.type) +
-            " to a value of type " + data::get_type_name(operand));
+                                    " to a value of type " + data::get_type_name(operand));
     m_returnedValue = *maybeResult;
 }
 
@@ -323,7 +323,8 @@ void Interpreter::visit(ast::BinaryOperator& node)
             data::perform_binary_operation(node.type, leftOperand, rightOperand);
     if (!maybeResult)
         throw LuaRuntimeError(node, "Cannot apply operator " + data::BINARY_OP_TYPE_NAMES.at(node.type) +
-            " to values of types " + data::get_type_name(leftOperand) + " and " + data::get_type_name(rightOperand));
+                                    " to values of types " + data::get_type_name(leftOperand) + " and " +
+                                    data::get_type_name(rightOperand));
     m_returnedValue = *maybeResult;
 }
 
@@ -359,7 +360,7 @@ void Interpreter::visit(ast::IndexRequest& node)
     auto& dct = std::get<data::Table>(dict);
     if (!dct->contains(index))
     {
-        dct->emplace(index, std::make_unique<data::GenericValue>(data::Nil()));
+        dct->emplace(index, mem_utils::CopyMovePtr<data::GenericValue>(data::Nil()));
     }
     m_returnedValue.clear();
     m_returnedValue.addReferenced(*dct->at(index));
@@ -388,7 +389,7 @@ void Interpreter::visit(ast::MakeTable& node)
         }
 
         Visitor::visit(*element.value);
-        table->emplace(data::to_string(index), new data::GenericValue(m_returnedValue.spit()));
+        table->emplace(data::to_string(index), data::GenericValue(m_returnedValue.spit()));
     }
 
     m_returnedValue = std::move(table);
@@ -467,12 +468,13 @@ void Interpreter::visit(ast::Assignment& node)
         if (node.op)
         {
             std::optional<data::GenericValue> maybeValue =
-                data::perform_binary_operation(*node.op, subjectValues[idx], value);
+                    data::perform_binary_operation(*node.op, subjectValues[idx], value);
             if (!maybeValue)
                 throw LuaRuntimeError(node, "Attempt to apply operator " +
-                    data::BINARY_OP_TYPE_NAMES.at(*node.op) + " to values of types " +
-                    data::get_type_name(subjectValues[idx]) + " and " + data::get_type_name(value) +
-                    " during assignment");
+                                            data::BINARY_OP_TYPE_NAMES.at(*node.op) + " to values of types " +
+                                            data::get_type_name(subjectValues[idx]) + " and " + data::get_type_name(
+                                                value) +
+                                            " during assignment");
             value = *maybeValue;
         }
         if (auto genericSubject = std::get_if<data::GenericValue*>(&subject))
@@ -751,6 +753,59 @@ ecs_query_t* Interpreter::makeEcsQuery(const ast::EcsEntityFilter& filter, ast::
 {
     ecs_query_desc_t desc = makeEcsQueryDesc(filter, node);
     return ecs_query_init(m_world->c_ptr(), &desc);
+}
+
+std::vector<std::string> split_by_dot(const std::string& s)
+{
+    std::vector<std::string> parts;
+    std::size_t start = 0;
+    while (true)
+    {
+        std::size_t pos = s.find('.', start);
+        if (pos == std::string::npos)
+        {
+            parts.push_back(s.substr(start));
+            break;
+        }
+        parts.push_back(s.substr(start, pos - start));
+        start = pos + 1;
+    }
+    return parts;
+}
+
+data::GenericValue* Interpreter::getGlobalValueByName(const std::string& name)
+{
+    std::vector<std::string> parts = split_by_dot(name);
+    std::unordered_map<std::string, mem_utils::CopyMovePtr<data::GenericValue> >* mapPtr = &m_stack.front().varNameMap;
+
+    for (unsigned partIdx = 0; partIdx + 1 < parts.size(); ++partIdx)
+    {
+        auto newMap = mapPtr->emplace(parts[partIdx], mem_utils::CopyMovePtr<data::GenericValue>(data::Table()));
+        data::GenericValue& value = *newMap.first->second;
+        if (!std::holds_alternative<data::Table>(value)) return nullptr;
+        mapPtr = std::get<data::Table>(value).get();
+    }
+
+    return mapPtr->emplace(parts.back(), mem_utils::CopyMovePtr<data::GenericValue>(data::Nil())).first->second.get();
+}
+
+const data::GenericValue* Interpreter::getGlobalValueByName(const std::string& name) const
+{
+    std::vector<std::string> parts = split_by_dot(name);
+    const std::unordered_map<std::string, mem_utils::CopyMovePtr<data::GenericValue> >* mapPtr = &m_stack.front().varNameMap;
+
+    for (unsigned partIdx = 0; partIdx + 1 < parts.size(); ++partIdx)
+    {
+        auto newMap = mapPtr->find(parts.back());
+        if (newMap == mapPtr->end()) return nullptr;
+        const data::GenericValue& value = *newMap->second;
+        if (!std::holds_alternative<data::Table>(value)) return nullptr;
+        mapPtr = std::get<data::Table>(value).get();
+    }
+
+    auto found = mapPtr->find(parts.back());
+    if (found == mapPtr->end()) return nullptr;
+    return found->second.get();
 }
 
 struct GuardedEcsIterator

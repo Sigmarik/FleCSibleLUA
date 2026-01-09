@@ -40,21 +40,24 @@ public:
     template <class ValueT>
     void setGlobal(const std::string& name, const ValueT& value)
     {
-        m_stack.front().varNameMap[name] = mem_utils::CopyMovePtr<data::GenericValue>(value);
+        data::GenericValue* found = getGlobalValueByName(name);
+        if (!found) return;
+        *found = data::GenericValue(value);
     }
 
     template <class ValueT>
     ValueT getGlobal(const std::string& name) const
     {
-        return std::get<ValueT>(*m_stack.front().varNameMap.at(name));
+        const data::GenericValue* found = getGlobalValueByName(name);
+        return std::get<ValueT>(*found);
     }
 
     template <class ValueT>
     bool isGlobalOfType(const std::string& name) const
     {
-        auto found = m_stack.front().varNameMap.find(name);
-        if (found == m_stack.front().varNameMap.end()) return false;
-        return std::holds_alternative<ValueT>(*found->second);
+        const data::GenericValue* found = getGlobalValueByName(name);
+        if (!found) return false;
+        return std::holds_alternative<ValueT>(*found);
     }
 
     [[nodiscard]] bool fallen() const { return m_fallen; }
@@ -111,6 +114,9 @@ private:
 
     ecs_query_desc_t makeEcsQueryDesc(const ast::EcsEntityFilter& filter, ast::INode& node);
     ecs_query_t* makeEcsQuery(const ast::EcsEntityFilter& filter, ast::INode& node);
+
+    data::GenericValue* getGlobalValueByName(const std::string& name);
+    const data::GenericValue* getGlobalValueByName(const std::string& name) const;
 
     struct NameQueryPair
     {

@@ -94,16 +94,16 @@ void FluaState::pushValue(flecs::entity value) const
 
 void FluaState::setGlobal(const std::string& name, double value) const
 {
-    m_interpreter->m_stack.front().varNameMap[name] = mem_utils::CopyMovePtr<data::GenericValue>(value);
+    m_interpreter->setGlobal(name, value);
 }
 
 void FluaState::setGlobal(const std::string& name, const std::string& value) const
 {
-    m_interpreter->m_stack.front().varNameMap[name] = mem_utils::CopyMovePtr<data::GenericValue>(value);
+    m_interpreter->setGlobal(name, value);
 }
 
 void FluaState::setGlobal(const std::string& name, flecs::entity value) const
 {
-    m_interpreter->m_stack.front().varNameMap[name] = mem_utils::CopyMovePtr<data::GenericValue>(value);
+    m_interpreter->setGlobal(name, value);
 }
 }

@@ -109,9 +109,9 @@ struct Function : std::variant<LuaFunction, LibraryFunction>
     using std::variant<LuaFunction, LibraryFunction>::variant;
 };
 
-struct Table : std::shared_ptr<std::unordered_map<std::string, std::unique_ptr<GenericValue>>>
+struct Table : std::shared_ptr<std::unordered_map<std::string, mem_utils::CopyMovePtr<GenericValue>>>
 {
-    using MapType = std::unordered_map<std::string, std::unique_ptr<GenericValue>>;
+    using MapType = std::unordered_map<std::string, mem_utils::CopyMovePtr<GenericValue>>;
 
     using std::shared_ptr<MapType>::shared_ptr;
 
