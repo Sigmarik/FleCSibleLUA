@@ -216,10 +216,11 @@ FleCSibleLUA/
   - [ ] Vectors
   - [ ] Integers _(for more precise calculations)_
 - [ ] Expand Scripting Library
-  - [ ] Strings
-  - [ ] Math _(with vector operations)_
+  - [x] Strings
+  - [ ] Math
   - [ ] Tables
   - [ ] ECS
+  - [ ] Expand the `string` library with regex matching
 - [ ] Performance Tests
 - [ ] Documentation
   - [ ] Language Reference
