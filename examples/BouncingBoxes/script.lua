@@ -1,12 +1,14 @@
 gCollisions = 0
 
+abs = math.abs
+
 system(entity(Position, Velocity))
-    entity.Position.x += entity.Velocity.x * deltaTime()
-    entity.Position.y += entity.Velocity.y * deltaTime()
+    entity.Position.x += entity.Velocity.x * ecs.deltaTime()
+    entity.Position.y += entity.Velocity.y * ecs.deltaTime()
 end
 
 system(entity(Velocity, Gravity))
-    entity.Velocity.y += entity.Gravity.value * deltaTime()
+    entity.Velocity.y += entity.Gravity.value * ecs.deltaTime()
 end
 
 system(entity(Position, Velocity, BoxCollider))
