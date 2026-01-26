@@ -86,6 +86,10 @@ bool to_bool(const GenericValue& value)
         if (maybeChecker == cmp_info::ENTITY_COMPONENT_CHECKERS.end()) return false;
         return maybeChecker->second(flecs::entity(component.entity));
     }
+    if (std::holds_alternative<Entity>(value))
+    {
+        return std::get<Entity>(value).is_alive();
+    }
 
     return true;
 }

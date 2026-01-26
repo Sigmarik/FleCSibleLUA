@@ -87,11 +87,13 @@ public:
     bool isEntity(const ValueAccessor& key) const;
     flecs::entity getEntity(const ValueAccessor& key) const;
 
+    bool isString(const ValueAccessor& key) const;
+    std::string getString(const ValueAccessor& key) const;
     std::string asString(const ValueAccessor& key) const;
 
     void pushRaw(data::GenericValue& value);
-
     void pushNil() const;
+
     void pushValue(bool value) const;
     void pushValue(double value) const;
     void pushValue(const std::string& value) const;

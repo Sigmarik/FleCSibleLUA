@@ -38,8 +38,8 @@ systems with minimal boilerplate.
 ### Basic System
 ```lua
 system(entity(Position, Velocity))
-    entity.Position.x += entity.Velocity.x * ecs.deltaTime()
-    entity.Position.y += entity.Velocity.y * ecs.deltaTime()
+    entity.Position.x += entity.Velocity.x * ecs.delta_time()
+    entity.Position.y += entity.Velocity.y * ecs.delta_time()
 end
 ```
 

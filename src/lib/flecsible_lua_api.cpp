@@ -79,6 +79,18 @@ flecs::entity FluaState::getEntity(const ValueAccessor& key) const
     return std::get<data::Entity>(*value);
 }
 
+bool FluaState::isString(const ValueAccessor& key) const
+{
+    const data::GenericValue* value = getRaw(key);
+    return value != nullptr && std::holds_alternative<std::string>(*value);
+}
+
+std::string FluaState::getString(const ValueAccessor& key) const
+{
+    const data::GenericValue* value = getRaw(key);
+    return std::get<std::string>(*value);
+}
+
 std::string FluaState::asString(const ValueAccessor& key) const
 {
     const data::GenericValue* value = getRaw(key);
