@@ -219,7 +219,7 @@ FleCSibleLUA/
   - [x] Strings
   - [ ] Math
   - [ ] Tables
-  - [ ] ECS
+  - [x] ECS
   - [ ] Expand the `string` library with regex matching
 - [ ] Performance Tests
 - [ ] Documentation
