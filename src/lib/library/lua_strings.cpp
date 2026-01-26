@@ -88,7 +88,7 @@ void to_char(FluaState& state)
 void len(FluaState& state)
 {
     if (state.getArgumentCount() < 1)
-        throw Error("string.len requires 1 argument");
+        throw Error("Expected at least 1 argument");
 
     std::string str = state.asString(0);
     state.pushValue(static_cast<double>(str.length()));
