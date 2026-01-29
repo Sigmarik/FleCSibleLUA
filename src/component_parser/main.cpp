@@ -409,6 +409,22 @@ int main(int argc, char** argv)
             continue;
         }
 
+        if (unsigned numErrors = clang_getNumDiagnostics(translationUnit)) {
+            unsigned displayOptions = clang_defaultDiagnosticDisplayOptions();
+
+            for (unsigned errIdx = 0; errIdx < numErrors; ++errIdx) {
+                CXDiagnostic diag = clang_getDiagnostic(translationUnit, errIdx);
+                CXString str = clang_formatDiagnostic(diag, displayOptions);
+
+                std::cerr << clang_getCString(str) << "\n";
+
+                clang_disposeString(str);
+                clang_disposeDiagnostic(diag);
+            }
+
+            return EXIT_FAILURE;
+        }
+
         CXCursor rootCursor = clang_getTranslationUnitCursor(translationUnit);
         clang_visitChildren(rootCursor, collect_top_level_structs, &discoveredStructs);
 
