@@ -212,9 +212,7 @@ FleCSibleLUA/
 
 ## 📝 TODO
 
-- [ ] Implement Additional Data Types
-  - [ ] Vectors
-  - [ ] Integers _(for more precise calculations)_
+- [ ] Implement vectors as built-in data types
 - [ ] Expand Scripting Library
   - [x] Strings
   - [ ] Math
