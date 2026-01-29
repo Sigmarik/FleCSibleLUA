@@ -19,6 +19,18 @@ function(target_flua_components tgt gen)
     # Collect inputs (ARGN contains inputs)
     set(_inputs ${ARGN})
 
+    get_target_property(_flua_target_includes ${tgt} INCLUDE_DIRECTORIES)
+
+    set(_include_paths)
+    if (NOT "${_flua_target_includes}" STREQUAL _flua_target_includes-NOTFOUND)
+        foreach(_incl IN LISTS _flua_target_includes)
+            list(APPEND _include_paths "-I")
+            list(APPEND _include_paths "${_incl}")
+        endforeach()
+    else()
+        message(WARNING "target_flua_components requires target include paths to be defined\nHint: Call target_include_paths before target_flua_components")
+    endif()
+
     # Ensure output directory under caller's binary dir
     set(_out_dir "${_caller_bin_dir}/generated/${tgt}")
     file(MAKE_DIRECTORY "${_out_dir}")
@@ -40,6 +52,9 @@ function(target_flua_components tgt gen)
     set(_cmd)
     list(APPEND _cmd ${_gen_cmd} "${_out_file}")
     foreach(_i IN LISTS _inputs)
+        list(APPEND _cmd "${_i}")
+    endforeach()
+    foreach(_i IN LISTS _include_paths)
         list(APPEND _cmd "${_i}")
     endforeach()
 

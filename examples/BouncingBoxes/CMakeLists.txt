@@ -40,13 +40,13 @@ target_sources(BouncingBoxes
 	PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/systems.cpp
 )
 
-target_flua_components(BouncingBoxes FluaComponentParser components.h)
-
 target_include_directories(BouncingBoxes
 	PRIVATE ${CMAKE_LIBRARY_PATH}/sfml/include
 	PRIVATE ${CMAKE_LIBRARY_PATH}/flecs/include
 	PRIVATE ${CMAKE_INCLUDE_PATH}
 )
+
+target_flua_components(BouncingBoxes FluaComponentParser components.h)
 
 target_compile_definitions(BouncingBoxes PRIVATE SFML_STATIC)
 

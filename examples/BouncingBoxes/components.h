@@ -1,3 +1,5 @@
+#include <SFML/Graphics/Color.hpp>
+
 namespace ecs
 {
 struct Position
@@ -30,13 +32,7 @@ struct Mass
 
 struct Coloration
 {
-    struct Color
-    {
-        unsigned r = 255;
-        unsigned g = 255;
-        unsigned b = 255;
-    };
-    Color fill{255, 151, 30};
-    Color outline{230, 107, 18};
+    sf::Color fill{255, 151, 30};
+    sf::Color outline{230, 107, 18};
 };
 }

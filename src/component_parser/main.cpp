@@ -98,11 +98,18 @@ static CXChildVisitResult collect_struct_fields(CXCursor cursor, CXCursor, CXCli
 
     fieldInfo field;
     field.name = to_std_string(clang_getCursorSpelling(cursor));
-    field.type = to_std_string(clang_getTypeSpelling(clang_getCursorType(cursor)));
+    CXType type = clang_getCursorType(cursor);
+    field.type = to_std_string(clang_getTypeSpelling(type));
+
+    if (type.kind == CXType_Unexposed || type.kind == CXType_Invalid)
+    {
+        std::cerr << "UNDEFINED TYPE" << std::endl;
+    }
+
     if (!is_type_name_allowed(field.type))
     {
         std::cerr << "Warning: Ignoring field " << field.name <<
-                ", type " << field.type << " is not allowed." << std::endl;
+                ", type " << field.type << " is not recognized by the system." << std::endl;
         return CXChildVisit_Continue;
     }
 
@@ -154,6 +161,7 @@ static CXChildVisitResult collect_top_level_structs(CXCursor cursor, CXCursor, C
     auto* structList = reinterpret_cast<std::vector<structInfo>*>(clientData);
     CXCursorKind kind = clang_getCursorKind(cursor);
     if (!(kind == CXCursor_StructDecl || kind == CXCursor_ClassDecl)) return CXChildVisit_Recurse;
+    if (!clang_Location_isFromMainFile(clang_getCursorLocation(cursor))) return CXChildVisit_Recurse;
 
     clang_getCursorPrintingPolicy(cursor);
 
@@ -251,27 +259,33 @@ static void write_get_component_ids_function(std::ofstream& out, const std::vect
     out << "    return componentIds;\n}\n}\n";
 }
 
-static std::string trim_surrounding_quotes(std::string s) {
-    if (s.size() >= 2) {
+static std::string trim_surrounding_quotes(std::string s)
+{
+    if (s.size() >= 2)
+    {
         // remove matching surrounding double quotes
-        if (s.front() == '"' && s.back() == '"') {
+        if (s.front() == '"' && s.back() == '"')
+        {
             return s.substr(1, s.size() - 2);
         }
         // optionally handle single quotes
-        if (s.front() == '\'' && s.back() == '\'') {
+        if (s.front() == '\'' && s.back() == '\'')
+        {
             return s.substr(1, s.size() - 2);
         }
     }
     return s;
 }
 
-static fs::path expand_tilde(const std::string &s) {
+static fs::path expand_tilde(const std::string& s)
+{
     if (s.empty() || s[0] != '~') return s;
 #if defined(_WIN32)
     return fs::path(s);
 #else
-    const char *home = std::getenv("HOME");
-    if (!home || std::string(home).empty()) {
+    const char* home = std::getenv("HOME");
+    if (!home || std::string(home).empty())
+    {
         return fs::path(s); // leave as-is if HOME unavailable
     }
     if (s.size() == 1) return fs::path(home);
@@ -284,32 +298,44 @@ fs::path path_from_string(const std::string& input)
 {
     fs::path candidate = expand_tilde(trim_surrounding_quotes(input));
 
-    if (candidate.is_absolute()) {
-        try {
+    if (candidate.is_absolute())
+    {
+        try
+        {
             return candidate.lexically_normal();
-        } catch (...) {
+        }
+        catch (...)
+        {
             return candidate;
         }
     }
 
 #if defined(_WIN32)
     if (candidate.string().size() >= 2 && std::isalpha(static_cast<unsigned char>(candidate.string()[0]))
-        && candidate.string()[1] == ':') {
-        if (candidate.string().size() >= 3 && (candidate.string()[2] == '\\' || candidate.string()[2] == '/')) {
-            try {
+        && candidate.string()[1] == ':')
+    {
+        if (candidate.string().size() >= 3 && (candidate.string()[2] == '\\' || candidate.string()[2] == '/'))
+        {
+            try
+            {
                 return candidate.lexically_normal();
-            } catch (...) {
+            }
+            catch (...)
+            {
                 return candidate;
             }
         }
     }
 #endif
 
-    try {
+    try
+    {
         fs::path cwd = fs::current_path();
         fs::path full = cwd / candidate;
         return full.lexically_normal();
-    } catch (...) {
+    }
+    catch (...)
+    {
         return candidate;
     }
 }
@@ -325,8 +351,24 @@ int main(int argc, char** argv)
     fs::path outputPath(path_from_string(argv[1]));
 
     std::vector<fs::path> inputPaths;
+    std::vector<std::string> includePaths;
     for (int inputId = 2; inputId < argc; ++inputId)
-        inputPaths.push_back(path_from_string(argv[inputId]));
+    {
+        if (std::string(argv[inputId]) == "-I")
+        {
+            if (inputId + 1 >= argc)
+            {
+                std::cerr << "Missing argument for \"-I\" option.\n";
+                return EXIT_FAILURE;
+            }
+            ++inputId;
+            includePaths.push_back(path_from_string(argv[inputId]).string());
+        }
+        else
+        {
+            inputPaths.push_back(path_from_string(argv[inputId]));
+        }
+    }
 
     std::vector<structInfo> discoveredStructs;
     std::vector<fs::path> relativeIncludes;
@@ -346,11 +388,16 @@ int main(int argc, char** argv)
         }
 
         CXIndex clangIndex = clang_createIndex(0, 0);
-        const char* clangArgs[] = {"-x", "c++", "-std=c++17"};
+        std::vector<const char*> clangArgs = {"-x", "c++", "-std=c++17"};
+        for (const std::string& path : includePaths)
+        {
+            clangArgs.push_back("-I");
+            clangArgs.push_back(path.c_str());
+        }
         CXTranslationUnit translationUnit = nullptr;
         CXErrorCode parseResult = clang_parseTranslationUnit2(clangIndex,
                                                               inputPathStr.c_str(),
-                                                              clangArgs, 3,
+                                                              &clangArgs.front(), static_cast<int>(clangArgs.size()),
                                                               nullptr, 0,
                                                               CXTranslationUnit_None,
                                                               &translationUnit);
