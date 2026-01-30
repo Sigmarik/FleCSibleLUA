@@ -156,4 +156,9 @@ void FluaState::setGlobal(const std::string& name, const std::function<void(Flua
 {
     m_interpreter->setGlobal(name, value);
 }
+
+std::mt19937& FluaState::getRandomEngine() const
+{
+    return m_interpreter->m_rng;
+}
 }

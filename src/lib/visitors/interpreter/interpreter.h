@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <set>
+#include <random>
 
 #include "ast/visitor.h"
 #include "ast/data_types.h"
@@ -203,5 +204,7 @@ private:
     std::set<ecs_entity_t> m_ownedSystems{};
 
     const ast::INode* m_functionCaller = nullptr;
+
+    std::mt19937 m_rng{std::random_device{}()};
 };
 }

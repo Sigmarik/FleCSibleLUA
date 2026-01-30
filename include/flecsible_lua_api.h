@@ -4,6 +4,7 @@
 #include <variant>
 #include <vector>
 #include <exception>
+#include <random>
 
 #include <flecs.h>
 #include <functional>
@@ -105,6 +106,8 @@ public:
     void setGlobal(const std::string& name, const std::string& value) const;
     void setGlobal(const std::string& name, flecs::entity value) const;
     void setGlobal(const std::string& name, const std::function<void(FluaState&)>& value) const;
+
+    std::mt19937& getRandomEngine() const;
 
 private:
     FluaState(vst::Interpreter* interpreter, flecs::world* world) : m_interpreter(interpreter), m_world(world) {}

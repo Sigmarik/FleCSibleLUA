@@ -4,5 +4,6 @@
 
 namespace flua::lib
 {
-    extern const std::unordered_map<std::string, std::function<void(FluaState&)>> STANDARD_LIBRARY;
+    using LibraryElement = std::variant<std::function<void(FluaState&)>, double, std::string>;
+    extern const std::unordered_map<std::string, LibraryElement> STANDARD_LIBRARY;
 }

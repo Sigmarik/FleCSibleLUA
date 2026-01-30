@@ -1,6 +1,37 @@
 #include "flecsible_lua_api.h"
 
-namespace flua::lib
+namespace flua::lib::math
 {
-void abs(FluaState& state); // number -> number
+void abs(FluaState& state);        // x -> abs
+void acos(FluaState& state);       // x -> acos
+void asin(FluaState& state);       // x -> asin
+void atan(FluaState& state);       // x -> atan
+void atan2(FluaState& state);      // y, x -> atan2
+void ceil(FluaState& state);       // x -> ceil
+void cos(FluaState& state);        // x -> cos
+void cosh(FluaState& state);       // x -> cosh
+void deg(FluaState& state);        // radians -> degrees
+void rad(FluaState& state);        // degrees -> radians
+void exp(FluaState& state);        // x -> e^x
+void floor(FluaState& state);      // x -> floor
+void fmod(FluaState& state);       // x, y -> fmod
+void frexp(FluaState& state);      // x -> mantissa, exponent
+void ldexp(FluaState& state);      // mantissa, exponent -> value
+void log(FluaState& state);        // x -> natural_log
+void log10(FluaState& state);      // x -> log10
+void max(FluaState& state);        // values... -> max_value
+void min(FluaState& state);        // values... -> min_value
+void modf(FluaState& state);       // x -> fractional_part, integer_part
+void pow(FluaState& state);        // x, y -> x^y
+void random(FluaState& state);     // [lower, upper] -> random_number
+void randomseed(FluaState& state); // seed ->
+void sin(FluaState& state);        // x -> sin
+void sinh(FluaState& state);       // x -> sinh
+void sqrt(FluaState& state);       // x -> sqrt
+void tan(FluaState& state);        // x -> tan
+void tanh(FluaState& state);       // x -> tanh
+
+static constexpr double kHuge = INFINITY;
+static constexpr double kPi = 3.14159265358979323846;
+static constexpr double kE = 2.718281828459045;
 }

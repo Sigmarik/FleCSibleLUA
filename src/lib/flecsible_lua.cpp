@@ -188,9 +188,9 @@ DeployedScript Script::deploy(flecs::world& world)
     script.m_interpreter = new vst::Interpreter(std::cout, std::cerr, &world);
     vst::Interpreter& interpreter = *script.m_interpreter;
 
-    for (const auto& [name, function] : lib::STANDARD_LIBRARY)
+    for (const auto& [name, element] : lib::STANDARD_LIBRARY)
     {
-        script.overrideGlobal(name, function);
+        std::visit([&](const auto& exact) { script.overrideGlobal(name, exact); }, element);
     }
 
     for (const auto& [name, genericValue] : m_globalOverrides)

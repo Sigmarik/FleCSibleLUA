@@ -9,7 +9,7 @@
 
 namespace flua::lib
 {
-const std::unordered_map<std::string, std::function<void(FluaState&)> > STANDARD_LIBRARY
+const std::unordered_map<std::string, LibraryElement> STANDARD_LIBRARY
 {
     {"print", print},
     {"assert", lua_assert},
@@ -31,7 +31,38 @@ const std::unordered_map<std::string, std::function<void(FluaState&)> > STANDARD
     {"error", misc::error},
     {"type", misc::type},
 
-    {"math.abs", abs},
+    {"math.abs", math::abs},
+    {"math.acos", math::acos},
+    {"math.asin", math::asin},
+    {"math.atan", math::atan},
+    {"math.atan2", math::atan2},
+    {"math.ceil", math::ceil},
+    {"math.cos", math::cos},
+    {"math.cosh", math::cosh},
+    {"math.deg", math::deg},
+    {"math.rad", math::rad},
+    {"math.exp", math::exp},
+    {"math.floor", math::floor},
+    {"math.fmod", math::fmod},
+    {"math.frexp", math::frexp},
+    {"math.ldexp", math::ldexp},
+    {"math.log", math::log},
+    {"math.log10", math::log10},
+    {"math.max", math::max},
+    {"math.min", math::min},
+    {"math.modf", math::modf},
+    {"math.pow", math::pow},
+    {"math.random", math::random},
+    {"math.randomseed", math::randomseed},
+    {"math.sin", math::sin},
+    {"math.sinh", math::sinh},
+    {"math.sqrt", math::sqrt},
+    {"math.tan", math::tan},
+    {"math.tanh", math::tanh},
+
+    {"math.huge", math::kHuge},
+    {"math.pi", math::kPi},
+    {"math.e", math::kE},
 
     {"tostring", string::tostring},
     {"string.byte", string::byte},
