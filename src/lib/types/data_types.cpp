@@ -3,6 +3,7 @@
 #include <ios>
 #include <sstream>
 #include <format>
+#include <iostream>
 
 #include "meta/variant_helper.h"
 
@@ -142,8 +143,17 @@ std::optional<GenericValue> perform_unary<UnaryOpType::Not>(const GenericValue& 
 template <>
 std::optional<GenericValue> perform_unary<UnaryOpType::Negate>(const GenericValue& value)
 {
-    if (std::holds_alternative<double>(value)) return -std::get<double>(value);
-    return std::nullopt;
+    std::optional<GenericValue> result = std::nullopt;
+    auto visitor = meta::Overloads
+    {
+        [&](double val) { result = -val; },
+        [&](const Vec2& val) { result = Vec2{ .x = -val.x, .y = -val.y }; },
+        [&](const Vec3& val) { result = Vec3{ .x = -val.x, .y = -val.y, .z = -val.z }; },
+        [&](const Vec4& val) { result = Vec4{ .x = -val.x, .y = -val.y, .z = -val.z, .w = -val.w }; },
+        [&](const auto&) { result = std::nullopt; },
+    };
+    std::visit(visitor, value);
+    return result;
 }
 
 template <>
@@ -171,47 +181,139 @@ static std::optional<GenericValue> perform_binary(const GenericValue&, const Gen
     assert(false); return {};
 }
 
+static std::optional<GenericValue> perform_floaty(const GenericValue& alpha, const GenericValue& beta,
+    const std::function<double(double, double)>& fnc)
+{
+    std::optional<GenericValue> result = std::nullopt;
+    result = fnc(std::get<double>(alpha), std::get<double>(beta));
+    if (alpha.index() == beta.index())
+    {
+        auto visitor = meta::Overloads
+        {
+            [&](double) { result = fnc(std::get<double>(alpha), std::get<double>(beta)); },
+            [&](const Vec2&)
+            {
+                const Vec2& alp = std::get<Vec2>(alpha);
+                const Vec2& bet = std::get<Vec2>(beta);
+                result = Vec2{fnc(alp.x, bet.x), fnc(alp.y, bet.y)};
+            },
+            [&](const Vec3&)
+            {
+                const Vec3& alp = std::get<Vec3>(alpha);
+                const Vec3& bet = std::get<Vec3>(beta);
+                result = Vec3{fnc(alp.x, bet.x), fnc(alp.y, bet.y), fnc(alp.z, bet.z)};
+            },
+            [&](const Vec4&)
+            {
+                const Vec4& alp = std::get<Vec4>(alpha);
+                const Vec4& bet = std::get<Vec4>(beta);
+                result = Vec4{fnc(alp.x, bet.x), fnc(alp.y, bet.y), fnc(alp.z, bet.z), fnc(alp.w, bet.w)};
+            },
+            [&](auto) { result = std::nullopt; }
+        };
+        std::visit(visitor, alpha);
+    }
+    else if (std::holds_alternative<double>(alpha))
+    {
+        double alp = std::get<double>(alpha);
+        auto visitor = meta::Overloads
+        {
+            [&](double bet) { result = fnc(alp, bet); },
+            [&](const Vec2& bet)
+            {
+                result = Vec2{fnc(alp, bet.x), fnc(alp, bet.y)};
+            },
+            [&](const Vec3& bet)
+            {
+                result = Vec3{fnc(alp, bet.x), fnc(alp, bet.y), fnc(alp, bet.z)};
+            },
+            [&](const Vec4& bet)
+            {
+                result = Vec4{fnc(alp, bet.x), fnc(alp, bet.y), fnc(alp, bet.z), fnc(alp, bet.w)};
+            },
+            [&](auto) { result = std::nullopt; }
+        };
+        std::visit(visitor, beta);
+    }
+    else if (std::holds_alternative<double>(beta))
+    {
+        double bet = std::get<double>(beta);
+        auto visitor = meta::Overloads
+        {
+            [&](double alp) { result = fnc(alp, bet); },
+            [&](const Vec2& alp)
+            {
+                result = Vec2{fnc(alp.x, bet), fnc(alp.x, bet)};
+            },
+            [&](const Vec3& alp)
+            {
+                result = Vec3{fnc(alp.x, bet), fnc(alp.x, bet), fnc(alp.x, bet)};
+            },
+            [&](const Vec4& alp)
+            {
+                result = Vec4{fnc(alp.x, bet), fnc(alp.x, bet), fnc(alp.x, bet), fnc(alp.x, bet)};
+            },
+            [&](auto) { result = std::nullopt; }
+        };
+        std::visit(visitor, alpha);
+    }
+
+    return result;
+}
+
 template <>
 std::optional<GenericValue> perform_binary<BinaryOpType::Add>(const GenericValue& alpha, const GenericValue& beta)
 {
-    if (!std::holds_alternative<double>(alpha) || !std::holds_alternative<double>(beta)) return std::nullopt;
-    return std::get<double>(alpha) + std::get<double>(beta);
+    return perform_floaty(alpha, beta, [](double alp, double bet)
+    {
+        return alp + bet;
+    });
 }
 
 template <>
 std::optional<GenericValue> perform_binary<BinaryOpType::Subtract>(const GenericValue& alpha, const GenericValue& beta)
 {
-    if (!std::holds_alternative<double>(alpha) || !std::holds_alternative<double>(beta)) return std::nullopt;
-    return std::get<double>(alpha) - std::get<double>(beta);
+    return perform_floaty(alpha, beta, [](double alp, double bet)
+    {
+        return alp - bet;
+    });
 }
 
 template <>
 std::optional<GenericValue> perform_binary<BinaryOpType::Multiply>(const GenericValue& alpha, const GenericValue& beta)
 {
-    if (!std::holds_alternative<double>(alpha) || !std::holds_alternative<double>(beta)) return std::nullopt;
-    return std::get<double>(alpha) * std::get<double>(beta);
+    return perform_floaty(alpha, beta, [](double alp, double bet)
+    {
+        return alp * bet;
+    });
 }
 
 template <>
 std::optional<GenericValue> perform_binary<BinaryOpType::Divide>(const GenericValue& alpha, const GenericValue& beta)
 {
-    if (!std::holds_alternative<double>(alpha) || !std::holds_alternative<double>(beta)) return std::nullopt;
-    return std::get<double>(alpha) / std::get<double>(beta);
+    return perform_floaty(alpha, beta, [](double alp, double bet)
+    {
+        return alp / bet;
+    });
 }
 
 template <>
 std::optional<GenericValue> perform_binary<BinaryOpType::Mod>(const GenericValue& alpha, const GenericValue& beta)
 {
-    if (!std::holds_alternative<double>(alpha) || !std::holds_alternative<double>(beta)) return std::nullopt;
-    double whole = std::get<double>(alpha) / std::get<double>(beta);
-    return std::get<double>(alpha) - std::floor(whole) * std::get<double>(beta);
+    return perform_floaty(alpha, beta, [](double alp, double bet)
+    {
+        double whole = alp / bet;
+        return alp - std::floor(whole) * bet;
+    });
 }
 
 template <>
 std::optional<GenericValue> perform_binary<BinaryOpType::Pow>(const GenericValue& alpha, const GenericValue& beta)
 {
-    if (!std::holds_alternative<double>(alpha) || !std::holds_alternative<double>(beta)) return std::nullopt;
-    return std::pow(std::get<double>(alpha), std::get<double>(beta));
+    return perform_floaty(alpha, beta, [](double alp, double bet)
+    {
+        return std::pow(alp, bet);
+    });
 }
 template <>
 std::optional<GenericValue> perform_binary<BinaryOpType::And>(const GenericValue& alpha, const GenericValue& beta)
