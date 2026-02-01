@@ -2,6 +2,10 @@ gCollisions = 0
 
 abs = math.abs
 
+alpha = vec(1, 2, 3)
+beta = vec(6, 3, 1)
+print(alpha + beta * 2)
+
 system(entity(Position, Velocity))
     entity.Position.x += entity.Velocity.x * ecs.delta_time()
     entity.Position.y += entity.Velocity.y * ecs.delta_time()

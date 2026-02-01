@@ -67,6 +67,42 @@ double FluaState::getNumber(const ValueAccessor& key) const
     return std::get<double>(*value);
 }
 
+bool FluaState::isVec2(const ValueAccessor& key) const
+{
+    const data::GenericValue* value = getRaw(key);
+    return value != nullptr && std::holds_alternative<Vec2>(*value);
+}
+
+Vec2 FluaState::getVec2(const ValueAccessor& key) const
+{
+    const data::GenericValue* value = getRaw(key);
+    return std::get<Vec2>(*value);
+}
+
+bool FluaState::isVec3(const ValueAccessor& key) const
+{
+    const data::GenericValue* value = getRaw(key);
+    return value != nullptr && std::holds_alternative<Vec3>(*value);
+}
+
+Vec3 FluaState::getVec3(const ValueAccessor& key) const
+{
+    const data::GenericValue* value = getRaw(key);
+    return std::get<Vec3>(*value);
+}
+
+bool FluaState::isVec4(const ValueAccessor& key) const
+{
+    const data::GenericValue* value = getRaw(key);
+    return value != nullptr && std::holds_alternative<Vec4>(*value);
+}
+
+Vec4 FluaState::getVec4(const ValueAccessor& key) const
+{
+    const data::GenericValue* value = getRaw(key);
+    return std::get<Vec4>(*value);
+}
+
 bool FluaState::isEntity(const ValueAccessor& key) const
 {
     const data::GenericValue* value = getRaw(key);
@@ -117,6 +153,21 @@ void FluaState::pushValue(double value) const
     m_interpreter->m_externalFunctionOutputs.emplace_back(value);
 }
 
+void FluaState::pushValue(const Vec2& value) const
+{
+    m_interpreter->m_externalFunctionOutputs.emplace_back(value);
+}
+
+void FluaState::pushValue(const Vec3& value) const
+{
+    m_interpreter->m_externalFunctionOutputs.emplace_back(value);
+}
+
+void FluaState::pushValue(const Vec4& value) const
+{
+    m_interpreter->m_externalFunctionOutputs.emplace_back(value);
+}
+
 void FluaState::pushValue(const std::string& value) const
 {
     m_interpreter->m_externalFunctionOutputs.emplace_back(value);
@@ -138,6 +189,21 @@ void FluaState::setGlobal(const std::string& name, bool value) const
 }
 
 void FluaState::setGlobal(const std::string& name, double value) const
+{
+    m_interpreter->setGlobal(name, value);
+}
+
+void FluaState::setGlobal(const std::string& name, const Vec2& value) const
+{
+    m_interpreter->setGlobal(name, value);
+}
+
+void FluaState::setGlobal(const std::string& name, const Vec3& value) const
+{
+    m_interpreter->setGlobal(name, value);
+}
+
+void FluaState::setGlobal(const std::string& name, const Vec4& value) const
 {
     m_interpreter->setGlobal(name, value);
 }

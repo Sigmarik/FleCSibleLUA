@@ -185,7 +185,6 @@ static std::optional<GenericValue> perform_floaty(const GenericValue& alpha, con
     const std::function<double(double, double)>& fnc)
 {
     std::optional<GenericValue> result = std::nullopt;
-    result = fnc(std::get<double>(alpha), std::get<double>(beta));
     if (alpha.index() == beta.index())
     {
         auto visitor = meta::Overloads
@@ -243,15 +242,15 @@ static std::optional<GenericValue> perform_floaty(const GenericValue& alpha, con
             [&](double alp) { result = fnc(alp, bet); },
             [&](const Vec2& alp)
             {
-                result = Vec2{fnc(alp.x, bet), fnc(alp.x, bet)};
+                result = Vec2{fnc(alp.x, bet), fnc(alp.y, bet)};
             },
             [&](const Vec3& alp)
             {
-                result = Vec3{fnc(alp.x, bet), fnc(alp.x, bet), fnc(alp.x, bet)};
+                result = Vec3{fnc(alp.x, bet), fnc(alp.y, bet), fnc(alp.z, bet)};
             },
             [&](const Vec4& alp)
             {
-                result = Vec4{fnc(alp.x, bet), fnc(alp.x, bet), fnc(alp.x, bet), fnc(alp.x, bet)};
+                result = Vec4{fnc(alp.x, bet), fnc(alp.y, bet), fnc(alp.z, bet), fnc(alp.w, bet)};
             },
             [&](auto) { result = std::nullopt; }
         };

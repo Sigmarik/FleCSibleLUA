@@ -64,6 +64,8 @@ const std::unordered_map<std::string, LibraryElement> STANDARD_LIBRARY
     {"math.lerpb", math::lerpb},
     {"math.clamp", math::clamp},
 
+    {"vec", math::vec},
+
     {"math.huge", math::kHuge},
     {"math.pi", math::kPi},
     {"math.e", math::kE},

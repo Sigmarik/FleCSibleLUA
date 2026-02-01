@@ -33,7 +33,9 @@ void tanh(FluaState& state);       // x... -> tanh...
 
 void lerp(FluaState& state);  // a, b, k -> interpolation
 void lerpb(FluaState& state); // a, b, k -> bound_interpolation
-void clamp(FluaState& state);  // value, min, max -> clamped
+void clamp(FluaState& state); // value, min, max -> clamped
+
+void vec(FluaState& state); // comps... -> vector
 
 static constexpr double kHuge = INFINITY;
 static constexpr double kPi = 3.14159265358979323846;

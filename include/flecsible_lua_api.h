@@ -100,6 +100,13 @@ public:
     bool isNumber(const ValueAccessor& key) const;
     double getNumber(const ValueAccessor& key) const;
 
+    bool isVec2(const ValueAccessor& key) const;
+    Vec2 getVec2(const ValueAccessor& key) const;
+    bool isVec3(const ValueAccessor& key) const;
+    Vec3 getVec3(const ValueAccessor& key) const;
+    bool isVec4(const ValueAccessor& key) const;
+    Vec4 getVec4(const ValueAccessor& key) const;
+
     bool isEntity(const ValueAccessor& key) const;
     flecs::entity getEntity(const ValueAccessor& key) const;
 
@@ -112,12 +119,18 @@ public:
 
     void pushValue(bool value) const;
     void pushValue(double value) const;
+    void pushValue(const Vec2& value) const;
+    void pushValue(const Vec3& value) const;
+    void pushValue(const Vec4& value) const;
     void pushValue(const std::string& value) const;
     void pushValue(flecs::entity value) const;
     void pushValue(const std::function<void(FluaState&)>& value) const;
 
     void setGlobal(const std::string& name, bool value) const;
     void setGlobal(const std::string& name, double value) const;
+    void setGlobal(const std::string& name, const Vec2& value) const;
+    void setGlobal(const std::string& name, const Vec3& value) const;
+    void setGlobal(const std::string& name, const Vec4& value) const;
     void setGlobal(const std::string& name, const std::string& value) const;
     void setGlobal(const std::string& name, flecs::entity value) const;
     void setGlobal(const std::string& name, const std::function<void(FluaState&)>& value) const;

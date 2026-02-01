@@ -354,4 +354,24 @@ void clamp(FluaState& state)
 
     state.pushValue(std::clamp(value, min, max));
 }
+
+void vec(FluaState& state)
+{
+    if (state.getArgumentCount() < 2 || state.getArgumentCount() > 4)
+        throw Error("Expected from 2 to 4 numeric arguments");
+
+    for (unsigned idx = 0; idx < state.getArgumentCount(); idx++)
+    {
+        if (!state.isNumber(idx))
+            throw Error("Argument " + std::to_string(idx) + " is not a number");
+    }
+
+    if (state.getArgumentCount() == 2)
+        state.pushValue(Vec2{state.getNumber(0), state.getNumber(1)});
+    if (state.getArgumentCount() == 3)
+        state.pushValue(Vec3{state.getNumber(0), state.getNumber(1), state.getNumber(2)});
+    if (state.getArgumentCount() == 4)
+        state.pushValue(Vec4{state.getNumber(0), state.getNumber(1),
+            state.getNumber(2), state.getNumber(3)});
+}
 }
