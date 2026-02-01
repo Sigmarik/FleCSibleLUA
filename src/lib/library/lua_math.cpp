@@ -5,40 +5,50 @@
 
 namespace flua::lib::math
 {
+static void apply_generic_function(FluaState& state, const std::function<double(double)>& function)
+{
+    if (state.getArgumentCount() < 1)
+        throw Error("Expected at least 1 numeric argument");
+
+    for (unsigned idx = 0; idx < state.getArgumentCount(); idx++)
+    {
+        if (!state.isNumber(idx))
+            throw Error("Expected argument " + std::to_string(idx) + " to be a number");
+        double value = state.getNumber(idx);
+        state.pushValue(function(value));
+    }
+}
+
 void abs(FluaState& state)
 {
-    if (state.getArgumentCount() < 1 || !state.isNumber(0))
-        throw Error("Expected 1 numeric argument");
-
-    double value = state.getNumber(0);
-    state.pushValue(std::abs(value));
+    apply_generic_function(state, [](double value)
+    {
+        return std::abs(value);
+    });
 }
 
 void acos(FluaState& state)
 {
-    if (state.getArgumentCount() < 1 || !state.isNumber(0))
-        throw Error("Expected 1 numeric argument");
-
-    double value = state.getNumber(0);
-    state.pushValue(std::acos(value));
+    apply_generic_function(state, [](double value)
+    {
+        return std::acos(value);
+    });
 }
 
 void asin(FluaState& state)
 {
-    if (state.getArgumentCount() < 1 || !state.isNumber(0))
-        throw Error("Expected 1 numeric argument");
-
-    double value = state.getNumber(0);
-    state.pushValue(std::asin(value));
+    apply_generic_function(state, [](double value)
+    {
+        return std::asin(value);
+    });
 }
 
 void atan(FluaState& state)
 {
-    if (state.getArgumentCount() < 1 || !state.isNumber(0))
-        throw Error("Expected 1 numeric argument");
-
-    double value = state.getNumber(0);
-    state.pushValue(std::atan(value));
+    apply_generic_function(state, [](double value)
+    {
+        return std::atan(value);
+    });
 }
 
 void atan2(FluaState& state)
@@ -53,65 +63,58 @@ void atan2(FluaState& state)
 
 void ceil(FluaState& state)
 {
-    if (state.getArgumentCount() < 1 || !state.isNumber(0))
-        throw Error("Expected 1 numeric argument");
-
-    double value = state.getNumber(0);
-    state.pushValue(std::ceil(value));
+    apply_generic_function(state, [](double value)
+    {
+        return std::ceil(value);
+    });
 }
 
 void cos(FluaState& state)
 {
-    if (state.getArgumentCount() < 1 || !state.isNumber(0))
-        throw Error("Expected 1 numeric argument");
-
-    double value = state.getNumber(0);
-    state.pushValue(std::cos(value));
+    apply_generic_function(state, [](double value)
+    {
+        return std::cos(value);
+    });
 }
 
 void cosh(FluaState& state)
 {
-    if (state.getArgumentCount() < 1 || !state.isNumber(0))
-        throw Error("Expected 1 numeric argument");
-
-    double value = state.getNumber(0);
-    state.pushValue(std::cosh(value));
+    apply_generic_function(state, [](double value)
+    {
+        return std::cosh(value);
+    });
 }
 
 void deg(FluaState& state)
 {
-    if (state.getArgumentCount() < 1 || !state.isNumber(0))
-        throw Error("Expected 1 numeric argument");
-
-    double radians = state.getNumber(0);
-    state.pushValue(radians * 180.0 / kPi);
+    apply_generic_function(state, [](double value)
+    {
+        return value * 180.0 / kPi;
+    });
 }
 
 void rad(FluaState& state)
 {
-    if (state.getArgumentCount() < 1 || !state.isNumber(0))
-        throw Error("Expected 1 numeric argument");
-
-    double degrees = state.getNumber(0);
-    state.pushValue(degrees * kPi / 180.0);
+    apply_generic_function(state, [](double value)
+    {
+        return value * kPi / 180.0;
+    });
 }
 
 void exp(FluaState& state)
 {
-    if (state.getArgumentCount() < 1 || !state.isNumber(0))
-        throw Error("Expected 1 numeric argument");
-
-    double value = state.getNumber(0);
-    state.pushValue(std::exp(value));
+    apply_generic_function(state, [](double value)
+    {
+        return std::exp(value);
+    });
 }
 
 void floor(FluaState& state)
 {
-    if (state.getArgumentCount() < 1 || !state.isNumber(0))
-        throw Error("Expected 1 numeric argument");
-
-    double value = state.getNumber(0);
-    state.pushValue(std::floor(value));
+    apply_generic_function(state, [](double value)
+    {
+        return std::floor(value);
+    });
 }
 
 void fmod(FluaState& state)
@@ -151,28 +154,22 @@ void ldexp(FluaState& state)
 
 void log(FluaState& state)
 {
-    if (state.getArgumentCount() < 1 || !state.isNumber(0))
-        throw Error("Expected 1 numeric argument");
-
-    double value = state.getNumber(0);
-
-    if (value <= 0.0)
-        throw Error("Logarithm of non-positive number");
-
-    state.pushValue(std::log(value));
+    apply_generic_function(state, [](double value)
+    {
+        if (value <= 0.0)
+            throw Error("Logarithm of non-positive number");
+        return std::log(value);
+    });
 }
 
 void log10(FluaState& state)
 {
-    if (state.getArgumentCount() < 1 || !state.isNumber(0))
-        throw Error("Expected 1 numeric argument");
-
-    double value = state.getNumber(0);
-
-    if (value <= 0.0)
-        throw Error("Logarithm of non-positive number");
-
-    state.pushValue(std::log10(value));
+    apply_generic_function(state, [](double value)
+    {
+        if (value <= 0.0)
+            throw Error("Logarithm of non-positive number");
+        return std::log10(value);
+    });
 }
 
 void max(FluaState& state)
@@ -284,51 +281,44 @@ void randomseed(FluaState& state)
 
 void sin(FluaState& state)
 {
-    if (state.getArgumentCount() < 1 || !state.isNumber(0))
-        throw Error("Expected 1 numeric argument");
-
-    double value = state.getNumber(0);
-    state.pushValue(std::sin(value));
+    apply_generic_function(state, [](double value)
+    {
+        return std::sin(value);
+    });
 }
 
 void sinh(FluaState& state)
 {
-    if (state.getArgumentCount() < 1 || !state.isNumber(0))
-        throw Error("Expected 1 numeric argument");
-
-    double value = state.getNumber(0);
-    state.pushValue(std::sinh(value));
+    apply_generic_function(state, [](double value)
+    {
+        return std::sinh(value);
+    });
 }
 
 void sqrt(FluaState& state)
 {
-    if (state.getArgumentCount() < 1 || !state.isNumber(0))
-        throw Error("Expected 1 numeric argument");
-
-    double value = state.getNumber(0);
-
-    if (value < 0.0)
-        throw Error("Square root of negative number");
-
-    state.pushValue(std::sqrt(value));
+    apply_generic_function(state, [](double value)
+    {
+        if (value < 0.0)
+            throw Error("Square root of negative number");
+        return std::sqrt(value);
+    });
 }
 
 void tan(FluaState& state)
 {
-    if (state.getArgumentCount() < 1 || !state.isNumber(0))
-        throw Error("Expected 1 numeric argument");
-
-    double value = state.getNumber(0);
-    state.pushValue(std::tan(value));
+    apply_generic_function(state, [](double value)
+    {
+        return std::tan(value);
+    });
 }
 
 void tanh(FluaState& state)
 {
-    if (state.getArgumentCount() < 1 || !state.isNumber(0))
-        throw Error("Expected 1 numeric argument");
-
-    double value = state.getNumber(0);
-    state.pushValue(std::tanh(value));
+    apply_generic_function(state, [](double value)
+    {
+        return std::tanh(value);
+    });
 }
 }
 
