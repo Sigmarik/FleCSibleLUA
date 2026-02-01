@@ -320,5 +320,38 @@ void tanh(FluaState& state)
         return std::tanh(value);
     });
 }
+
+void lerp(FluaState& state)
+{
+    if (state.getArgumentCount() < 3 || !state.isNumber(0) || !state.isNumber(1) || !state.isNumber(2))
+        throw Error("Expected 3 numeric arguments");
+    double alpha = state.getNumber(0);
+    double beta = state.getNumber(1);
+    double value = state.getNumber(2);
+
+    state.pushValue(alpha * (1.0 - value) + beta * value);
 }
 
+void lerpb(FluaState& state)
+{
+    if (state.getArgumentCount() < 3 || !state.isNumber(0) || !state.isNumber(1) || !state.isNumber(2))
+        throw Error("Expected 3 numeric arguments");
+    double alpha = state.getNumber(0);
+    double beta = state.getNumber(1);
+    double value = state.getNumber(2);
+
+    value = std::clamp(value, 0.0, 1.0);
+    state.pushValue(alpha * (1.0 - value) + beta * value);
+}
+
+void clamp(FluaState& state)
+{
+    if (state.getArgumentCount() < 3 || !state.isNumber(0) || !state.isNumber(1) || !state.isNumber(2))
+        throw Error("Expected 3 numeric arguments");
+    double value = state.getNumber(0);
+    double min = state.getNumber(1);
+    double max = state.getNumber(2);
+
+    state.pushValue(std::clamp(value, min, max));
+}
+}

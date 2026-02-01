@@ -60,6 +60,10 @@ const std::unordered_map<std::string, LibraryElement> STANDARD_LIBRARY
     {"math.tan", math::tan},
     {"math.tanh", math::tanh},
 
+    {"math.lerp", math::lerp},
+    {"math.lerpb", math::lerpb},
+    {"math.clamp", math::clamp},
+
     {"math.huge", math::kHuge},
     {"math.pi", math::kPi},
     {"math.e", math::kE},
