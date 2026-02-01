@@ -396,7 +396,9 @@ void Interpreter::visit(ast::IndexRequest& node)
             components = extract_vector_components(vec, index, node);
         }, subject);
 
-        if (components.size() == 2)
+        if (components.size() == 1)
+            m_returnedValue = components.front();
+        else if (components.size() == 2)
             m_returnedValue = Vec2{components[0], components[1]};
         else if (components.size() == 3)
             m_returnedValue = Vec3{components[0], components[1], components[2]};
