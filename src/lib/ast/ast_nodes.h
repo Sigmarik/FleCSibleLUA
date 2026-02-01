@@ -8,7 +8,7 @@
 #include <deque>
 #include <vector>
 
-#include "data_types.h"
+#include "types/data_types.h"
 #include "identification.h"
 #include "mem_utils/copyable_ptr.h"
 #include "parser/char_pos.h"

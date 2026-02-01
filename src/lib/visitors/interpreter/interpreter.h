@@ -5,7 +5,7 @@
 #include <random>
 
 #include "ast/visitor.h"
-#include "ast/data_types.h"
+#include "types/data_types.h"
 #include "flecsible_lua_api.h"
 #include "component_map/comp_map.h"
 

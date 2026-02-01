@@ -4,7 +4,7 @@ add_library(FlecsibleLua
         ast/ast_nodes.cpp
         ast/visitor.cpp
         ast/identification.cpp
-        ast/data_types.cpp
+        types/data_types.cpp
         visitors/dbg.cpp
         grammar/lua_lexemes.cpp
         parser/char_pos.cpp

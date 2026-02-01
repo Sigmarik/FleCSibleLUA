@@ -11,7 +11,7 @@
 #include <bitset>
 #include <complex>
 
-#include "ast/data_types.h"
+#include "types/data_types.h"
 
 namespace flua::lib::string
 {
