@@ -497,8 +497,8 @@ struct KeyValuePair : parser::Grammar
 
     parser::Sequence<parser::Lex<lualex::BracketSquareOp>, HighLevelExpression, parser::Lex<lualex::BracketSquareCl>,
         parser::Lex<lualex::Assignment>, HighLevelExpression>,
-    parser::Sequence<HighLevelExpression>,
-    parser::Sequence<parser::Lex<lualex::Name>, parser::Lex<lualex::Assignment>, HighLevelExpression>
+    parser::Sequence<parser::Lex<lualex::Name>, parser::Lex<lualex::Assignment>, HighLevelExpression>,
+    parser::Sequence<HighLevelExpression>
 >
 {
     static ast::MakeTable::KeyValuePair visit(ast::NodePtr& node)

@@ -54,7 +54,7 @@ struct make_forest<FirstSeq, Sequences...>
     using type = append_to_forest_t<FirstSeq, make_forest_t<Sequences...> >;
 };
 
-// Empty forest, empty forest
+// Empty sequence, empty forest
 template<bool ForestFinalV>
 struct append_to_forest<Sequence<>, Forest<ForestFinalV> >
 {

@@ -13,6 +13,13 @@
 #include "char_pos.h"
 #include "error.h"
 
+#ifdef DEBUG_FLUA_PARSER
+#include <iostream>
+#define __FLUA_PARSER_DEBUG_PRINT(sequence) std::cerr << sequence << std::endl
+#else
+#define __FLUA_PARSER_DEBUG_PRINT(sequence)
+#endif
+
 namespace flua::parser
 {
 using namespace flua;
@@ -170,9 +177,15 @@ struct Forest
                 }
                 auto expanded = meta::expand(args, std::move(*stageResult));
 
-                return CurrentTree::Forest::template tryParse
+                auto deepResult = CurrentTree::Forest::template tryParse
                         <RetType, CurrentGrmr, false, ParserT, decltype(expanded), LexemeVariantPtr, 0>
                         (parser, start, end, expanded);
+                if (deepResult)
+                    return deepResult;
+                start = formerStart;
+                return tryParse
+                        <RetType, CurrentGrmr, true, ParserT, PreviousIterationsTuple, LexemeVariantPtr, treeN + 1>
+                        (parser, start, end, args);
             }
         }
     }
@@ -192,16 +205,27 @@ struct Grammar
     template<class ParserT, class LexemeVariantPtr>
     static std::optional<RetType> tryParse(ParserT& parser, LexemeVariantPtr& start, const LexemeVariantPtr& end)
     {
+        CharacterPos startingPos{};
+        std::visit([&](const auto& lex) { startingPos = lex.startingPos; }, *start);
+        __FLUA_PARSER_DEBUG_PRINT("Entered " << typeid(ThisType).name() << " at " <<
+            startingPos.line << ":" << startingPos.column);
         std::tuple<> emptyTuple;
         std::optional<ReturnType> head = BorForest::template tryParse
             <RetType, ThisType, true, ParserT, std::tuple<>, LexemeVariantPtr, 0>
             (parser, start, end, emptyTuple);
 
-        if (!head.has_value()) return head;
+        if (!head.has_value())
+        {
+            __FLUA_PARSER_DEBUG_PRINT(typeid(ThisType).name() << " failed");
+            return head;
+        }
+        __FLUA_PARSER_DEBUG_PRINT(typeid(ThisType).name() << " succeeded, trying to extend...");
 
         while (BorForest::template tryExtend
             <RetType, ThisType, ParserT, LexemeVariantPtr, 0>
             (*head, parser, start, end)) {}
+
+        __FLUA_PARSER_DEBUG_PRINT("Exiting " << typeid(ThisType).name());
 
         return head;
     }
@@ -218,9 +242,13 @@ struct Lex final
         if (start != end && std::holds_alternative<Lexeme>(*start))
         {
             Lexeme result = std::get<Lexeme>(*start);
+            __FLUA_PARSER_DEBUG_PRINT(typeid(Lexeme).name() << " at " <<
+                result.startingPos.line << ":" << result.startingPos.column << " confirmed");
             ++start;
             return result;
         }
+
+        __FLUA_PARSER_DEBUG_PRINT(typeid(Lexeme).name() << " mismatch");
 
         std::string what = std::string(Lexeme::kName.value) + " expected near ";
         std::visit([&](const auto& specificLexeme) { what += specificLexeme.kName.value; }, *start);
