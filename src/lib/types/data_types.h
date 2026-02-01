@@ -12,6 +12,7 @@
 #include "flecs.h"
 #include "mem_utils/copyable_ptr.h"
 #include "component_map/comp_map.h"
+#include "flecsible_lua_api.h"
 
 namespace flua
 {
@@ -124,9 +125,11 @@ struct EntityComponent
     std::string name;
 };
 
-class GenericValue : public std::variant<Nil, bool, double, std::string, Table, Entity, EntityComponent, Function>
+class GenericValue : public
+    std::variant<Nil, bool, double, std::string, Table, Entity, EntityComponent, Function, Vec2, Vec3, Vec4>
 {
-    using std::variant<Nil, bool, double, std::string, Table, Entity, EntityComponent, Function>::variant;
+    using std::variant<Nil, bool, double, std::string, Table,
+        Entity, EntityComponent, Function, Vec2, Vec3, Vec4>::variant;
 };
 
 std::string get_type_name(const GenericValue& value);

@@ -29,6 +29,22 @@ static std::string to_string(const std::string& value)
     return value;
 }
 
+static std::string to_string(const Vec2& vec)
+{
+    return "(" + std::to_string(vec.x) + ", " + std::to_string(vec.y) + ")";
+}
+
+static std::string to_string(const Vec3& vec)
+{
+    return "(" + std::to_string(vec.x) + ", " + std::to_string(vec.y) + ", " + std::to_string(vec.z) + ")";
+}
+
+static std::string to_string(const Vec4& vec)
+{
+    return "(" + std::to_string(vec.x) + ", " + std::to_string(vec.y) + ", " +
+        std::to_string(vec.z) + ", " + std::to_string(vec.w) + ")";
+}
+
 static std::string pointer_to_hex_string(const void* ptr) {
     std::stringstream oss;
     oss << "0x" << std::hex << reinterpret_cast<std::uintptr_t>(ptr);
@@ -98,9 +114,12 @@ std::string get_type_name(const GenericValue& value)
 {
     const char* result = nullptr;
     const auto opNameGetter = meta::Overloads{
-        [&](const Nil&) { result = "nil"; },
-        [&](const bool&) { result = "boolean"; },
-        [&](const double&) { result = "number"; },
+        [&](Nil) { result = "nil"; },
+        [&](bool) { result = "boolean"; },
+        [&](double) { result = "number"; },
+        [&](const Vec2&) { result = "vec2"; },
+        [&](const Vec3&) { result = "vec3"; },
+        [&](const Vec4&) { result = "vec4"; },
         [&](const std::string&) { result = "string"; },
         [&](const Table&) { result = "table"; },
         [&](const Entity&) { result = "entity"; },
@@ -226,11 +245,29 @@ std::optional<GenericValue> perform_binary<BinaryOpType::CmpEq>(const GenericVal
     {
         [&](Nil) { result = true; },
         [&](bool) { result = std::get<bool>(alpha) == std::get<bool>(beta); },
-        // [&](long long) { result = std::get<long long>(alpha) == std::get<long long>(beta); },
         [&](double) { result = std::abs(std::get<double>(alpha) - std::get<double>(beta)) < CMP_EPS; },
         [&](const Entity&) { result = std::get<Entity>(alpha).id() == std::get<Entity>(beta).id(); },
         [&](const std::string&) { result = std::get<std::string>(alpha) == std::get<std::string>(beta); },
         [&](const Table&) { result = &std::get<Table>(alpha) == &std::get<Table>(beta); },
+        [&](const Vec2&)
+        {
+            auto alp = std::get<Vec2>(alpha);
+            auto bet = std::get<Vec2>(beta);
+            result = std::abs(alp.x - bet.x) + std::abs(alp.y - bet.y) < CMP_EPS * 2;
+        },
+        [&](const Vec3&)
+        {
+            auto alp = std::get<Vec3>(alpha);
+            auto bet = std::get<Vec3>(beta);
+            result = std::abs(alp.x - bet.x) + std::abs(alp.y - bet.y) + std::abs(alp.z - bet.z) < CMP_EPS * 3;
+        },
+        [&](const Vec4&)
+        {
+            auto alp = std::get<Vec4>(alpha);
+            auto bet = std::get<Vec4>(beta);
+            result = std::abs(alp.x - bet.x) + std::abs(alp.y - bet.y) +
+                std::abs(alp.z - bet.z) + std::abs(alp.w - bet.w) < CMP_EPS * 4;
+        },
         [&](const auto&) { result = to_string(alpha) == to_string(beta); },
     };
     std::visit(comparators, alpha);

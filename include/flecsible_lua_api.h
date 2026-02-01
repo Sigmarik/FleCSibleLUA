@@ -12,6 +12,21 @@
 namespace flua
 {
 
+struct Vec2
+{
+    double x = 0, y = 0;
+};
+
+struct Vec3
+{
+    double x = 0, y = 0, z = 0;
+};
+
+struct Vec4
+{
+    double x = 0, y = 0, z = 0, w = 0;
+};
+
 namespace data
 {
     class GenericValue;
