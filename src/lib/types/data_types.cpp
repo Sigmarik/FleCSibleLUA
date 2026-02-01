@@ -32,18 +32,18 @@ static std::string to_string(const std::string& value)
 
 static std::string to_string(const Vec2& vec)
 {
-    return "(" + std::to_string(vec.x) + ", " + std::to_string(vec.y) + ")";
+    return "(" + to_string(vec.x) + ", " + to_string(vec.y) + ")";
 }
 
 static std::string to_string(const Vec3& vec)
 {
-    return "(" + std::to_string(vec.x) + ", " + std::to_string(vec.y) + ", " + std::to_string(vec.z) + ")";
+    return "(" + to_string(vec.x) + ", " + to_string(vec.y) + ", " + to_string(vec.z) + ")";
 }
 
 static std::string to_string(const Vec4& vec)
 {
-    return "(" + std::to_string(vec.x) + ", " + std::to_string(vec.y) + ", " +
-        std::to_string(vec.z) + ", " + std::to_string(vec.w) + ")";
+    return "(" + to_string(vec.x) + ", " + to_string(vec.y) + ", " +
+        to_string(vec.z) + ", " + to_string(vec.w) + ")";
 }
 
 static std::string pointer_to_hex_string(const void* ptr) {
