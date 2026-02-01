@@ -335,31 +335,97 @@ void Interpreter::visit(ast::FieldRequest& node)
     assert(false && "Not implemented");
 }
 
+template <class VecN>
+static std::optional<double> extract_component(const VecN&, char) { return {}; }
+
+template <>
+std::optional<double> extract_component(const Vec2& vec, char ch)
+{
+    if (ch == 'x' || ch == 'X') return vec.x;
+    if (ch == 'y' || ch == 'Y') return vec.y;
+    return {};
+}
+
+template <>
+std::optional<double> extract_component(const Vec3& vec, char ch)
+{
+    if (ch == 'x' || ch == 'X') return vec.x;
+    if (ch == 'y' || ch == 'Y') return vec.y;
+    if (ch == 'z' || ch == 'Z') return vec.z;
+    return {};
+}
+
+template <>
+std::optional<double> extract_component(const Vec4& vec, char ch)
+{
+    if (ch == 'x' || ch == 'X') return vec.x;
+    if (ch == 'y' || ch == 'Y') return vec.y;
+    if (ch == 'z' || ch == 'Z') return vec.z;
+    if (ch == 'w' || ch == 'W') return vec.w;
+    return {};
+}
+
+template <class VecN>
+std::vector<double> Interpreter::extract_vector_components(const VecN& vec, const std::string& index, ast::INode& node)
+{
+    std::vector<double> components;
+    for (char ch : index)
+    {
+        std::optional<double> comp = extract_component(vec, ch);
+        if (comp) components.push_back(*comp);
+        else throw LuaRuntimeError(node,
+                "Unexpected index " + std::string(1, ch) + " for type " + data::get_type_name(vec));
+    }
+    return components;
+}
+
 void Interpreter::visit(ast::IndexRequest& node)
 {
     Visitor::visit(node.body);
-    data::GenericValue dict = m_returnedValue.spit();
+    data::GenericValue subject = m_returnedValue.spit();
     Visitor::visit(node.index);
     std::string index = data::to_string(m_returnedValue.spit());
 
-    if (std::holds_alternative<data::Entity>(dict))
+    if (std::holds_alternative<Vec2>(subject) ||
+        std::holds_alternative<Vec3>(subject) ||
+        std::holds_alternative<Vec4>(subject))
     {
-        indexEntity(node, std::get<data::Entity>(dict), index);
+        std::vector<double> components;
+        std::visit([&](const auto& vec)
+        {
+            components = extract_vector_components(vec, index, node);
+        }, subject);
+
+        if (components.size() == 2)
+            m_returnedValue = Vec2{components[0], components[1]};
+        else if (components.size() == 3)
+            m_returnedValue = Vec3{components[0], components[1], components[2]};
+        else if (components.size() == 4)
+            m_returnedValue = Vec4{components[0], components[1], components[2], components[3]};
+        else
+            throw LuaRuntimeError(node,
+                "Cannot index-create a vector with " + std::to_string(components.size()) + " components");
         return;
     }
 
-    if (std::holds_alternative<data::EntityComponent>(dict))
+    if (std::holds_alternative<data::Entity>(subject))
     {
-        indexEntityComponent(node, std::get<data::EntityComponent>(dict), index);
+        indexEntity(node, std::get<data::Entity>(subject), index);
         return;
     }
 
-    if (!std::holds_alternative<data::Table>(dict))
+    if (std::holds_alternative<data::EntityComponent>(subject))
     {
-        throw LuaRuntimeError(node, "Attempt to index value of type " + data::get_type_name(dict));
+        indexEntityComponent(node, std::get<data::EntityComponent>(subject), index);
+        return;
     }
 
-    auto& dct = std::get<data::Table>(dict);
+    if (!std::holds_alternative<data::Table>(subject))
+    {
+        throw LuaRuntimeError(node, "Attempt to index value of type " + data::get_type_name(subject));
+    }
+
+    auto& dct = std::get<data::Table>(subject);
     if (!dct->contains(index))
     {
         dct->emplace(index, mem_utils::CopyMovePtr<data::GenericValue>(data::Nil()));

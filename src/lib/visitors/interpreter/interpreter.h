@@ -99,6 +99,10 @@ protected:
     friend class FluaState;
 
 private:
+    template <class VecN>
+    static std::vector<double> extract_vector_components(const VecN& vec,
+        const std::string& indices, ast::INode& node);
+
     friend void lib::print(FluaState& state);
     friend void lib::misc::pcall(FluaState&);
     friend void lib::misc::error(FluaState&);
