@@ -357,21 +357,48 @@ void clamp(FluaState& state)
 
 void vec(FluaState& state)
 {
-    if (state.getArgumentCount() < 2 || state.getArgumentCount() > 4)
-        throw Error("Expected from 2 to 4 numeric arguments");
+    std::vector<double> components;
 
     for (unsigned idx = 0; idx < state.getArgumentCount(); idx++)
     {
-        if (!state.isNumber(idx))
-            throw Error("Argument " + std::to_string(idx) + " is not a number");
+        if (state.isNumber(idx))
+        {
+            components.emplace_back(state.getNumber(idx));
+        }
+        else if (state.isVec2(idx))
+        {
+            Vec2 vec = state.getVec2(idx);
+            components.emplace_back(vec.x);
+            components.emplace_back(vec.y);
+        }
+        else if (state.isVec3(idx))
+        {
+            Vec3 vec = state.getVec3(idx);
+            components.emplace_back(vec.x);
+            components.emplace_back(vec.y);
+            components.emplace_back(vec.z);
+        }
+        else if (state.isVec4(idx))
+        {
+            Vec4 vec = state.getVec4(idx);
+            components.emplace_back(vec.x);
+            components.emplace_back(vec.y);
+            components.emplace_back(vec.z);
+            components.emplace_back(vec.w);
+        }
+        else
+        {
+            throw Error("Argument " + std::to_string(idx) + " is neither a number or a vector");
+        }
     }
 
-    if (state.getArgumentCount() == 2)
-        state.pushValue(Vec2{state.getNumber(0), state.getNumber(1)});
-    if (state.getArgumentCount() == 3)
-        state.pushValue(Vec3{state.getNumber(0), state.getNumber(1), state.getNumber(2)});
-    if (state.getArgumentCount() == 4)
-        state.pushValue(Vec4{state.getNumber(0), state.getNumber(1),
-            state.getNumber(2), state.getNumber(3)});
+    if (components.size() == 2)
+        state.pushValue(Vec2{components[0], components[1]});
+    else if (components.size() == 3)
+        state.pushValue(Vec3{components[0], components[1], components[2]});
+    else if (components.size() == 4)
+        state.pushValue(Vec4{components[0], components[1], components[2], components[3]});
+    else
+        throw Error("Cannot contruct a vector from " + std::to_string(components.size()) + " components");
 }
 }
