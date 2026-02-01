@@ -212,7 +212,7 @@ FleCSibleLUA/
 
 ## 📝 TODO
 
-- [ ] Implement vectors as built-in data types
+- [x] Implement vectors as built-in data types
 - [ ] Expand Scripting Library
   - [x] Strings
   - [x] Math
