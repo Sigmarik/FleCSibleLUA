@@ -215,7 +215,7 @@ FleCSibleLUA/
 - [ ] Implement vectors as built-in data types
 - [ ] Expand Scripting Library
   - [x] Strings
-  - [ ] Math
+  - [x] Math
   - [ ] Tables
   - [x] ECS
   - [ ] Expand the `string` library with regex matching
