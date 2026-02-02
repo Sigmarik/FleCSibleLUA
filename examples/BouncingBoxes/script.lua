@@ -3,8 +3,7 @@ gCollisions = 0
 abs = math.abs
 
 system(entity(Position, Velocity))
-    entity.Position.x += entity.Velocity.x * ecs.delta_time()
-    entity.Position.y += entity.Velocity.y * ecs.delta_time()
+    entity.Position += entity.Velocity * ecs.delta_time()
 end
 
 system(entity(Velocity, Gravity))
@@ -38,34 +37,29 @@ system(
     local bCol = beta.BoxCollider
     local bMass = beta.Mass.kilos
 
-    local deltaX = bPos.x - aPos.x
-    local deltaY = bPos.y - aPos.y
+    local delta = bPos - aPos
+    local relative = bVel - aVel
+    local allowance = vec(aCol.sizeX + bCol.sizeX, aCol.sizeY + bCol.sizeY) / 2
 
-    local relativeX = bVel.x - aVel.x
-    local relativeY = bVel.y - aVel.y
+    if (abs(delta.x) > allowance.x or abs(delta.y) > allowance.y) then continue end
 
-    local allowanceX = (aCol.sizeX + bCol.sizeX) / 2
-    local allowanceY = (aCol.sizeY + bCol.sizeY) / 2
-
-    if (abs(deltaX) > allowanceX or abs(deltaY) > allowanceY) then continue end
-
-    local horizontal = allowanceX - abs(deltaX) < allowanceY - abs(deltaY)
+    local horizontal = allowance.x - abs(delta.x) < allowance.y - abs(delta.y)
     if (horizontal) then
-        local shift = (allowanceX - abs(deltaX)) * deltaX / abs(deltaX) / 2
+        local shift = (allowance.x - abs(delta.x)) * delta.x / abs(delta.x) / 2
         aPos.x -= shift
         bPos.x += shift
-        if (deltaX * relativeX < 0) then
-            aVel.x += relativeX * bMass / (aMass + bMass) * 2
-            bVel.x -= relativeX * aMass / (aMass + bMass) * 2
+        if (delta.x * relative.x < 0) then
+            aVel.x += relative.x * bMass / (aMass + bMass) * 2
+            bVel.x -= relative.x * aMass / (aMass + bMass) * 2
             gCollisions += 1
         end
     else
-        local shift = (allowanceY - abs(deltaY)) * deltaY / abs(deltaY) / 2
+        local shift = (allowance.y - abs(delta.y)) * delta.y / abs(delta.y) / 2
         aPos.y -= shift
         bPos.y += shift
-        if (deltaY * relativeY < 0) then
-            aVel.y += relativeY * bMass / (aMass + bMass) * 2
-            bVel.y -= relativeY * aMass / (aMass + bMass) * 2
+        if (delta.y * relative.y < 0) then
+            aVel.y += relative.y * bMass / (aMass + bMass) * 2
+            bVel.y -= relative.y * aMass / (aMass + bMass) * 2
             gCollisions += 1
         end
     end

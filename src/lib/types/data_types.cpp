@@ -206,8 +206,32 @@ static std::optional<double> try_get_entity_component_field(const EntityComponen
         [&](unsigned* ptr) { result = *ptr; },
         [&](float* ptr) { result = *ptr; },
         [&](double* ptr) { result = *ptr; },
-        [&](bool* ptr) { result = *ptr ? 1.0 : 0.0; },
         [&](auto*) { result = std::nullopt; },
+    };
+    std::visit(visitors, accessed);
+    return result;
+}
+
+static bool try_set_entity_component_field(const EntityComponent& comp, const std::string& field, double value)
+{
+    if (!comp.entity) return false;
+
+    auto checker = cmp_info::ENTITY_COMPONENT_CHECKERS.find(comp.name);
+    if (checker == cmp_info::ENTITY_COMPONENT_CHECKERS.end()) return false;
+    if (!checker->second(comp.entity)) return false;
+
+    auto accessor = cmp_info::ENTITY_MEMBER_MAP.find(comp.name + " " + field);
+    if (accessor == cmp_info::ENTITY_MEMBER_MAP.end()) return false;
+
+    cmp_info::GenericComponentPtr accessed = accessor->second(comp.entity);
+    bool result = true;
+    auto visitors = meta::Overloads
+    {
+        [&](int* ptr) { *ptr = static_cast<int>(value); },
+        [&](unsigned* ptr) { *ptr = static_cast<unsigned>(value); },
+        [&](float* ptr) { *ptr = static_cast<float>(value); },
+        [&](double* ptr) { *ptr = value; },
+        [&](auto*) { result = false; },
     };
     std::visit(visitors, accessed);
     return result;
@@ -499,6 +523,29 @@ std::optional<GenericValue> try_implicitly_convert_component(const EntityCompone
         else break;
     }
     return std_to_geom(components);
+}
+
+bool try_implicitly_write_to_component(const EntityComponent& comp, const GenericValue& value)
+{
+    static const std::vector<std::pair<VectorComponent, std::string>> kCmpMappings =
+    {
+        {VectorComponent::eX, "x"},
+        {VectorComponent::eY, "y"},
+        {VectorComponent::eZ, "z"},
+        {VectorComponent::eW, "w"},
+    };
+    for (const auto& [geomCmp, cmpName] : kCmpMappings)
+    {
+        std::optional<double> valueSource = try_get_component(value, geomCmp);
+        if (!valueSource)
+        {
+            if (try_set_entity_component_field(comp, cmpName, 0)) return false;
+            break;
+        }
+        bool success = try_set_entity_component_field(comp, cmpName, *valueSource);
+        if (!success) return false;
+    }
+    return true;
 }
 
 void ValueSequence::add(const GenericValue& value)

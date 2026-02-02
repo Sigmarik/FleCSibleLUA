@@ -125,6 +125,11 @@ struct EntityComponent
     std::string name;
 };
 
+static bool operator==(const EntityComponent& alpha, const EntityComponent& beta)
+{
+    return alpha.entity == beta.entity && alpha.name == beta.name;
+}
+
 class GenericValue : public
     std::variant<Nil, bool, double, std::string, Table, Entity, EntityComponent, Function, Vec2, Vec3, Vec4>
 {
@@ -140,9 +145,10 @@ std::optional<GenericValue> perform_unary_operation(UnaryOpType op, const Generi
 std::optional<GenericValue> perform_binary_operation(BinaryOpType op,
     const GenericValue& alpha, const GenericValue& beta);
 
-using MaybeFixedValuePtr = std::variant<GenericValue*, cmp_info::GenericComponentPtr>;
+using MaybeFixedValuePtr = std::variant<GenericValue*, cmp_info::GenericComponentPtr, EntityComponent>;
 
 std::optional<GenericValue> try_implicitly_convert_component(const EntityComponent& comp);
+bool try_implicitly_write_to_component(const EntityComponent& comp, const GenericValue& value);
 
 struct ValueSequence
 {

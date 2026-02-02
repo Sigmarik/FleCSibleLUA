@@ -551,11 +551,18 @@ void Interpreter::visit(ast::Assignment& node)
         {
             **genericSubject = value;
         }
-        else
+        else if (auto fixedSubject = std::get_if<cmp_info::GenericComponentPtr>(&subject))
         {
             if (idx >= values.size())
                 throw LuaRuntimeError(node, "Not enough arguments to satisfy entity component field assignment");
-            performFixedTypeAssignment(node, std::get<cmp_info::GenericComponentPtr>(subject), value);
+            performFixedTypeAssignment(node, *fixedSubject, value);
+        }
+        else if (auto comp = std::get_if<data::EntityComponent>(&subject))
+        {
+            bool success = data::try_implicitly_write_to_component(*comp, value);
+            if (!success)
+                throw LuaRuntimeError(node, "Failed to implicitly assign value of type " +
+                    data::get_type_name(value) + " to entity component " + comp->name);
         }
     }
 
@@ -675,7 +682,12 @@ void Interpreter::indexEntity(ast::IndexRequest& node, data::Entity& entity, con
 {
     if (!cmp_info::ENTITY_COMPONENT_CHECKERS.contains(index))
         throw LuaRuntimeError(node, "Component " + index + " is not recognized by the system");
-    m_returnedValue = data::EntityComponent(entity, index);
+    data::EntityComponent component = data::EntityComponent(entity, index);
+    m_returnedValue.clear();
+    m_returnedValue.sequence.emplace_back(data::ValueSequence::ValueBackrefPair{
+        .value = component,
+        .reference = std::move(component),
+    });
 }
 
 void Interpreter::indexEntityComponent(ast::IndexRequest& node, data::EntityComponent& component,
