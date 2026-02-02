@@ -38,9 +38,22 @@ systems with minimal boilerplate.
 
 ### Basic System
 ```lua
+system(entity(Velocity, Gravity))
+    entity.Velocity.y -= entity.Gravity.value * ecs.delta_time()
+end
+```
+
+### Vectors
+```lua
+-- HLSL-inspired vector operations with extensive math library
+wind = vec(0.5, -0.7)
+wind3 = math.normalize(wind.yxx) / 2 + vec(1, wind)
+resistance = math.dot(wind3, wingNormal)
+
 system(entity(Position, Velocity))
-    entity.Position.x += entity.Velocity.x * ecs.delta_time()
-    entity.Position.y += entity.Velocity.y * ecs.delta_time()
+    -- Implicit component-to-vector and vector-to-component conversions
+    -- As long as your component has xyzw fields this works!
+    entity.Position += entity.Velocity * ecs.delta_time()
 end
 ```
 
@@ -51,7 +64,7 @@ function countMovingEntities()
     
     for entity(Velocity) do
         local vel = entity.Velocity
-        if (length(vel.x, vel.y) > 0.1) then
+        if (math.length(vel) > 0.1) then
             count += 1
         end
     end
