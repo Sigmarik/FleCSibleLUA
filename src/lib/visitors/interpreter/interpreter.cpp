@@ -712,7 +712,7 @@ void Interpreter::indexEntityComponent(ast::IndexRequest& node, data::EntityComp
         [&](std::string* ptr) { interpretedValue = data::GenericValue(*ptr); },
         [&](bool* ptr) { interpretedValue = data::GenericValue(*ptr); },
         [&](flecs::entity* ptr) { interpretedValue = data::GenericValue(*ptr); },
-        [&](auto ptr) { interpretedValue = data::GenericValue(static_cast<double>(*ptr)); }
+        [&](auto* ptr) { interpretedValue = data::GenericValue(static_cast<double>(*ptr)); }
     };
     std::visit(interpretation, genericReference);
 
