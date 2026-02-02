@@ -30,6 +30,7 @@ systems with minimal boilerplate.
 - **🚀 Zero-Boilerplate Systems** – Write game logic directly, with little to no setup
 - **🔌 Seamless Integration** – Easy embedding into C++ Flecs projects
 - **📚 Lua Compatibility** – Adapt your existing Lua scripts with minimal effort
+- **↗️ Native Vector Support** – Built-in 2D, 3D, and 4D vector types
 
 ---
 
