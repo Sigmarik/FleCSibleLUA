@@ -145,7 +145,7 @@ std::optional<GenericValue> perform_unary_operation(UnaryOpType op, const Generi
 std::optional<GenericValue> perform_binary_operation(BinaryOpType op,
     const GenericValue& alpha, const GenericValue& beta);
 
-using MaybeFixedValuePtr = std::variant<GenericValue*, cmp_info::GenericComponentPtr, EntityComponent>;
+using MaybeFixedValuePtr = std::variant<GenericValue*, cmp_info::GenericComponentPtr>;
 
 std::optional<GenericValue> try_implicitly_convert_component(const EntityComponent& comp);
 bool try_implicitly_write_to_component(const EntityComponent& comp, const GenericValue& value);

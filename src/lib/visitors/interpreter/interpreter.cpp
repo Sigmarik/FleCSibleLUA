@@ -512,13 +512,14 @@ void Interpreter::visit(ast::Assignment& node)
     for (ast::NodePtr& subject : node.subjects)
     {
         Visitor::visit(subject);
-        if (m_returnedValue.sequence.empty() || m_returnedValue.sequence.front().reference ==
-            data::MaybeFixedValuePtr(nullptr))
+        if (m_returnedValue.sequence.empty() ||
+            (!std::holds_alternative<data::EntityComponent>(m_returnedValue.sequence.front().value) &&
+                m_returnedValue.sequence.front().reference == data::MaybeFixedValuePtr(nullptr)))
         {
             throw LuaRuntimeError(node, "Attempt to assign a value to a non-assignable variable");
         }
         subjects.emplace_back(m_returnedValue.sequence.front().reference);
-        if (node.op) subjectValues.emplace_back(m_returnedValue.sequence.front().value);
+        subjectValues.emplace_back(m_returnedValue.sequence.front().value);
     }
 
     for (ast::NodePtr& value : node.data)
@@ -547,22 +548,29 @@ void Interpreter::visit(ast::Assignment& node)
                                             " during assignment");
             value = *maybeValue;
         }
-        if (auto genericSubject = std::get_if<data::GenericValue*>(&subject))
+
+        bool assignedToComponent = false;
+        if (idx < subjectValues.size() && std::holds_alternative<data::EntityComponent>(subjectValues[idx]))
         {
-            **genericSubject = value;
-        }
-        else if (auto fixedSubject = std::get_if<cmp_info::GenericComponentPtr>(&subject))
-        {
-            if (idx >= values.size())
-                throw LuaRuntimeError(node, "Not enough arguments to satisfy entity component field assignment");
-            performFixedTypeAssignment(node, *fixedSubject, value);
-        }
-        else if (auto comp = std::get_if<data::EntityComponent>(&subject))
-        {
-            bool success = data::try_implicitly_write_to_component(*comp, value);
-            if (!success)
+            const data::EntityComponent& comp = std::get<data::EntityComponent>(subjectValues[idx]);
+            assignedToComponent = data::try_implicitly_write_to_component(comp, value);
+            if (!assignedToComponent && subject == data::MaybeFixedValuePtr(nullptr))
                 throw LuaRuntimeError(node, "Failed to implicitly assign value of type " +
-                    data::get_type_name(value) + " to entity component " + comp->name);
+                    data::get_type_name(value) + " to entity component " + comp.name);
+        }
+
+        if (!assignedToComponent)
+        {
+            if (auto genericSubject = std::get_if<data::GenericValue*>(&subject))
+            {
+                **genericSubject = value;
+            }
+            else if (auto fixedSubject = std::get_if<cmp_info::GenericComponentPtr>(&subject))
+            {
+                if (idx >= values.size())
+                    throw LuaRuntimeError(node, "Not enough arguments to satisfy entity component field assignment");
+                performFixedTypeAssignment(node, *fixedSubject, value);
+            }
         }
     }
 
@@ -682,12 +690,7 @@ void Interpreter::indexEntity(ast::IndexRequest& node, data::Entity& entity, con
 {
     if (!cmp_info::ENTITY_COMPONENT_CHECKERS.contains(index))
         throw LuaRuntimeError(node, "Component " + index + " is not recognized by the system");
-    data::EntityComponent component = data::EntityComponent(entity, index);
-    m_returnedValue.clear();
-    m_returnedValue.sequence.emplace_back(data::ValueSequence::ValueBackrefPair{
-        .value = component,
-        .reference = std::move(component),
-    });
+    m_returnedValue = data::EntityComponent(entity, index);
 }
 
 void Interpreter::indexEntityComponent(ast::IndexRequest& node, data::EntityComponent& component,
