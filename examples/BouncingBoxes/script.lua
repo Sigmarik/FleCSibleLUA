@@ -2,6 +2,10 @@ gCollisions = 0
 
 abs = math.abs
 
+for ent(Position) do
+    print("Position of entity " .. ecs.entity_id(ent) .. " is " .. vec(ent.Position))
+end
+
 system(entity(Position, Velocity))
     entity.Position += entity.Velocity * ecs.delta_time()
 end

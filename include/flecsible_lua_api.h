@@ -97,12 +97,12 @@ public:
     bool isNumber(const ValueAccessor& key) const;
     double getNumber(const ValueAccessor& key) const;
 
-    bool isVec2(const ValueAccessor& key) const;
-    Vec2 getVec2(const ValueAccessor& key) const;
-    bool isVec3(const ValueAccessor& key) const;
-    Vec3 getVec3(const ValueAccessor& key) const;
-    bool isVec4(const ValueAccessor& key) const;
-    Vec4 getVec4(const ValueAccessor& key) const;
+    bool isVec2(const ValueAccessor& key, bool pedantic = false) const;
+    Vec2 getVec2(const ValueAccessor& key, bool pedantic = false) const;
+    bool isVec3(const ValueAccessor& key, bool pedantic = false) const;
+    Vec3 getVec3(const ValueAccessor& key, bool pedantic = false) const;
+    bool isVec4(const ValueAccessor& key, bool pedantic = false) const;
+    Vec4 getVec4(const ValueAccessor& key, bool pedantic = false) const;
 
     bool isEntity(const ValueAccessor& key) const;
     flecs::entity getEntity(const ValueAccessor& key) const;

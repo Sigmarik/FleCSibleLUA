@@ -67,12 +67,12 @@ double FluaState::getNumber(const ValueAccessor& key) const
     return std::get<double>(*value);
 }
 
-bool FluaState::isVec2(const ValueAccessor& key) const
+bool FluaState::isVec2(const ValueAccessor& key, bool pedantic) const
 {
     const data::GenericValue* value = getRaw(key);
     if (value == nullptr) return false;
     if (std::holds_alternative<Vec2>(*value)) return true;
-    if (std::holds_alternative<data::EntityComponent>(*value))
+    if (!pedantic && std::holds_alternative<data::EntityComponent>(*value))
     {
         const auto& comp = std::get<data::EntityComponent>(*value);
         auto implicit = data::try_implicitly_convert_component(comp);
@@ -81,11 +81,11 @@ bool FluaState::isVec2(const ValueAccessor& key) const
     return false;
 }
 
-Vec2 FluaState::getVec2(const ValueAccessor& key) const
+Vec2 FluaState::getVec2(const ValueAccessor& key, bool pedantic) const
 {
     const data::GenericValue* value = getRaw(key);
     if (std::holds_alternative<Vec2>(*value)) return std::get<Vec2>(*value);
-    if (std::holds_alternative<data::EntityComponent>(*value))
+    if (!pedantic && std::holds_alternative<data::EntityComponent>(*value))
     {
         const auto& comp = std::get<data::EntityComponent>(*value);
         auto implicit = data::try_implicitly_convert_component(comp);
@@ -95,12 +95,12 @@ Vec2 FluaState::getVec2(const ValueAccessor& key) const
     return {};
 }
 
-bool FluaState::isVec3(const ValueAccessor& key) const
+bool FluaState::isVec3(const ValueAccessor& key, bool pedantic) const
 {
     const data::GenericValue* value = getRaw(key);
     if (value == nullptr) return false;
     if (std::holds_alternative<Vec3>(*value)) return true;
-    if (std::holds_alternative<data::EntityComponent>(*value))
+    if (!pedantic && std::holds_alternative<data::EntityComponent>(*value))
     {
         const auto& comp = std::get<data::EntityComponent>(*value);
         auto implicit = data::try_implicitly_convert_component(comp);
@@ -109,11 +109,11 @@ bool FluaState::isVec3(const ValueAccessor& key) const
     return false;
 }
 
-Vec3 FluaState::getVec3(const ValueAccessor& key) const
+Vec3 FluaState::getVec3(const ValueAccessor& key, bool pedantic) const
 {
     const data::GenericValue* value = getRaw(key);
     if (std::holds_alternative<Vec3>(*value)) return std::get<Vec3>(*value);
-    if (std::holds_alternative<data::EntityComponent>(*value))
+    if (!pedantic && std::holds_alternative<data::EntityComponent>(*value))
     {
         const auto& comp = std::get<data::EntityComponent>(*value);
         auto implicit = data::try_implicitly_convert_component(comp);
@@ -123,12 +123,12 @@ Vec3 FluaState::getVec3(const ValueAccessor& key) const
     return {};
 }
 
-bool FluaState::isVec4(const ValueAccessor& key) const
+bool FluaState::isVec4(const ValueAccessor& key, bool pedantic) const
 {
     const data::GenericValue* value = getRaw(key);
     if (value == nullptr) return false;
     if (std::holds_alternative<Vec4>(*value)) return true;
-    if (std::holds_alternative<data::EntityComponent>(*value))
+    if (!pedantic && std::holds_alternative<data::EntityComponent>(*value))
     {
         const auto& comp = std::get<data::EntityComponent>(*value);
         auto implicit = data::try_implicitly_convert_component(comp);
@@ -137,11 +137,11 @@ bool FluaState::isVec4(const ValueAccessor& key) const
     return false;
 }
 
-Vec4 FluaState::getVec4(const ValueAccessor& key) const
+Vec4 FluaState::getVec4(const ValueAccessor& key, bool pedantic) const
 {
     const data::GenericValue* value = getRaw(key);
     if (std::holds_alternative<Vec3>(*value)) return std::get<Vec4>(*value);
-    if (std::holds_alternative<data::EntityComponent>(*value))
+    if (pedantic && std::holds_alternative<data::EntityComponent>(*value))
     {
         const auto& comp = std::get<data::EntityComponent>(*value);
         auto implicit = data::try_implicitly_convert_component(comp);
