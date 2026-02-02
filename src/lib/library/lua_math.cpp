@@ -12,10 +12,30 @@ static void apply_generic_function(FluaState& state, const std::function<double(
 
     for (unsigned idx = 0; idx < state.getArgumentCount(); idx++)
     {
-        if (!state.isNumber(idx))
-            throw Error("Expected argument " + std::to_string(idx) + " to be a number");
-        double value = state.getNumber(idx);
-        state.pushValue(function(value));
+        if (state.isNumber(idx))
+        {
+            double value = state.getNumber(idx);
+            state.pushValue(function(value));
+        }
+        else if (state.isVec2(idx))
+        {
+            Vec2 value = state.getVec2(idx);
+            state.pushValue(Vec2(function(value.x), function(value.y)));
+        }
+        else if (state.isVec3(idx))
+        {
+            Vec3 value = state.getVec3(idx);
+            state.pushValue(Vec3(function(value.x), function(value.y), function(value.z)));
+        }
+        else if (state.isVec4(idx))
+        {
+            Vec4 value = state.getVec4(idx);
+            state.pushValue(Vec4(function(value.x), function(value.y), function(value.z), function(value.w)));
+        }
+        else
+        {
+            throw Error("Expected argument " + std::to_string(idx) + " to be either a number or a vector");
+        }
     }
 }
 
