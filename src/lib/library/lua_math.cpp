@@ -421,4 +421,373 @@ void vec(FluaState& state)
     else
         throw Error("Cannot contruct a vector from " + std::to_string(components.size()) + " components");
 }
+
+void dot(FluaState& state)
+{
+    if (state.getArgumentCount() < 2)
+        throw Error("Expected 2 arguments");
+
+    double result = 0.0;
+
+    if (state.isNumber(0) && state.isNumber(1))
+    {
+        result = state.getNumber(0) * state.getNumber(1);
+    }
+    else if (state.isVec2(0) && state.isVec2(1))
+    {
+        Vec2 alpha = state.getVec2(0);
+        Vec2 beta = state.getVec2(1);
+        result = alpha.x * beta.x + alpha.y * beta.y;
+    }
+    else if (state.isVec3(0) && state.isVec3(1))
+    {
+        Vec3 alpha = state.getVec3(0);
+        Vec3 beta = state.getVec3(1);
+        result = alpha.x * beta.x + alpha.y * beta.y + alpha.z * beta.z;
+    }
+    else if (state.isVec4(0) && state.isVec4(1))
+    {
+        Vec4 alpha = state.getVec4(0);
+        Vec4 beta = state.getVec4(1);
+        result = alpha.x * beta.x + alpha.y * beta.y + alpha.z * beta.z + alpha.w * beta.w;
+    }
+    else
+    {
+        throw Error("Arguments must be vectors of the same type");
+    }
+
+    state.pushValue(result);
+}
+
+void cross(FluaState& state)
+{
+    if (state.getArgumentCount() < 2)
+        throw Error("Expected 2 vectors");
+
+    if (state.isVec2(0) && state.isVec2(1))
+    {
+        Vec2 alpha = state.getVec2(0);
+        Vec2 beta = state.getVec2(1);
+
+        state.pushValue(alpha.x * beta.y - alpha.y * beta.x);
+    }
+    else if (state.isVec3(0) && state.isVec3(1))
+    {
+        Vec3 alpha = state.getVec3(0);
+        Vec3 beta = state.getVec3(1);
+
+        Vec3 result = {
+            alpha.y * beta.z - alpha.z * beta.y,
+            alpha.z * beta.x - alpha.x * beta.z,
+            alpha.x * beta.y - alpha.y * beta.x
+        };
+
+        state.pushValue(result);
+    }
+    else
+    {
+        throw Error("Arguments must be 2D/3D vectors of the same type");
+    }
+}
+
+void length(FluaState& state)
+{
+    if (state.getArgumentCount() < 1)
+        throw Error("Expected a vector argument");
+
+    double result = 0.0;
+
+    if (state.isNumber(0))
+    {
+        double value = state.getNumber(0);
+        result = std::abs(value);
+    }
+    else if (state.isVec2(0))
+    {
+        Vec2 vector = state.getVec2(0);
+        result = std::sqrt(vector.x * vector.x + vector.y * vector.y);
+    }
+    else if (state.isVec3(0))
+    {
+        Vec3 vector = state.getVec3(0);
+        result = std::sqrt(vector.x * vector.x + vector.y * vector.y + vector.z * vector.z);
+    }
+    else if (state.isVec4(0))
+    {
+        Vec4 vector = state.getVec4(0);
+        result = std::sqrt(vector.x * vector.x + vector.y * vector.y + vector.z * vector.z + vector.w * vector.w);
+    }
+    else
+    {
+        throw Error("Argument must be a number or a vector");
+    }
+
+    state.pushValue(result);
+}
+
+void length2(FluaState& state)
+{
+    if (state.getArgumentCount() < 1)
+        throw Error("Expected a vector argument");
+
+    double result = 0.0;
+
+    if (state.isNumber(0))
+    {
+        double value = state.getNumber(0);
+        result = value * value;
+    }
+    else if (state.isVec2(0))
+    {
+        Vec2 vector = state.getVec2(0);
+        result = vector.x * vector.x + vector.y * vector.y;
+    }
+    else if (state.isVec3(0))
+    {
+        Vec3 vector = state.getVec3(0);
+        result = vector.x * vector.x + vector.y * vector.y + vector.z * vector.z;
+    }
+    else if (state.isVec4(0))
+    {
+        Vec4 vector = state.getVec4(0);
+        result = vector.x * vector.x + vector.y * vector.y + vector.z * vector.z + vector.w * vector.w;
+    }
+    else
+    {
+        throw Error("Argument must be a number or a vector");
+    }
+
+    state.pushValue(result);
+}
+
+void length_man(FluaState& state)
+{
+    if (state.getArgumentCount() < 1)
+        throw Error("Expected a vector argument");
+
+    double result = 0.0;
+
+    if (state.isNumber(0))
+    {
+        double value = state.getNumber(0);
+        result = std::abs(value);
+    }
+    else if (state.isVec2(0))
+    {
+        Vec2 vector = state.getVec2(0);
+        result = std::abs(vector.x) + std::abs(vector.y);
+    }
+    else if (state.isVec3(0))
+    {
+        Vec3 vector = state.getVec3(0);
+        result = std::abs(vector.x) + std::abs(vector.y) + std::abs(vector.z);
+    }
+    else if (state.isVec4(0))
+    {
+        Vec4 vector = state.getVec4(0);
+        result = std::abs(vector.x) + std::abs(vector.y) + std::abs(vector.z) + std::abs(vector.w);
+    }
+    else
+    {
+        throw Error("Argument must be a number or a vector");
+    }
+
+    state.pushValue(result);
+}
+
+void dist(FluaState& state)
+{
+    if (state.getArgumentCount() < 2)
+        throw Error("Expected 2 arguments (alpha and beta)");
+
+    double result = 0.0;
+
+    if (state.isNumber(0) && state.isNumber(1))
+    {
+        double alpha = state.getNumber(0);
+        double beta = state.getNumber(1);
+        result = std::abs(alpha - beta);
+    }
+    else if (state.isVec2(0) && state.isVec2(1))
+    {
+        Vec2 alpha = state.getVec2(0);
+        Vec2 beta = state.getVec2(1);
+        double dx = alpha.x - beta.x;
+        double dy = alpha.y - beta.y;
+        result = std::sqrt(dx * dx + dy * dy);
+    }
+    else if (state.isVec3(0) && state.isVec3(1))
+    {
+        Vec3 alpha = state.getVec3(0);
+        Vec3 beta = state.getVec3(1);
+        double dx = alpha.x - beta.x;
+        double dy = alpha.y - beta.y;
+        double dz = alpha.z - beta.z;
+        result = std::sqrt(dx * dx + dy * dy + dz * dz);
+    }
+    else if (state.isVec4(0) && state.isVec4(1))
+    {
+        Vec4 alpha = state.getVec4(0);
+        Vec4 beta = state.getVec4(1);
+        double dx = alpha.x - beta.x;
+        double dy = alpha.y - beta.y;
+        double dz = alpha.z - beta.z;
+        double dw = alpha.w - beta.w;
+        result = std::sqrt(dx * dx + dy * dy + dz * dz + dw * dw);
+    }
+    else
+    {
+        throw Error("Arguments must be of the same type (both numbers or both vectors of same dimension)");
+    }
+
+    state.pushValue(result);
+}
+
+void dist2(FluaState& state)
+{
+    if (state.getArgumentCount() < 2)
+        throw Error("Expected 2 arguments (alpha and beta)");
+
+    double result = 0.0;
+
+    if (state.isNumber(0) && state.isNumber(1))
+    {
+        double alpha = state.getNumber(0);
+        double beta = state.getNumber(1);
+        double diff = alpha - beta;
+        result = diff * diff;
+    }
+    else if (state.isVec2(0) && state.isVec2(1))
+    {
+        Vec2 alpha = state.getVec2(0);
+        Vec2 beta = state.getVec2(1);
+        double dx = alpha.x - beta.x;
+        double dy = alpha.y - beta.y;
+        result = dx * dx + dy * dy;
+    }
+    else if (state.isVec3(0) && state.isVec3(1))
+    {
+        Vec3 alpha = state.getVec3(0);
+        Vec3 beta = state.getVec3(1);
+        double dx = alpha.x - beta.x;
+        double dy = alpha.y - beta.y;
+        double dz = alpha.z - beta.z;
+        result = dx * dx + dy * dy + dz * dz;
+    }
+    else if (state.isVec4(0) && state.isVec4(1))
+    {
+        Vec4 alpha = state.getVec4(0);
+        Vec4 beta = state.getVec4(1);
+        double dx = alpha.x - beta.x;
+        double dy = alpha.y - beta.y;
+        double dz = alpha.z - beta.z;
+        double dw = alpha.w - beta.w;
+        result = dx * dx + dy * dy + dz * dz + dw * dw;
+    }
+    else
+    {
+        throw Error("Arguments must be of the same type (both numbers or both vectors of same dimension)");
+    }
+
+    state.pushValue(result);
+}
+
+void dist_man(FluaState& state)
+{
+    if (state.getArgumentCount() < 2)
+        throw Error("Expected 2 arguments (alpha and beta)");
+
+    double result = 0.0;
+
+    if (state.isNumber(0) && state.isNumber(1))
+    {
+        double alpha = state.getNumber(0);
+        double beta = state.getNumber(1);
+        result = std::abs(alpha - beta);
+    }
+    else if (state.isVec2(0) && state.isVec2(1))
+    {
+        Vec2 alpha = state.getVec2(0);
+        Vec2 beta = state.getVec2(1);
+        result = std::abs(alpha.x - beta.x) + std::abs(alpha.y - beta.y);
+    }
+    else if (state.isVec3(0) && state.isVec3(1))
+    {
+        Vec3 alpha = state.getVec3(0);
+        Vec3 beta = state.getVec3(1);
+        result = std::abs(alpha.x - beta.x) + std::abs(alpha.y - beta.y) + std::abs(alpha.z - beta.z);
+    }
+    else if (state.isVec4(0) && state.isVec4(1))
+    {
+        Vec4 alpha = state.getVec4(0);
+        Vec4 beta = state.getVec4(1);
+        result = std::abs(alpha.x - beta.x) + std::abs(alpha.y - beta.y) +
+                 std::abs(alpha.z - beta.z) + std::abs(alpha.w - beta.w);
+    }
+    else
+    {
+        throw Error("Arguments must be of the same type (both numbers or both vectors of same dimension)");
+    }
+
+    state.pushValue(result);
+}
+
+void normalize(FluaState& state)
+{
+    if (state.getArgumentCount() < 1)
+        throw Error("Expected a vector argument");
+
+    double magnitude = 0.0;
+
+    if (state.isNumber(0))
+    {
+        double value = state.getNumber(0);
+        magnitude = std::abs(value);
+        if (magnitude == 0.0)
+        {
+            state.pushValue(value);
+            return;
+        }
+        state.pushValue(value / magnitude);
+    }
+    else if (state.isVec2(0))
+    {
+        Vec2 vector = state.getVec2(0);
+        magnitude = std::sqrt(vector.x * vector.x + vector.y * vector.y);
+        if (magnitude == 0.0)
+        {
+            state.pushValue(vector);
+            return;
+        }
+        state.pushValue(Vec2{vector.x / magnitude, vector.y / magnitude});
+    }
+    else if (state.isVec3(0))
+    {
+        Vec3 vector = state.getVec3(0);
+        magnitude = std::sqrt(vector.x * vector.x + vector.y * vector.y + vector.z * vector.z);
+        if (magnitude == 0.0)
+        {
+            state.pushValue(vector);
+            return;
+        }
+        state.pushValue(Vec3{vector.x / magnitude, vector.y / magnitude, vector.z / magnitude});
+    }
+    else if (state.isVec4(0))
+    {
+        Vec4 vector = state.getVec4(0);
+        magnitude = std::sqrt(vector.x * vector.x + vector.y * vector.y +
+                             vector.z * vector.z + vector.w * vector.w);
+        if (magnitude == 0.0)
+        {
+            state.pushValue(vector);
+            return;
+        }
+        state.pushValue(Vec4{vector.x / magnitude, vector.y / magnitude,
+                            vector.z / magnitude, vector.w / magnitude});
+    }
+    else
+    {
+        throw Error("Argument must be a number or a vector");
+    }
+}
 }

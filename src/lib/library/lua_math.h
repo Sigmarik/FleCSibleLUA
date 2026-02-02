@@ -35,7 +35,16 @@ void lerp(FluaState& state);  // a, b, k -> interpolation
 void lerpb(FluaState& state); // a, b, k -> bound_interpolation
 void clamp(FluaState& state); // value, min, max -> clamped
 
-void vec(FluaState& state); // comps... -> vector
+void vec(FluaState& state);        // comps... -> vector
+void dot(FluaState& state);        // alpha, beta -> dot_product
+void cross(FluaState& state);      // alpha, beta -> cross_product
+void length(FluaState& state);     // vector -> length
+void length2(FluaState& state);    // vector -> length^2
+void length_man(FluaState& state); // vector -> manhattan_length
+void dist(FluaState& state);       // alpha, beta -> distance
+void dist2(FluaState& state);      // alpha, beta -> distance^2
+void dist_man(FluaState& state);   // alpha, beta -> manhattan_distance
+void normalize(FluaState& state);  // vector -> normalized
 
 static constexpr double kHuge = INFINITY;
 static constexpr double kPi = 3.14159265358979323846;

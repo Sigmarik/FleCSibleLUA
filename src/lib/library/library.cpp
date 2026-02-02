@@ -64,6 +64,16 @@ const std::unordered_map<std::string, LibraryElement> STANDARD_LIBRARY
     {"math.lerpb", math::lerpb},
     {"math.clamp", math::clamp},
 
+    {"math.dot", math::dot},
+    {"math.cross", math::cross},
+    {"math.length", math::length},
+    {"math.length2", math::length2},
+    {"math.length_man", math::length_man},
+    {"math.dist", math::dist},
+    {"math.dist2", math::dist2},
+    {"math.dist_man", math::dist_man},
+    {"math.normalize", math::normalize},
+
     {"vec", math::vec},
 
     {"math.huge", math::kHuge},
