@@ -6,6 +6,7 @@
 #include <iostream>
 
 #include "meta/variant_helper.h"
+#include "component_map/comp_map.h"
 
 namespace flua::data
 {
@@ -181,83 +182,142 @@ static std::optional<GenericValue> perform_binary(const GenericValue&, const Gen
     assert(false); return {};
 }
 
+enum class VectorComponent
+{
+    eX, eY, eZ, eW
+};
+
+static std::optional<double> try_get_entity_component_field(const EntityComponent& comp, const std::string& field)
+{
+    if (!comp.entity) return std::nullopt;
+
+    auto checker = cmp_info::ENTITY_COMPONENT_CHECKERS.find(comp.name);
+    if (checker == cmp_info::ENTITY_COMPONENT_CHECKERS.end()) return std::nullopt;
+    if (!checker->second(comp.entity)) return std::nullopt;
+
+    auto accessor = cmp_info::ENTITY_MEMBER_MAP.find(comp.name + " " + field);
+    if (accessor == cmp_info::ENTITY_MEMBER_MAP.end()) return std::nullopt;
+
+    cmp_info::GenericComponentPtr accessed = accessor->second(comp.entity);
+    std::optional<double> result = std::nullopt;
+    auto visitors = meta::Overloads
+    {
+        [&](int* ptr) { result = *ptr; },
+        [&](unsigned* ptr) { result = *ptr; },
+        [&](float* ptr) { result = *ptr; },
+        [&](double* ptr) { result = *ptr; },
+        [&](bool* ptr) { result = *ptr ? 1.0 : 0.0; },
+        [&](auto*) { result = std::nullopt; },
+    };
+    std::visit(visitors, accessed);
+    return result;
+}
+
+static std::optional<double> try_get_component(const GenericValue& value, VectorComponent component)
+{
+    switch (component)
+    {
+    case VectorComponent::eX:
+    {
+        std::optional<double> result = std::nullopt;
+        auto visitor = meta::Overloads
+        {
+            [&](double val) { result = val; },
+            [&](const Vec2& val) { result = val.x; },
+            [&](const Vec3& val) { result = val.x; },
+            [&](const Vec4& val) { result = val.x; },
+            [&](const EntityComponent& val)
+            {
+                result = try_get_entity_component_field(val, "x");
+            },
+            [&](auto) { result = std::nullopt; },
+        };
+        std::visit(visitor, value);
+        return result;
+    }
+    case VectorComponent::eY:
+    {
+        std::optional<double> result = std::nullopt;
+        auto visitor = meta::Overloads
+        {
+            [&](double val) { result = val; },
+            [&](const Vec2& val) { result = val.y; },
+            [&](const Vec3& val) { result = val.y; },
+            [&](const Vec4& val) { result = val.y; },
+            [&](const EntityComponent& val)
+            {
+                result = try_get_entity_component_field(val, "y");
+            },
+            [&](auto) { result = std::nullopt; },
+        };
+        std::visit(visitor, value);
+        return result;
+    }
+    case VectorComponent::eZ:
+    {
+        std::optional<double> result = std::nullopt;
+        auto visitor = meta::Overloads
+        {
+            [&](double val) { result = val; },
+            [&](const Vec3& val) { result = val.z; },
+            [&](const Vec4& val) { result = val.z; },
+            [&](const EntityComponent& val)
+            {
+                result = try_get_entity_component_field(val, "z");
+            },
+            [&](auto) { result = std::nullopt; },
+        };
+        std::visit(visitor, value);
+        return result;
+    }
+    case VectorComponent::eW:
+    {
+        std::optional<double> result = std::nullopt;
+        auto visitor = meta::Overloads
+        {
+            [&](double val) { result = val; },
+            [&](const Vec4& val) { result = val.w; },
+            [&](const EntityComponent& val)
+            {
+                result = try_get_entity_component_field(val, "w");
+            },
+            [&](auto) { result = std::nullopt; },
+        };
+        std::visit(visitor, value);
+        return result;
+    }
+    default: assert(false && "Unknown enum option");
+    }
+
+    return std::nullopt;
+}
+
+std::optional<GenericValue> std_to_geom(const std::vector<double>& components)
+{
+    if (components.size() == 2) return Vec2{components[0], components[1]};
+    if (components.size() == 3) return Vec3{components[0], components[1], components[2]};
+    if (components.size() == 4) return Vec4{components[0], components[1], components[2], components[3]};
+    return std::nullopt;
+}
+
 static std::optional<GenericValue> perform_floaty(const GenericValue& alpha, const GenericValue& beta,
     const std::function<double(double, double)>& fnc)
 {
-    std::optional<GenericValue> result = std::nullopt;
-    if (alpha.index() == beta.index())
+    if (std::holds_alternative<double>(alpha) && std::holds_alternative<double>(beta))
+        return fnc(std::get<double>(alpha), std::get<double>(beta));
+
+    std::vector<double> outputComponents;
+    for (VectorComponent comp : {VectorComponent::eX, VectorComponent::eY, VectorComponent::eZ, VectorComponent::eW})
     {
-        auto visitor = meta::Overloads
-        {
-            [&](double) { result = fnc(std::get<double>(alpha), std::get<double>(beta)); },
-            [&](const Vec2&)
-            {
-                const Vec2& alp = std::get<Vec2>(alpha);
-                const Vec2& bet = std::get<Vec2>(beta);
-                result = Vec2{fnc(alp.x, bet.x), fnc(alp.y, bet.y)};
-            },
-            [&](const Vec3&)
-            {
-                const Vec3& alp = std::get<Vec3>(alpha);
-                const Vec3& bet = std::get<Vec3>(beta);
-                result = Vec3{fnc(alp.x, bet.x), fnc(alp.y, bet.y), fnc(alp.z, bet.z)};
-            },
-            [&](const Vec4&)
-            {
-                const Vec4& alp = std::get<Vec4>(alpha);
-                const Vec4& bet = std::get<Vec4>(beta);
-                result = Vec4{fnc(alp.x, bet.x), fnc(alp.y, bet.y), fnc(alp.z, bet.z), fnc(alp.w, bet.w)};
-            },
-            [&](auto) { result = std::nullopt; }
-        };
-        std::visit(visitor, alpha);
-    }
-    else if (std::holds_alternative<double>(alpha))
-    {
-        double alp = std::get<double>(alpha);
-        auto visitor = meta::Overloads
-        {
-            [&](double bet) { result = fnc(alp, bet); },
-            [&](const Vec2& bet)
-            {
-                result = Vec2{fnc(alp, bet.x), fnc(alp, bet.y)};
-            },
-            [&](const Vec3& bet)
-            {
-                result = Vec3{fnc(alp, bet.x), fnc(alp, bet.y), fnc(alp, bet.z)};
-            },
-            [&](const Vec4& bet)
-            {
-                result = Vec4{fnc(alp, bet.x), fnc(alp, bet.y), fnc(alp, bet.z), fnc(alp, bet.w)};
-            },
-            [&](auto) { result = std::nullopt; }
-        };
-        std::visit(visitor, beta);
-    }
-    else if (std::holds_alternative<double>(beta))
-    {
-        double bet = std::get<double>(beta);
-        auto visitor = meta::Overloads
-        {
-            [&](double alp) { result = fnc(alp, bet); },
-            [&](const Vec2& alp)
-            {
-                result = Vec2{fnc(alp.x, bet), fnc(alp.y, bet)};
-            },
-            [&](const Vec3& alp)
-            {
-                result = Vec3{fnc(alp.x, bet), fnc(alp.y, bet), fnc(alp.z, bet)};
-            },
-            [&](const Vec4& alp)
-            {
-                result = Vec4{fnc(alp.x, bet), fnc(alp.y, bet), fnc(alp.z, bet), fnc(alp.w, bet)};
-            },
-            [&](auto) { result = std::nullopt; }
-        };
-        std::visit(visitor, alpha);
+        auto alp = try_get_component(alpha, comp);
+        if (!alp) break;
+        auto bet = try_get_component(beta, comp);
+        if (!bet) break;
+
+        outputComponents.emplace_back(fnc(*alp, *bet));
     }
 
-    return result;
+    return std_to_geom(outputComponents);
 }
 
 template <>
@@ -427,6 +487,18 @@ std::optional<GenericValue> perform_binary_operation(BinaryOpType op, const Gene
         case BinaryOpType::CmpNeq:      return perform_binary<BinaryOpType::CmpNeq>(alpha, beta);
         default: assert(false); return std::nullopt;
     }
+}
+
+std::optional<GenericValue> try_implicitly_convert_component(const EntityComponent& comp)
+{
+    std::vector<double> components;
+    for (std::string cmp : {"x", "y", "z", "w"})
+    {
+        auto field = try_get_entity_component_field(comp, cmp);
+        if (field) components.emplace_back(*field);
+        else break;
+    }
+    return std_to_geom(components);
 }
 
 void ValueSequence::add(const GenericValue& value)

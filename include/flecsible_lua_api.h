@@ -48,13 +48,10 @@ public:
     ValueAccessor(size_t argumentIndex) : m_core(argumentIndex) {}
     ValueAccessor(const std::string& variableName) : m_core(variableName) {}
 
-    void extend(const std::string& field);
-
     friend class FluaState;
 
 private:
     std::variant<size_t, std::string> m_core{};
-    std::vector<std::string> m_internalPath{};
 };
 
 namespace vst

@@ -134,11 +134,15 @@ class GenericValue : public
 
 std::string get_type_name(const GenericValue& value);
 
+std::optional<GenericValue> std_to_geom(const std::vector<double>& components);
+
 std::optional<GenericValue> perform_unary_operation(UnaryOpType op, const GenericValue& value);
 std::optional<GenericValue> perform_binary_operation(BinaryOpType op,
     const GenericValue& alpha, const GenericValue& beta);
 
 using MaybeFixedValuePtr = std::variant<GenericValue*, cmp_info::GenericComponentPtr>;
+
+std::optional<GenericValue> try_implicitly_convert_component(const EntityComponent& comp);
 
 struct ValueSequence
 {

@@ -406,9 +406,13 @@ void vec(FluaState& state)
             components.emplace_back(vec.z);
             components.emplace_back(vec.w);
         }
+        else if (state.isNil(idx))
+        {
+            break;
+        }
         else
         {
-            throw Error("Argument " + std::to_string(idx) + " is neither a number or a vector");
+            throw Error("Argument " + std::to_string(idx) + " is neither a number nor a vector");
         }
     }
 
