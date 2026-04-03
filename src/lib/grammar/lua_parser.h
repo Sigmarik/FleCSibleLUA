@@ -181,27 +181,27 @@ struct InlineFunction : parser::Grammar
 
 struct ParamNames : parser::Grammar
 <
-    ParamNames, std::deque<ids::ResolvableName>,
+    ParamNames, std::deque<mem_utils::PointerMappedString>,
 
     parser::Sequence<parser::Lex<lualex::Name>, parser::Lex<lualex::Comma>, ParamNames>,
     parser::Sequence<parser::Lex<lualex::Name>>,
     parser::Sequence<>
 >
 {
-    static std::deque<ids::ResolvableName> visit()
+    static std::deque<mem_utils::PointerMappedString> visit()
     {
         return {};
     }
 
-    static std::deque<ids::ResolvableName> visit(const lualex::Name& name)
+    static std::deque<mem_utils::PointerMappedString> visit(const lualex::Name& name)
     {
-        return {ids::ResolvableName(name.name)};
+        return {mem_utils::PointerMappedString(name.name)};
     }
 
-    static std::deque<ids::ResolvableName> visit(const lualex::Name& name, lualex::Comma,
-        std::deque<ids::ResolvableName>& params)
+    static std::deque<mem_utils::PointerMappedString> visit(const lualex::Name& name, lualex::Comma,
+        std::deque<mem_utils::PointerMappedString>& params)
     {
-        std::deque<ids::ResolvableName> newParams = std::move(params);
+        std::deque<mem_utils::PointerMappedString> newParams = std::move(params);
         newParams.emplace_front(name.name);
         return newParams;
     }
@@ -256,7 +256,7 @@ struct QueryEntity : parser::Grammar
         std::deque<lualex::Name>& components, lualex::BracketRoundCl)
     {
         ast::EcsEntityFilter entity;
-        entity.entityName = entityName.name;
+        entity.entityName = mem_utils::PointerMappedString(entityName.name);
         entity.components = {};
         for (lualex::Name& component : components)
         {
@@ -268,7 +268,7 @@ struct QueryEntity : parser::Grammar
     static ast::EcsEntityFilter visit(lualex::Name& entityName, lualex::BracketRoundOp, lualex::BracketRoundCl)
     {
         ast::EcsEntityFilter entity;
-        entity.entityName = entityName.name;
+        entity.entityName = mem_utils::PointerMappedString(entityName.name);
         entity.components = {};
         return entity;
     }
@@ -516,7 +516,7 @@ struct KeyValuePair : parser::Grammar
     static ast::MakeTable::KeyValuePair visit(const lualex::Name& name, lualex::Assignment, ast::NodePtr& node)
     {
         ast::MakeTable::KeyValuePair pair(std::move(node));
-        pair.index = ast::NodePtr{ast::Constant(name.startingPos, name.name)};
+        pair.index = ast::NodePtr{ast::Constant(name.startingPos, mem_utils::PointerMappedString(name.name))};
         return pair;
     }
 };
@@ -595,7 +595,7 @@ struct ExprSingleton : parser::Grammar
 
     static ast::NodePtr visit(ast::NodePtr& body, lualex::Dot dot, const lualex::Name& field)
     {
-        ast::NodePtr index = ast::NodePtr{ast::Constant(field.startingPos, field.name)};
+        ast::NodePtr index = ast::NodePtr{ast::Constant(field.startingPos, mem_utils::PointerMappedString(field.name))};
         return ast::NodePtr{ast::IndexRequest(dot.startingPos, std::move(body), std::move(index))};
     }
 
@@ -631,7 +631,7 @@ struct ExprSingleton : parser::Grammar
 
     static ast::NodePtr visit(const lualex::String& constString)
     {
-        return ast::NodePtr{ast::Constant(constString.startingPos, constString.string)};
+        return ast::NodePtr{ast::Constant(constString.startingPos, mem_utils::PointerMappedString(constString.string))};
     }
 
     static ast::NodePtr visit(ast::Function& lambda)

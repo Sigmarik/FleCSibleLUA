@@ -23,6 +23,8 @@ public:
     class Pointer
     {
     public:
+        Pointer() = default;
+
         Pointer(const Pointer& other);
         Pointer& operator=(const Pointer& other);
 
@@ -30,6 +32,8 @@ public:
         Pointer& operator=(Pointer&& other) noexcept;
 
         ~Pointer();
+
+        void decreaseSelf();
 
         explicit Pointer(const std::string& content);
         explicit Pointer(std::string&& content);
@@ -55,7 +59,7 @@ private:
     struct Cell
     {
         unsigned useCount = 0;
-        std::string object;
+        std::string object{};
     };
 
     std::unordered_map<std::string, Cell*> m_hashes;

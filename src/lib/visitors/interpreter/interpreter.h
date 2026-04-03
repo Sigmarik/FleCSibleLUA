@@ -8,6 +8,7 @@
 #include "types/data_types.h"
 #include "flecsible_lua_api.h"
 #include "component_map/comp_map.h"
+#include "meta/remap.h"
 
 namespace flua::lib
 {
@@ -40,13 +41,13 @@ public:
         : m_errStream(errStream), m_outStream(outStream), m_world(world)
     {
         m_stack.emplace_back();
-        m_componentIds = cmp_info::get_component_ids(*world);
+        m_componentIds = cmp_info::get_cached_component_ids(*world);
     }
 
     ~Interpreter() override;
 
     template <class ValueT>
-    void setGlobal(const std::string& name, const ValueT& value)
+    void setGlobal(const mem_utils::PointerMappedString& name, const ValueT& value)
     {
         data::GenericValue* found = getGlobalValueByName(name);
         if (!found) return;
@@ -54,14 +55,14 @@ public:
     }
 
     template <class ValueT>
-    ValueT getGlobal(const std::string& name) const
+    ValueT getGlobal(const mem_utils::PointerMappedString& name) const
     {
         const data::GenericValue* found = getGlobalValueByName(name);
         return std::get<ValueT>(*found);
     }
 
     template <class ValueT>
-    bool isGlobalOfType(const std::string& name) const
+    bool isGlobalOfType(const mem_utils::PointerMappedString& name) const
     {
         const data::GenericValue* found = getGlobalValueByName(name);
         if (!found) return false;
@@ -110,9 +111,10 @@ private:
     void performFixedTypeAssignment(ast::Assignment& node, cmp_info::GenericComponentPtr ptr,
                                     data::GenericValue& value);
 
-    void indexEntity(ast::IndexRequest& node, data::Entity& entity, const std::string& index);
+    void indexEntity(ast::IndexRequest& node, data::Entity& entity, const mem_utils::PointerMappedString& index);
 
-    void indexEntityComponent(ast::IndexRequest& node, data::EntityComponent& component, const std::string& index);
+    void indexEntityComponent(ast::IndexRequest& node, data::EntityComponent& component,
+        const mem_utils::PointerMappedString& index);
 
     void visitTransparentBlock(std::deque<ast::NodePtr>& nodes);
 
@@ -130,12 +132,12 @@ private:
     ecs_query_desc_t makeEcsQueryDesc(const ast::EcsEntityFilter& filter, ast::INode& node);
     ecs_query_t* makeEcsQuery(const ast::EcsEntityFilter& filter, ast::INode& node);
 
-    data::GenericValue* getGlobalValueByName(const std::string& name);
-    const data::GenericValue* getGlobalValueByName(const std::string& name) const;
+    data::GenericValue* getGlobalValueByName(const mem_utils::PointerMappedString& name);
+    const data::GenericValue* getGlobalValueByName(const mem_utils::PointerMappedString& name) const;
 
     struct NameQueryPair
     {
-        std::string entityName{};
+        mem_utils::PointerMappedString entityName{};
         ecs_query_t* query = nullptr;
     };
 
@@ -154,7 +156,7 @@ private:
 
         Frame(Frame&&) = default;
 
-        std::unordered_map<std::string, mem_utils::CopyMovePtr<data::GenericValue> > varNameMap{};
+        std::map<mem_utils::PointerMappedString, mem_utils::CopyMovePtr<data::GenericValue> > varNameMap{};
         bool transparent = false;
     };
 
@@ -200,7 +202,7 @@ private:
 
     flecs::world* m_world{};
 
-    std::unordered_map<std::string, ecs_id_t> m_componentIds{};
+    std::map<mem_utils::PointerMappedString, ecs_id_t> m_componentIds{};
 
     using QueryArray = std::vector<NameQueryPair>;
     std::map<ast::INode*, QueryArray> m_nodeQueries{};

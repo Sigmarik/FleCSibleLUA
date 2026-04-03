@@ -18,7 +18,8 @@ struct PairIterator
     {
         if (it == end) return;
 
-        state.pushValue(it->first);
+        data::GenericValue rawKey = it->first;
+        state.pushRaw(rawKey);
         state.pushRaw(*it->second);
         ++it;
     }

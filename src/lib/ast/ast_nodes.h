@@ -9,9 +9,9 @@
 #include <vector>
 
 #include "types/data_types.h"
-#include "identification.h"
 #include "mem_utils/copyable_ptr.h"
 #include "parser/char_pos.h"
+#include "mem_utils/string_container.h"
 
 namespace flua::ast
 {
@@ -56,14 +56,14 @@ struct Function : INode
 {
     using INode::INode;
 
-    std::deque<ids::ResolvableName> parameters{};
+    std::deque<mem_utils::PointerMappedString> parameters{};
     std::deque<NodePtr> body{};
 };
 
 struct EcsEntityFilter
 {
-    ids::ResolvableName entityName{"UNDEFINED_SYSTEM_PARAMETER"};
-    std::deque<std::string> components{};
+    mem_utils::PointerMappedString entityName{"UNDEFINED_SYSTEM_PARAMETER"};
+    std::deque<mem_utils::PointerMappedString> components{};
 };
 
 struct System : INode
@@ -89,7 +89,7 @@ struct ForLoopNumeric : INode
         NodePtr&& step)
         : INode(pos), name(name), base(std::move(base)), limit(std::move(limit)), step(std::move(step)) {}
 
-    ids::ResolvableName name;
+    mem_utils::PointerMappedString name;
     NodePtr base;
     NodePtr limit;
     NodePtr step;
@@ -102,7 +102,7 @@ struct ForLoopGeneric : INode
     explicit ForLoopGeneric(const parser::CharacterPos& pos, NodePtr&& iterator)
         : INode(pos), iterator(std::move(iterator)) {}
 
-    std::vector<ids::ResolvableName> names{};
+    std::vector<mem_utils::PointerMappedString> names{};
     NodePtr iterator;
 
     std::deque<NodePtr> body{};
@@ -167,7 +167,7 @@ struct FieldRequest : INode
         : INode(pos), body(std::move(body)), field(std::move(field)) {}
 
     NodePtr body;
-    std::string field;
+    mem_utils::PointerMappedString field;
 };
 
 struct IndexRequest : INode
@@ -206,7 +206,7 @@ struct Variable : INode
 {
     explicit Variable(const parser::CharacterPos& pos, const std::string& name) : INode(pos), name(name) {}
 
-    ids::ResolvableName name;
+    mem_utils::PointerMappedString name;
 };
 
 struct FunctionCall : INode
@@ -231,7 +231,7 @@ struct LocalAssignment : INode
 {
     using INode::INode;
 
-    std::deque<ids::ResolvableName> names;
+    std::deque<mem_utils::PointerMappedString> names;
     std::deque<NodePtr> values{};
 };
 

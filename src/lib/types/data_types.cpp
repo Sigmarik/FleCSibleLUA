@@ -26,9 +26,9 @@ static std::string to_string(double value)
     return std::format("{:.6}", value);
 }
 
-static std::string to_string(const std::string& value)
+static std::string to_string(const mem_utils::PointerMappedString& value)
 {
-    return value;
+    return *value;
 }
 
 static std::string to_string(const Vec2& vec)
@@ -66,7 +66,7 @@ static std::string to_string(const Entity& entity)
 
 static std::string to_string(const EntityComponent& component)
 {
-    return "component " + component.name + " of entity " + std::to_string(component.entity.id());
+    return "component " + *component.name + " of entity " + std::to_string(component.entity.id());
 }
 
 static std::string to_string(const Function& function)
@@ -100,8 +100,8 @@ bool to_bool(const GenericValue& value)
     if (std::holds_alternative<EntityComponent>(value))
     {
         const EntityComponent& component = std::get<EntityComponent>(value);
-        auto maybeChecker = cmp_info::ENTITY_COMPONENT_CHECKERS.find(component.name);
-        if (maybeChecker == cmp_info::ENTITY_COMPONENT_CHECKERS.end()) return false;
+        auto maybeChecker = cmp_info::CACHED_ENTITY_COMPONENT_CHECKERS.find(component.name);
+        if (maybeChecker == cmp_info::CACHED_ENTITY_COMPONENT_CHECKERS.end()) return false;
         return maybeChecker->second(flecs::entity(component.entity));
     }
     if (std::holds_alternative<Entity>(value))
@@ -122,7 +122,7 @@ std::string get_type_name(const GenericValue& value)
         [&](const Vec2&) { result = "vec2"; },
         [&](const Vec3&) { result = "vec3"; },
         [&](const Vec4&) { result = "vec4"; },
-        [&](const std::string&) { result = "string"; },
+        [&](const mem_utils::PointerMappedString&) { result = "string"; },
         [&](const Table&) { result = "table"; },
         [&](const Entity&) { result = "entity"; },
         [&](const EntityComponent&) { result = "component"; },
@@ -160,7 +160,10 @@ std::optional<GenericValue> perform_unary<UnaryOpType::Negate>(const GenericValu
 template <>
 std::optional<GenericValue> perform_unary<UnaryOpType::Length>(const GenericValue& value)
 {
-    if (std::holds_alternative<std::string>(value)) return static_cast<double>(std::get<std::string>(value).size());
+    if (std::holds_alternative<mem_utils::PointerMappedString>(value))
+    {
+        return static_cast<double>(std::get<mem_utils::PointerMappedString>(value)->size());
+    }
     if (std::holds_alternative<Table>(value)) return static_cast<double>(std::get<Table>(value)->size());
     return std::nullopt;
 }
@@ -187,15 +190,16 @@ enum class VectorComponent
     eX, eY, eZ, eW
 };
 
-static std::optional<double> try_get_entity_component_field(const EntityComponent& comp, const std::string& field)
+static std::optional<double> try_get_entity_component_field(const EntityComponent& comp,
+    const mem_utils::PointerMappedString& field)
 {
     if (!comp.entity) return std::nullopt;
 
-    auto checker = cmp_info::ENTITY_COMPONENT_CHECKERS.find(comp.name);
-    if (checker == cmp_info::ENTITY_COMPONENT_CHECKERS.end()) return std::nullopt;
+    auto checker = cmp_info::CACHED_ENTITY_COMPONENT_CHECKERS.find(comp.name);
+    if (checker == cmp_info::CACHED_ENTITY_COMPONENT_CHECKERS.end()) return std::nullopt;
     if (!checker->second(comp.entity)) return std::nullopt;
 
-    auto accessor = cmp_info::ENTITY_MEMBER_MAP.find(comp.name + " " + field);
+    auto accessor = cmp_info::ENTITY_MEMBER_MAP.find(*comp.name + " " + *field);
     if (accessor == cmp_info::ENTITY_MEMBER_MAP.end()) return std::nullopt;
 
     cmp_info::GenericComponentPtr accessed = accessor->second(comp.entity);
@@ -212,15 +216,16 @@ static std::optional<double> try_get_entity_component_field(const EntityComponen
     return result;
 }
 
-static bool try_set_entity_component_field(const EntityComponent& comp, const std::string& field, double value)
+static bool try_set_entity_component_field(const EntityComponent& comp,
+    const mem_utils::PointerMappedString& field, double value)
 {
     if (!comp.entity) return false;
 
-    auto checker = cmp_info::ENTITY_COMPONENT_CHECKERS.find(comp.name);
-    if (checker == cmp_info::ENTITY_COMPONENT_CHECKERS.end()) return false;
+    auto checker = cmp_info::CACHED_ENTITY_COMPONENT_CHECKERS.find(comp.name);
+    if (checker == cmp_info::CACHED_ENTITY_COMPONENT_CHECKERS.end()) return false;
     if (!checker->second(comp.entity)) return false;
 
-    auto accessor = cmp_info::ENTITY_MEMBER_MAP.find(comp.name + " " + field);
+    auto accessor = cmp_info::ENTITY_MEMBER_MAP.find(*comp.name + " " + *field);
     if (accessor == cmp_info::ENTITY_MEMBER_MAP.end()) return false;
 
     cmp_info::GenericComponentPtr accessed = accessor->second(comp.entity);
@@ -237,8 +242,14 @@ static bool try_set_entity_component_field(const EntityComponent& comp, const st
     return result;
 }
 
+static const mem_utils::PointerMappedString CACHED_X("x");
+static const mem_utils::PointerMappedString CACHED_Y("y");
+static const mem_utils::PointerMappedString CACHED_Z("z");
+static const mem_utils::PointerMappedString CACHED_W("w");
+
 static std::optional<double> try_get_component(const GenericValue& value, VectorComponent component)
 {
+
     switch (component)
     {
     case VectorComponent::eX:
@@ -252,7 +263,7 @@ static std::optional<double> try_get_component(const GenericValue& value, Vector
             [&](const Vec4& val) { result = val.x; },
             [&](const EntityComponent& val)
             {
-                result = try_get_entity_component_field(val, "x");
+                result = try_get_entity_component_field(val, CACHED_X);
             },
             [&](auto) { result = std::nullopt; },
         };
@@ -270,7 +281,7 @@ static std::optional<double> try_get_component(const GenericValue& value, Vector
             [&](const Vec4& val) { result = val.y; },
             [&](const EntityComponent& val)
             {
-                result = try_get_entity_component_field(val, "y");
+                result = try_get_entity_component_field(val, CACHED_Y);
             },
             [&](auto) { result = std::nullopt; },
         };
@@ -287,7 +298,7 @@ static std::optional<double> try_get_component(const GenericValue& value, Vector
             [&](const Vec4& val) { result = val.z; },
             [&](const EntityComponent& val)
             {
-                result = try_get_entity_component_field(val, "z");
+                result = try_get_entity_component_field(val, CACHED_Z);
             },
             [&](auto) { result = std::nullopt; },
         };
@@ -303,7 +314,7 @@ static std::optional<double> try_get_component(const GenericValue& value, Vector
             [&](const Vec4& val) { result = val.w; },
             [&](const EntityComponent& val)
             {
-                result = try_get_entity_component_field(val, "w");
+                result = try_get_entity_component_field(val, CACHED_W);
             },
             [&](auto) { result = std::nullopt; },
         };
@@ -416,7 +427,7 @@ std::optional<GenericValue> perform_binary<BinaryOpType::Xor>(const GenericValue
 template <>
 std::optional<GenericValue> perform_binary<BinaryOpType::Concatenate>(const GenericValue& alpha, const GenericValue& beta)
 {
-    return to_string(alpha) + to_string(beta);
+    return mem_utils::PointerMappedString(to_string(alpha) + to_string(beta));
 }
 
 static constexpr double CMP_EPS = 1e-6;
@@ -432,7 +443,10 @@ std::optional<GenericValue> perform_binary<BinaryOpType::CmpEq>(const GenericVal
         [&](bool) { result = std::get<bool>(alpha) == std::get<bool>(beta); },
         [&](double) { result = std::abs(std::get<double>(alpha) - std::get<double>(beta)) < CMP_EPS; },
         [&](const Entity&) { result = std::get<Entity>(alpha).id() == std::get<Entity>(beta).id(); },
-        [&](const std::string&) { result = std::get<std::string>(alpha) == std::get<std::string>(beta); },
+        [&](const std::string&)
+        {
+            result = std::get<mem_utils::PointerMappedString>(alpha) == std::get<mem_utils::PointerMappedString>(beta);
+        },
         [&](const Table&) { result = &std::get<Table>(alpha) == &std::get<Table>(beta); },
         [&](const Vec2&)
         {
@@ -516,7 +530,7 @@ std::optional<GenericValue> perform_binary_operation(BinaryOpType op, const Gene
 std::optional<GenericValue> try_implicitly_convert_component(const EntityComponent& comp)
 {
     std::vector<double> components;
-    for (std::string cmp : {"x", "y", "z", "w"})
+    for (const mem_utils::PointerMappedString& cmp : {CACHED_X, CACHED_Y, CACHED_Z, CACHED_W})
     {
         auto field = try_get_entity_component_field(comp, cmp);
         if (field) components.emplace_back(*field);
@@ -527,12 +541,12 @@ std::optional<GenericValue> try_implicitly_convert_component(const EntityCompone
 
 bool try_implicitly_write_to_component(const EntityComponent& comp, const GenericValue& value)
 {
-    static const std::vector<std::pair<VectorComponent, std::string>> kCmpMappings =
+    static const std::vector<std::pair<VectorComponent, mem_utils::PointerMappedString>> kCmpMappings =
     {
-        {VectorComponent::eX, "x"},
-        {VectorComponent::eY, "y"},
-        {VectorComponent::eZ, "z"},
-        {VectorComponent::eW, "w"},
+        {VectorComponent::eX, CACHED_X},
+        {VectorComponent::eY, CACHED_Y},
+        {VectorComponent::eZ, CACHED_Z},
+        {VectorComponent::eW, CACHED_W},
     };
     for (const auto& [geomCmp, cmpName] : kCmpMappings)
     {
