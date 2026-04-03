@@ -9,7 +9,7 @@ function(target_flua_components tgt gen)
     if(NOT TARGET ${tgt})
         message(FATAL_ERROR "target_flua_components: target '${tgt}' does not exist")
     endif()
-    if(ARGC LESS 3)
+    if(ARGC LESS 2)
         message(FATAL_ERROR "target_flua_components requires at least: <target> <generator> <inputs...>")
     endif()
 

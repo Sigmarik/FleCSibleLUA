@@ -27,4 +27,7 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${BUILD}/archive)
 
 add_subdirectory(src)
 
+set(CMK_INCLUDE_FOLDER ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+
 add_subdirectory(examples)
+add_subdirectory(perf)
