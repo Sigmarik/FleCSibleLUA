@@ -11,6 +11,7 @@
 #include "ecs/guarded_iterator.h"
 #include "meta/string.h"
 #include "meta/variant_helper.h"
+#include "meta/remap.h"
 
 namespace flua::vst
 {
@@ -57,7 +58,7 @@ void Interpreter::visit(ast::Program& node)
 
 void Interpreter::visit(ast::Function& node)
 {
-    using VariableMap = std::unordered_map<std::string, mem_utils::CopyMovePtr<data::GenericValue> >;
+    using VariableMap = std::map<mem_utils::PointerMappedString, mem_utils::CopyMovePtr<data::GenericValue> >;
     VariableMap bakedFrame;
     if (m_stack.size() > 1)
     {
@@ -92,7 +93,7 @@ void Interpreter::visit(ast::System& node)
                                           std::vector<NameQueryPair>(node.entities.size() - 1, {});
     for (unsigned entityId = 1; entityId < node.entities.size(); ++entityId)
     {
-        queries[entityId - 1].entityName = node.entities[entityId].entityName.string;
+        queries[entityId - 1].entityName = node.entities[entityId].entityName;
         queries[entityId - 1].query = makeEcsQuery(node.entities[entityId], node);
     }
 
@@ -144,7 +145,7 @@ void Interpreter::visit(ast::ForLoopNumeric& node)
     frame.transparent = true;
     Visitor::visit(node.base);
     data::GenericValue& counter =
-            *(frame.varNameMap[node.name.string] = mem_utils::CopyMovePtr<data::GenericValue>(m_returnedValue.spit()));
+            *(frame.varNameMap[node.name] = mem_utils::CopyMovePtr<data::GenericValue>(m_returnedValue.spit()));
     Visitor::visit(node.limit);
     data::GenericValue limit = m_returnedValue.spit();
 
@@ -189,7 +190,7 @@ void Interpreter::visit(ast::ForLoopGeneric& node)
             break;
         for (unsigned id = 0; id < node.names.size(); ++id)
         {
-            const std::string& name = node.names[id].string;
+            const mem_utils::PointerMappedString& name = node.names[id];
             if (id < m_returnedValue.sequence.size())
                 m_stack.back().varNameMap[name] = mem_utils::CopyMovePtr<data::GenericValue>(
                     std::move(m_returnedValue.sequence[id].value));
@@ -223,7 +224,7 @@ void Interpreter::visit(ast::Query& node)
                                           std::vector<NameQueryPair>(node.filters.size(), {});
     for (unsigned entityId = 0; entityId < node.filters.size(); ++entityId)
     {
-        queries[entityId].entityName = node.filters[entityId].entityName.string;
+        queries[entityId].entityName = node.filters[entityId].entityName;
         queries[entityId].query = makeEcsQuery(node.filters[entityId], node);
     }
 
@@ -384,7 +385,7 @@ void Interpreter::visit(ast::IndexRequest& node)
     Visitor::visit(node.body);
     data::GenericValue subject = m_returnedValue.spit();
     Visitor::visit(node.index);
-    std::string index = data::to_string(m_returnedValue.spit());
+    mem_utils::PointerMappedString index(data::to_string(m_returnedValue.spit()));
 
     if (std::holds_alternative<Vec2>(subject) ||
         std::holds_alternative<Vec3>(subject) ||
@@ -393,7 +394,7 @@ void Interpreter::visit(ast::IndexRequest& node)
         std::vector<double> components;
         std::visit([&](const auto& vec)
         {
-            components = extract_vector_components(vec, index, node);
+            components = extract_vector_components(vec, *index, node);
         }, subject);
 
         if (components.size() == 1)
@@ -473,7 +474,7 @@ void Interpreter::visit(ast::Variable& node)
     data::GenericValue* foundValue = nullptr;
     for (auto& frameIt : std::ranges::reverse_view(m_stack))
     {
-        auto found = frameIt.varNameMap.find(node.name.string);
+        auto found = frameIt.varNameMap.find(node.name);
         if (found != frameIt.varNameMap.end())
         {
             foundValue = found->second.get();
@@ -487,15 +488,15 @@ void Interpreter::visit(ast::Variable& node)
 
     if (foundValue == nullptr && !localAssignment)
     {
-        auto foundGlobal = m_stack.front().varNameMap.find(node.name.string);
+        auto foundGlobal = m_stack.front().varNameMap.find(node.name);
         if (foundGlobal != m_stack.front().varNameMap.end()) foundValue = foundGlobal->second.get();
     }
 
     if (foundValue == nullptr)
     {
-        std::unordered_map<std::string, mem_utils::CopyMovePtr<data::GenericValue> >& frameToAddTo =
+        std::map<mem_utils::PointerMappedString, mem_utils::CopyMovePtr<data::GenericValue> >& frameToAddTo =
                 localAssignment ? m_stack.back().varNameMap : m_stack.front().varNameMap;
-        foundValue = (frameToAddTo[node.name.string] =
+        foundValue = (frameToAddTo[node.name] =
                       mem_utils::CopyMovePtr<data::GenericValue>(data::Nil())).get();
     }
 
@@ -556,7 +557,7 @@ void Interpreter::visit(ast::Assignment& node)
             assignedToComponent = data::try_implicitly_write_to_component(comp, value);
             if (!assignedToComponent && subject == data::MaybeFixedValuePtr(nullptr))
                 throw LuaRuntimeError(node, "Failed to implicitly assign value of type " +
-                    data::get_type_name(value) + " to entity component " + comp.name);
+                    data::get_type_name(value) + " to entity component " + *comp.name);
         }
 
         if (!assignedToComponent)
@@ -582,14 +583,14 @@ void Interpreter::visit(ast::LocalAssignment& node)
     std::vector<data::GenericValue*> subjects;
     std::vector<data::GenericValue> values;
     subjects.reserve(node.names.size());
-    for (const ids::ResolvableName& subject : node.names)
+    for (const mem_utils::PointerMappedString& subject : node.names)
     {
         Frame& localFrame = m_stack.back();
-        auto emplacementResult = localFrame.varNameMap.try_emplace(subject.string);
+        auto emplacementResult = localFrame.varNameMap.try_emplace(subject);
         if (!emplacementResult.second)
         {
             throw LuaRuntimeError(
-                node, "Attempt to create a local variable \"" + subject.string + "\" that already exists");
+                node, "Attempt to create a local variable \"" + *subject + "\" that already exists");
         }
         subjects.emplace_back(emplacementResult.first->second.get());
     }
@@ -674,6 +675,10 @@ void Interpreter::performFixedTypeAssignment(ast::Assignment& node, cmp_info::Ge
                                             " to numeric component field");
             *ptr = std::get<double>(value);
         },
+        [&](std::string* ptr)
+        {
+            *ptr = data::to_string(value);
+        },
         [&](auto* ptr)
         {
             using UnderlyingType = std::remove_reference_t<decltype(*ptr)>;
@@ -686,21 +691,21 @@ void Interpreter::performFixedTypeAssignment(ast::Assignment& node, cmp_info::Ge
     std::visit(reinterpretations, pointer);
 }
 
-void Interpreter::indexEntity(ast::IndexRequest& node, data::Entity& entity, const std::string& index)
+void Interpreter::indexEntity(ast::IndexRequest& node, data::Entity& entity, const mem_utils::PointerMappedString& index)
 {
-    if (!cmp_info::ENTITY_COMPONENT_CHECKERS.contains(index))
-        throw LuaRuntimeError(node, "Component " + index + " is not recognized by the system");
+    if (!cmp_info::CACHED_ENTITY_COMPONENT_CHECKERS.contains(index))
+        throw LuaRuntimeError(node, "Component " + *index + " is not recognized by the system");
     m_returnedValue = data::EntityComponent(entity, index);
 }
 
 void Interpreter::indexEntityComponent(ast::IndexRequest& node, data::EntityComponent& component,
-                                       const std::string& index)
+                                       const mem_utils::PointerMappedString& index)
 {
-    auto foundMapper = cmp_info::ENTITY_MEMBER_MAP.find(component.name + " " + index);
+    auto foundMapper = cmp_info::ENTITY_MEMBER_MAP.find(*component.name + " " + *index);
     if (foundMapper == cmp_info::ENTITY_MEMBER_MAP.end())
-        throw LuaRuntimeError(node, "Component field " + index + " is not recognized by the system");
+        throw LuaRuntimeError(node, "Component field " + *index + " is not recognized by the system");
 
-    if (!cmp_info::ENTITY_COMPONENT_CHECKERS.at(component.name)(component.entity))
+    if (!cmp_info::CACHED_ENTITY_COMPONENT_CHECKERS.at(component.name)(component.entity))
     {
         m_returnedValue = data::Nil();
         return;
@@ -709,7 +714,7 @@ void Interpreter::indexEntityComponent(ast::IndexRequest& node, data::EntityComp
     auto genericReference = foundMapper->second(component.entity);
     data::GenericValue interpretedValue = data::Nil();
     auto interpretation = meta::Overloads{
-        [&](std::string* ptr) { interpretedValue = data::GenericValue(*ptr); },
+        [&](std::string* ptr) { interpretedValue = data::GenericValue(mem_utils::PointerMappedString(*ptr)); },
         [&](bool* ptr) { interpretedValue = data::GenericValue(*ptr); },
         [&](flecs::entity* ptr) { interpretedValue = data::GenericValue(*ptr); },
         [&](auto* ptr) { interpretedValue = data::GenericValue(static_cast<double>(*ptr)); }
@@ -808,8 +813,8 @@ void Interpreter::runLuaFunction(data::LuaFunction& luaFunction, std::vector<dat
 
         for (size_t idx = 0; idx < luaFunction.body->parameters.size() && idx < args.size(); ++idx)
         {
-            ids::ResolvableName& name = luaFunction.body->parameters[idx];
-            m_stack.back().varNameMap[name.string] = mem_utils::CopyMovePtr<data::GenericValue>(std::move(args[idx]));
+            mem_utils::PointerMappedString& name = luaFunction.body->parameters[idx];
+            m_stack.back().varNameMap[name] = mem_utils::CopyMovePtr<data::GenericValue>(std::move(args[idx]));
         }
 
         executeFunction(*luaFunction.body);
@@ -833,18 +838,18 @@ ecs_query_desc_t Interpreter::makeEcsQueryDesc(const ast::EcsEntityFilter& filte
     ecs_query_desc_t desc{};
 
     if (filter.components.empty())
-        throw LuaRuntimeError(node, "Entity filter " + filter.entityName.string +
+        throw LuaRuntimeError(node, "Entity filter " + *filter.entityName +
                                     " should have at least on component requirement");
     if (filter.components.size() > FLECS_TERM_COUNT_MAX)
-        throw LuaRuntimeError(node, "Entity filter " + filter.entityName.string +
+        throw LuaRuntimeError(node, "Entity filter " + *filter.entityName +
                                     " cannot have more than " + std::to_string(FLECS_TERM_COUNT_MAX) + " components");
 
     unsigned termIdx = 0;
-    for (const std::string& component : filter.components)
+    for (const mem_utils::PointerMappedString& component : filter.components)
     {
         auto found = m_componentIds.find(component);
         if (found == m_componentIds.end())
-            throw LuaRuntimeError(node, "Component " + component + " is not recognized by the system");
+            throw LuaRuntimeError(node, "Component " + *component + " is not recognized by the system");
         desc.terms[termIdx] = {found->second};
         ++termIdx;
     }
@@ -875,10 +880,10 @@ std::vector<std::string> split_by_dot(const std::string& s)
     return parts;
 }
 
-data::GenericValue* Interpreter::getGlobalValueByName(const std::string& name)
+data::GenericValue* Interpreter::getGlobalValueByName(const mem_utils::PointerMappedString& name)
 {
-    std::vector<std::string> parts = split_by_dot(name);
-    std::unordered_map<std::string, mem_utils::CopyMovePtr<data::GenericValue> >* mapPtr = &m_stack.front().varNameMap;
+    std::vector<std::string> parts = split_by_dot(*name);
+    std::map<mem_utils::PointerMappedString, mem_utils::CopyMovePtr<data::GenericValue> >* mapPtr = &m_stack.front().varNameMap;
 
     for (unsigned partIdx = 0; partIdx + 1 < parts.size(); ++partIdx)
     {
@@ -891,21 +896,21 @@ data::GenericValue* Interpreter::getGlobalValueByName(const std::string& name)
     return mapPtr->emplace(parts.back(), mem_utils::CopyMovePtr<data::GenericValue>(data::Nil())).first->second.get();
 }
 
-const data::GenericValue* Interpreter::getGlobalValueByName(const std::string& name) const
+const data::GenericValue* Interpreter::getGlobalValueByName(const mem_utils::PointerMappedString& name) const
 {
-    std::vector<std::string> parts = split_by_dot(name);
-    const std::unordered_map<std::string, mem_utils::CopyMovePtr<data::GenericValue> >* mapPtr = &m_stack.front().varNameMap;
+    std::vector<std::string> parts = split_by_dot(*name);
+    const std::map<mem_utils::PointerMappedString, mem_utils::CopyMovePtr<data::GenericValue> >* mapPtr = &m_stack.front().varNameMap;
 
     for (unsigned partIdx = 0; partIdx + 1 < parts.size(); ++partIdx)
     {
-        auto newMap = mapPtr->find(parts.back());
+        auto newMap = mapPtr->find(mem_utils::PointerMappedString(parts.back()));
         if (newMap == mapPtr->end()) return nullptr;
         const data::GenericValue& value = *newMap->second;
         if (!std::holds_alternative<data::Table>(value)) return nullptr;
         mapPtr = std::get<data::Table>(value).get();
     }
 
-    auto found = mapPtr->find(parts.back());
+    auto found = mapPtr->find(mem_utils::PointerMappedString(parts.back()));
     if (found == mapPtr->end()) return nullptr;
     return found->second.get();
 }
@@ -924,7 +929,7 @@ void Interpreter::runBodyWithinQueries(std::vector<NameQueryPair>& queries, std:
     ecs::GuardedEcsIterator iter(ecs_query_iter(m_world->c_ptr(), query));
     while (ecs_query_next(&*iter))
     {
-        const std::string& entityName = queryPair.entityName;
+        const mem_utils::PointerMappedString& entityName = queryPair.entityName;
         for (long long iterEntityIdx = 0; iterEntityIdx < iter->count; ++iterEntityIdx)
         {
             ecs_entity_t ecsEntity = iter->entities[iterEntityIdx];
@@ -943,7 +948,7 @@ void Interpreter::prepareAndRunSystem(ast::System& node, ecs_iter_t* systemIt)
 {
     NamespaceHolder systemNamespace(m_stack, false);
 
-    const std::string& entityName = node.entities.front().entityName.string;
+    const mem_utils::PointerMappedString& entityName = node.entities.front().entityName;
     for (long long iterEntityIdx = 0; iterEntityIdx < systemIt->count; ++iterEntityIdx)
     {
         ecs_entity_t ecsEntity = systemIt->entities[iterEntityIdx];

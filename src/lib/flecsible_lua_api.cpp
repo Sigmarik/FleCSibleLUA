@@ -22,7 +22,7 @@ data::GenericValue* FluaState::getRaw(const ValueAccessor& accessor) const
         [&](const std::string& name)
         {
             auto& frame = m_interpreter->m_stack.front();
-            auto found = frame.varNameMap.find(name);
+            auto found = frame.varNameMap.find(mem_utils::PointerMappedString(name));
             if (found != frame.varNameMap.end()) value = found->second.get();
             else value = nullptr;
         }
@@ -166,13 +166,13 @@ flecs::entity FluaState::getEntity(const ValueAccessor& key) const
 bool FluaState::isString(const ValueAccessor& key) const
 {
     const data::GenericValue* value = getRaw(key);
-    return value != nullptr && std::holds_alternative<std::string>(*value);
+    return value != nullptr && std::holds_alternative<mem_utils::PointerMappedString>(*value);
 }
 
 std::string FluaState::getString(const ValueAccessor& key) const
 {
     const data::GenericValue* value = getRaw(key);
-    return std::get<std::string>(*value);
+    return *std::get<mem_utils::PointerMappedString>(*value);
 }
 
 std::string FluaState::asString(const ValueAccessor& key) const
@@ -218,7 +218,7 @@ void FluaState::pushValue(const Vec4& value) const
 
 void FluaState::pushValue(const std::string& value) const
 {
-    m_interpreter->m_externalFunctionOutputs.emplace_back(value);
+    m_interpreter->m_externalFunctionOutputs.emplace_back(mem_utils::PointerMappedString(value));
 }
 
 void FluaState::pushValue(flecs::entity value) const
@@ -233,42 +233,42 @@ void FluaState::pushValue(const std::function<void(FluaState&)>& value) const
 
 void FluaState::setGlobal(const std::string& name, bool value) const
 {
-    m_interpreter->setGlobal(name, value);
+    m_interpreter->setGlobal(mem_utils::PointerMappedString(name), value);
 }
 
 void FluaState::setGlobal(const std::string& name, double value) const
 {
-    m_interpreter->setGlobal(name, value);
+    m_interpreter->setGlobal(mem_utils::PointerMappedString(name), value);
 }
 
 void FluaState::setGlobal(const std::string& name, const Vec2& value) const
 {
-    m_interpreter->setGlobal(name, value);
+    m_interpreter->setGlobal(mem_utils::PointerMappedString(name), value);
 }
 
 void FluaState::setGlobal(const std::string& name, const Vec3& value) const
 {
-    m_interpreter->setGlobal(name, value);
+    m_interpreter->setGlobal(mem_utils::PointerMappedString(name), value);
 }
 
 void FluaState::setGlobal(const std::string& name, const Vec4& value) const
 {
-    m_interpreter->setGlobal(name, value);
+    m_interpreter->setGlobal(mem_utils::PointerMappedString(name), value);
 }
 
 void FluaState::setGlobal(const std::string& name, const std::string& value) const
 {
-    m_interpreter->setGlobal(name, value);
+    m_interpreter->setGlobal(mem_utils::PointerMappedString(name), mem_utils::PointerMappedString(value));
 }
 
 void FluaState::setGlobal(const std::string& name, flecs::entity value) const
 {
-    m_interpreter->setGlobal(name, value);
+    m_interpreter->setGlobal(mem_utils::PointerMappedString(name), value);
 }
 
 void FluaState::setGlobal(const std::string& name, const std::function<void(FluaState&)>& value) const
 {
-    m_interpreter->setGlobal(name, value);
+    m_interpreter->setGlobal(mem_utils::PointerMappedString(name), value);
 }
 
 std::mt19937& FluaState::getRandomEngine() const

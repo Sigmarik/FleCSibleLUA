@@ -10,33 +10,42 @@ flua::mem_utils::StringContainer& flua::mem_utils::StringContainer::GetInstance(
 flua::mem_utils::StringContainer::Pointer::Pointer(const Pointer& other)
 {
     m_cell = other.m_cell;
-    ++m_cell->useCount;
+    if (m_cell) ++m_cell->useCount;
 }
 
 flua::mem_utils::StringContainer::Pointer& flua::mem_utils::StringContainer::Pointer::operator=(const Pointer& other)
 {
     if (&other == this) return *this;
+    decreaseSelf();
     m_cell = other.m_cell;
-    ++m_cell->useCount;
+    if (m_cell) ++m_cell->useCount;
     return *this;
 }
 
 flua::mem_utils::StringContainer::Pointer::Pointer(Pointer&& other) noexcept
 {
     m_cell = other.m_cell;
-    ++m_cell->useCount;
+    if (m_cell) ++m_cell->useCount;
 }
 
 flua::mem_utils::StringContainer::Pointer& flua::mem_utils::StringContainer::Pointer::operator=(
     Pointer&& other) noexcept
 {
+    decreaseSelf();
     m_cell = other.m_cell;
-    ++m_cell->useCount;
+    if (m_cell) ++m_cell->useCount;
     return *this;
 }
 
 flua::mem_utils::StringContainer::Pointer::~Pointer()
 {
+    decreaseSelf();
+}
+
+void flua::mem_utils::StringContainer::Pointer::decreaseSelf()
+{
+    if (!m_cell) return;
+
     --m_cell->useCount;
     if (m_cell->useCount == 0)
     {
@@ -67,9 +76,9 @@ flua::mem_utils::StringContainer::Pointer::Pointer(std::string&& content)
     else
     {
         m_cell = new Cell();
-        m_cell->object = std::move(thisContent);
         m_cell->useCount = 1;
         instance.m_hashes[thisContent] = m_cell;
         instance.m_cells[m_cell] = m_cell;
+        m_cell->object = std::move(thisContent);
     }
 }

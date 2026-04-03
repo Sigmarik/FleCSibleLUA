@@ -34,33 +34,35 @@ DeployedScript& DeployedScript::operator=(DeployedScript&& other) noexcept
 void DeployedScript::overrideGlobal(const std::string& name, const std::function<void(FluaState&)>& function)
 {
     assert(m_interpreter);
-    m_interpreter->setGlobal(name, data::Function(function));
+    m_interpreter->setGlobal(mem_utils::PointerMappedString(name), data::Function(function));
 }
 
 void DeployedScript::overrideGlobal(const std::string& name, double value)
 {
     assert(m_interpreter);
-    m_interpreter->setGlobal(name, value);
+    m_interpreter->setGlobal(mem_utils::PointerMappedString(name), value);
 }
 
 void DeployedScript::overrideGlobal(const std::string& name, const std::string& value)
 {
     assert(m_interpreter);
-    m_interpreter->setGlobal(name, value);
+    m_interpreter->setGlobal(mem_utils::PointerMappedString(name), mem_utils::PointerMappedString(value));
 }
 
 std::optional<double> DeployedScript::getGlobalNumber(const std::string& name)
 {
     assert(m_interpreter);
-    if (!m_interpreter->isGlobalOfType<double>(name)) return std::nullopt;
-    return m_interpreter->getGlobal<double>(name);
+    mem_utils::PointerMappedString cachedName(name);
+    if (!m_interpreter->isGlobalOfType<double>(cachedName)) return std::nullopt;
+    return m_interpreter->getGlobal<double>(cachedName);
 }
 
 std::optional<std::string> DeployedScript::getGlobalString(const std::string& name)
 {
     assert(m_interpreter);
-    if (!m_interpreter->isGlobalOfType<std::string>(name)) return std::nullopt;
-    return m_interpreter->getGlobal<std::string>(name);
+    mem_utils::PointerMappedString cachedName(name);
+    if (!m_interpreter->isGlobalOfType<mem_utils::PointerMappedString>(cachedName)) return std::nullopt;
+    return *m_interpreter->getGlobal<mem_utils::PointerMappedString>(cachedName);
 }
 
 Script::Script(const Script& other)

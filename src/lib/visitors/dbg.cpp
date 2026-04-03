@@ -13,9 +13,9 @@ void AstDebugger::visit(ast::Program& node)
 void AstDebugger::visit(ast::Function& node)
 {
     m_stream << m_indent << "Function ( ";
-    for (ids::ResolvableName& param : node.parameters)
+    for (mem_utils::PointerMappedString& param : node.parameters)
     {
-        m_stream << param.string << " ";
+        m_stream << *param << " ";
     }
     m_stream << ") {\n";
     visitList(node.body);
@@ -27,10 +27,10 @@ void AstDebugger::visit(ast::System& node)
     m_stream << m_indent << "System ( ";
     for (const ast::EcsEntityFilter& entity : node.entities)
     {
-        m_stream << entity.entityName.string << " ( ";
-        for (const std::string& component : entity.components)
+        m_stream << *entity.entityName << " ( ";
+        for (const mem_utils::PointerMappedString& component : entity.components)
         {
-            m_stream << component << " ";
+            m_stream << *component << " ";
         }
         m_stream << ") ";
     }
@@ -52,7 +52,7 @@ void AstDebugger::visit(ast::WhileLoop& node)
 
 void AstDebugger::visit(ast::ForLoopNumeric& node)
 {
-    m_stream << m_indent << "For " << node.name.string << " from\n";
+    m_stream << m_indent << "For " << *node.name << " from\n";
     increaseIndent();
     Visitor::visit(node.base);
     decreaseIndent();
@@ -72,9 +72,9 @@ void AstDebugger::visit(ast::ForLoopNumeric& node)
 void AstDebugger::visit(ast::ForLoopGeneric& node)
 {
     m_stream << m_indent << "For ";
-    for (const ids::ResolvableName& name : node.names)
+    for (const mem_utils::PointerMappedString& name : node.names)
     {
-        m_stream << name.string << " ";
+        m_stream << *name << " ";
     }
     m_stream << "in\n";
     increaseIndent();
@@ -90,10 +90,10 @@ void AstDebugger::visit(ast::Query& node)
     m_stream << m_indent << "Query ";
     for (const ast::EcsEntityFilter& entity : node.filters)
     {
-        m_stream << entity.entityName.string << " ( ";
-        for (const std::string& component : entity.components)
+        m_stream << *entity.entityName << " ( ";
+        for (const mem_utils::PointerMappedString& component : entity.components)
         {
-            m_stream << component << " ";
+            m_stream << *component << " ";
         }
         m_stream << ") ";
     }
@@ -169,7 +169,7 @@ void AstDebugger::visit(ast::FieldRequest& node)
     increaseIndent();
     Visitor::visit(node.body);
     decreaseIndent();
-    m_stream << ")." << node.field << "\n";
+    m_stream << ")." << *node.field << "\n";
 }
 
 void AstDebugger::visit(ast::IndexRequest& node)
@@ -215,7 +215,7 @@ void AstDebugger::visit(ast::MakeTable& node)
 
 void AstDebugger::visit(ast::Variable& node)
 {
-    m_stream << m_indent << "Variable " << node.name.string << "\n";
+    m_stream << m_indent << "Variable " << *node.name << "\n";
 }
 
 void AstDebugger::visit(ast::Assignment& node)
@@ -231,9 +231,9 @@ void AstDebugger::visit(ast::LocalAssignment& node)
 {
     m_stream << m_indent << "LocalAssignment to\n";
     increaseIndent();
-    for (ids::ResolvableName& name : node.names)
+    for (mem_utils::PointerMappedString& name : node.names)
     {
-        m_stream << m_indent << name.string << "\n";
+        m_stream << m_indent << *name << "\n";
     }
     decreaseIndent();
     m_stream << m_indent << "of (\n";

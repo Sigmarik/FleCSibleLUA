@@ -3,7 +3,7 @@ add_library(FlecsibleLua
         flecsible_lua_api.cpp
         ast/ast_nodes.cpp
         ast/visitor.cpp
-        ast/identification.cpp
+		component_map/comp_map_remap.cpp
         types/data_types.cpp
         visitors/dbg.cpp
         grammar/lua_lexemes.cpp
@@ -15,7 +15,9 @@ add_library(FlecsibleLua
 		library/lua_math.cpp
 		library/lua_strings.cpp
 		library/lua_misc.cpp
-        visitors/interpreter/interpreter.cpp)
+		mem_utils/string_container.cpp
+        visitors/interpreter/interpreter.cpp
+)
 
 if (WINDOWS)
 	target_compile_options(FlecsibleLua PRIVATE "/bigobj")

@@ -2,7 +2,6 @@
 
 #include <memory>
 #include <string>
-#include <unordered_map>
 #include <variant>
 #include <vector>
 #include <functional>
@@ -13,6 +12,7 @@
 #include "mem_utils/copyable_ptr.h"
 #include "component_map/comp_map.h"
 #include "flecsible_lua_api.h"
+#include "mem_utils/string_container.h"
 
 namespace flua
 {
@@ -100,7 +100,7 @@ static const std::map<BinaryOpType, std::string> BINARY_OP_TYPE_NAMES {
 struct LuaFunction
 {
     ast::Function* body = nullptr;
-    std::shared_ptr<std::unordered_map<std::string, mem_utils::CopyMovePtr<GenericValue>>> frame{};
+    std::shared_ptr<std::map<mem_utils::PointerMappedString, mem_utils::CopyMovePtr<GenericValue>>> frame{};
 };
 
 using LibraryFunction = std::function<void(FluaState&)>;
@@ -110,9 +110,9 @@ struct Function : std::variant<LuaFunction, LibraryFunction>
     using std::variant<LuaFunction, LibraryFunction>::variant;
 };
 
-struct Table : std::shared_ptr<std::unordered_map<std::string, mem_utils::CopyMovePtr<GenericValue>>>
+struct Table : std::shared_ptr<std::map<mem_utils::PointerMappedString, mem_utils::CopyMovePtr<GenericValue>>>
 {
-    using MapType = std::unordered_map<std::string, mem_utils::CopyMovePtr<GenericValue>>;
+    using MapType = std::map<mem_utils::PointerMappedString, mem_utils::CopyMovePtr<GenericValue>>;
 
     using std::shared_ptr<MapType>::shared_ptr;
 
@@ -122,7 +122,7 @@ struct Table : std::shared_ptr<std::unordered_map<std::string, mem_utils::CopyMo
 struct EntityComponent
 {
     flecs::entity entity;
-    std::string name;
+    mem_utils::PointerMappedString name;
 };
 
 static bool operator==(const EntityComponent& alpha, const EntityComponent& beta)
@@ -131,9 +131,10 @@ static bool operator==(const EntityComponent& alpha, const EntityComponent& beta
 }
 
 class GenericValue : public
-    std::variant<Nil, bool, double, std::string, Table, Entity, EntityComponent, Function, Vec2, Vec3, Vec4>
+    std::variant<Nil, bool, double, mem_utils::PointerMappedString, Table,
+                Entity, EntityComponent, Function, Vec2, Vec3, Vec4>
 {
-    using std::variant<Nil, bool, double, std::string, Table,
+    using std::variant<Nil, bool, double, mem_utils::PointerMappedString, Table,
         Entity, EntityComponent, Function, Vec2, Vec3, Vec4>::variant;
 };
 
