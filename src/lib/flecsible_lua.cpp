@@ -176,7 +176,7 @@ void Script::overrideGlobal(const std::string& name, const std::string& value)
     m_globalOverrides[name] = value;
 }
 
-DeployedScript Script::deploy(flecs::world& world)
+DeployedScript Script::deploy(flecs::world& world, std::ostream& outStream, std::ostream& errStream)
 {
     if (m_ast == nullptr)
         return {};
@@ -185,7 +185,7 @@ DeployedScript Script::deploy(flecs::world& world)
     // dbg.process(*m_ast);
 
     DeployedScript script;
-    script.m_interpreter = new vst::Interpreter(std::cout, std::cerr, &world);
+    script.m_interpreter = new vst::Interpreter(outStream, errStream, &world);
     vst::Interpreter& interpreter = *script.m_interpreter;
 
     for (const auto& [name, element] : lib::STANDARD_LIBRARY)

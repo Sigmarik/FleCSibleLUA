@@ -4,6 +4,7 @@
 
 #include <flecs.h>
 #include <functional>
+#include <iostream>
 #include <optional>
 #include <variant>
 
@@ -63,7 +64,8 @@ public:
     void overrideGlobal(const std::string& name, double value);
     void overrideGlobal(const std::string& name, const std::string& value);
 
-    [[nodiscard]] DeployedScript deploy(flecs::world& world);
+    [[nodiscard]] DeployedScript deploy(flecs::world& world, std::ostream& outStream = std::cout,
+        std::ostream& errStream = std::cerr);
 
 private:
     Script() = default;
