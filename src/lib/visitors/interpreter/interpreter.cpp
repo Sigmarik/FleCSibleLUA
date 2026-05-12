@@ -804,7 +804,7 @@ void Interpreter::runLuaFunction(data::LuaFunction& luaFunction, std::vector<dat
         *luaFunction.capturedValues[id] = std::move(*m_stack[m_stackBasePtr + id]);
     }
 
-    m_stack.resize(m_stackBasePtr);
+    if (m_stack.size() > m_stackBasePtr * 2) m_stack.resize(m_stackBasePtr);
     m_stackBasePtr = prevStackBase;
 }
 
@@ -950,10 +950,9 @@ mem_utils::CopyMovePtr<data::GenericValue>& Interpreter::resolveAddress(const da
 {
     unsigned index = address.shift;
     if (address.relative) index += m_stackBasePtr;
-    if (index >= m_stack.size())
+    while (m_stack.size() <= index)
     {
-        m_stack.resize(index + 1);
-        m_stack[index] = mem_utils::CopyMovePtr<data::GenericValue>(data::Nil());
+        m_stack.emplace_back(data::Nil());
     }
     return m_stack[index];
 }

@@ -86,7 +86,7 @@ struct ProgramBody : parser::Grammar
 
 struct Function : parser::Grammar
 <
-    Function, ast::Assignment,
+    Function, ast::LocalAssignment,
 
     parser::Sequence<
         parser::Lex<lualex::Function>,
@@ -108,31 +108,29 @@ struct Function : parser::Grammar
     >
 >
 {
-    static ast::Assignment visit(lualex::Function fnc, const lualex::Name& name, lualex::BracketRoundOp,
+    static ast::LocalAssignment visit(lualex::Function fnc, const lualex::Name& name, lualex::BracketRoundOp,
         std::deque<lualex::Name>& params, lualex::BracketRoundCl, std::deque<ast::NodePtr>& body, lualex::End)
     {
         ast::Function function(fnc.startingPos);
         function.body = std::move(body);
-        ast::Variable assignee(name.startingPos, name.name);
         for (lualex::Name& paramName : params)
         {
             function.parameters.emplace_back(paramName.name);
         }
-        ast::Assignment assignment(fnc.startingPos);
-        assignment.subjects.emplace_back(std::move(assignee));
-        assignment.data.emplace_back(std::move(function));
+        ast::LocalAssignment assignment(fnc.startingPos);
+        assignment.names.emplace_back(name.name);
+        assignment.values.emplace_back(std::move(function));
         return assignment;
     }
 
-    static ast::Assignment visit(lualex::Function fnc, const lualex::Name& name, lualex::BracketRoundOp,
+    static ast::LocalAssignment visit(lualex::Function fnc, const lualex::Name& name, lualex::BracketRoundOp,
         lualex::BracketRoundCl, std::deque<ast::NodePtr>& body, lualex::End)
     {
         ast::Function function(fnc.startingPos);
         function.body = std::move(body);
-        ast::Variable assignee(name.startingPos, name.name);
-        ast::Assignment assignment(fnc.startingPos);
-        assignment.subjects.emplace_back(std::move(assignee));
-        assignment.data.emplace_back(std::move(function));
+        ast::LocalAssignment assignment(fnc.startingPos);
+        assignment.names.emplace_back(name.name);
+        assignment.values.emplace_back(std::move(function));
         return assignment;
     }
 };
@@ -755,19 +753,9 @@ struct LocalAssignment : parser::Grammar
         return assignment;
     }
 
-    static ast::LocalAssignment visit(lualex::Local lex, ast::Assignment& fncAssignment)
+    static ast::LocalAssignment visit(lualex::Local lex, ast::LocalAssignment& fncAssignment)
     {
-        ast::LocalAssignment assignment(lex.startingPos);
-        for (ast::NodePtr& var : fncAssignment.subjects)
-        {
-            assert(std::holds_alternative<ast::Variable>(*var));
-            assignment.names.emplace_back(std::get<ast::Variable>(*var).name);
-        }
-        for (ast::NodePtr& value : fncAssignment.data)
-        {
-            assignment.values.emplace_back(std::move(value));
-        }
-        return assignment;
+        return std::move(fncAssignment);
     }
 };
 

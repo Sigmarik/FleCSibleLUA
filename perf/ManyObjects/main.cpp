@@ -28,13 +28,14 @@ int main()
         world.progress();
         std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
         long long attemptTime = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
-        if (attemptTime == 0) continue;
-        executionTime = std::min(attemptTime, executionTime);
 
         if (attemptId > 0 && attemptId % 100 == 0)
         {
             std::cout << "Tick " << attemptId << " / " << UPDATE_COUNT << ", " << attemptTime << " ms" << std::endl;
         }
+
+        if (attemptTime == 0) continue;
+        executionTime = std::min(attemptTime, executionTime);
     }
 
     std::cout << "\nApproximate iteration time: " << executionTime << " ms" << std::endl;

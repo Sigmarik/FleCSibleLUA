@@ -76,6 +76,7 @@ void AddressResolver::visit(ast::ForLoopNumeric& node)
 void AddressResolver::visit(ast::ForLoopGeneric& node)
 {
     m_stack.emplace_back();
+    node.iteratorAddresses = {};
     for (const mem_utils::PointerMappedString& name : node.names)
     {
         node.iteratorAddresses.emplace_back(resolveLocal(name));
@@ -88,6 +89,7 @@ void AddressResolver::visit(ast::ForLoopGeneric& node)
 void AddressResolver::visit(ast::Query& node)
 {
     m_stack.emplace_back();
+    node.iteratorAddresses = {};
     for (const ast::EcsEntityFilter& entity : node.filters)
     {
         node.iteratorAddresses.emplace_back(resolveLocal(entity.entityName));
@@ -177,6 +179,7 @@ void AddressResolver::visit(ast::Assignment& node)
 
 void AddressResolver::visit(ast::LocalAssignment& node)
 {
+    node.addresses = {};
     for (mem_utils::PointerMappedString& name : node.names)
     {
         node.addresses.emplace_back(resolveLocal(name));
