@@ -934,6 +934,8 @@ void Interpreter::runBodyWithinQueries(std::vector<AddressQueryPair>& queries, s
 
 void Interpreter::prepareAndRunSystem(ast::System& node, ecs_iter_t* systemIt)
 {
+    auto oldStackBase = m_stackBasePtr;
+    m_stackBasePtr = m_stack.size();
     const data::Address addr = node.iteratorAddresses.front();
     for (long long iterEntityIdx = 0; iterEntityIdx < systemIt->count; ++iterEntityIdx)
     {
@@ -945,6 +947,7 @@ void Interpreter::prepareAndRunSystem(ast::System& node, ecs_iter_t* systemIt)
     m_returning = false;
     m_breaking = false;
     m_returnedValue.clear();
+    m_stackBasePtr = oldStackBase;
 }
 
 data::GenericValue& Interpreter::resolveAddress(const data::Address& address)

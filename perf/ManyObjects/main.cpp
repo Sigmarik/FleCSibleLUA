@@ -8,7 +8,7 @@
 #include "components.h"
 
 static constexpr unsigned UPDATE_COUNT = 1000;
-static constexpr unsigned ENTITY_COUNT = 1000;
+static constexpr unsigned ENTITY_COUNT = 10000;
 
 int main()
 {
