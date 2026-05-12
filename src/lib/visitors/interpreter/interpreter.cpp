@@ -58,7 +58,7 @@ void Interpreter::visit(ast::Program& node)
 
 void Interpreter::visit(ast::Function& node)
 {
-    std::vector<mem_utils::CopyMovePtr<data::GenericValue>> capturedValues;
+    std::vector<data::GenericValue> capturedValues;
     for (const data::Address& address : node.valuesToCapture)
     {
         capturedValues.push_back(resolveAddress(address));
@@ -131,7 +131,7 @@ void Interpreter::visit(ast::ForLoopNumeric& node)
 {
     Visitor::visit(node.base);
     data::GenericValue& counter =
-            *(resolveAddress(node.iteratorAddress) = mem_utils::CopyMovePtr<data::GenericValue>(m_returnedValue.spit()));
+            resolveAddress(node.iteratorAddress) = m_returnedValue.spit();
     Visitor::visit(node.limit);
     data::GenericValue limit = m_returnedValue.spit();
 
@@ -178,10 +178,9 @@ void Interpreter::visit(ast::ForLoopGeneric& node)
             const mem_utils::PointerMappedString& name = node.names[id];
             data::Address address = node.iteratorAddresses[id];
             if (id < m_returnedValue.sequence.size())
-                resolveAddress(address) = mem_utils::CopyMovePtr<data::GenericValue>(
-                    std::move(m_returnedValue.sequence[id].value));
+                resolveAddress(address) = std::move(m_returnedValue.sequence[id].value);
             else
-                resolveAddress(address) = mem_utils::CopyMovePtr<data::GenericValue>(data::Nil());
+                resolveAddress(address) = data::Nil();
         }
 
         visitTransparentBlock(node.body);
@@ -471,7 +470,7 @@ void Interpreter::visit(ast::Variable& node)
     if (node.resolvedAddress)
     {
         m_returnedValue.clear();
-        m_returnedValue.addReferenced(*resolveAddress(*node.resolvedAddress));
+        m_returnedValue.addAddressReferenced(resolveAddress(*node.resolvedAddress), *node.resolvedAddress);
         return;
     }
 
@@ -564,6 +563,10 @@ void Interpreter::visit(ast::Assignment& node)
                     throw LuaRuntimeError(node, "Not enough arguments to satisfy entity component field assignment");
                 performFixedTypeAssignment(node, *fixedSubject, value);
             }
+            else if (auto addressSubject = std::get_if<data::Address>(&subject))
+            {
+                resolveAddress(*addressSubject) = value;
+            }
         }
     }
 
@@ -588,7 +591,7 @@ void Interpreter::visit(ast::LocalAssignment& node)
     {
         auto& subjectAddr = node.addresses[idx];
         auto& subject = resolveAddress(subjectAddr);
-        *subject = idx < values.size() ? std::move(values[idx]) : data::Nil();
+        subject = idx < values.size() ? std::move(values[idx]) : data::Nil();
     }
 }
 
@@ -784,9 +787,9 @@ void Interpreter::runLuaFunction(data::LuaFunction& luaFunction, std::vector<dat
 {
     auto prevStackBase = m_stackBasePtr;
     m_stackBasePtr = m_stack.size();
-    for (const auto& value : luaFunction.capturedValues)
+    for (auto& value : luaFunction.capturedValues)
     {
-        m_stack.push_back(value);
+        m_stack.emplace_back(std::move(value));
     }
 
     for (size_t idx = 0; idx < luaFunction.body->parameters.size() && idx < args.size(); ++idx)
@@ -794,14 +797,14 @@ void Interpreter::runLuaFunction(data::LuaFunction& luaFunction, std::vector<dat
         data::Address addr;
         addr.relative = true;
         addr.shift = luaFunction.capturedValues.size() + idx;
-        resolveAddress(addr) = mem_utils::CopyMovePtr<data::GenericValue>(std::move(args[idx]));
+        resolveAddress(addr) = std::move(args[idx]);
     }
 
     executeFunction(*luaFunction.body);
 
     for (unsigned id = 0; id < luaFunction.capturedValues.size(); ++id)
     {
-        *luaFunction.capturedValues[id] = std::move(*m_stack[m_stackBasePtr + id]);
+        luaFunction.capturedValues[id] = std::move(m_stack[m_stackBasePtr + id]);
     }
 
     if (m_stack.size() > m_stackBasePtr * 2) m_stack.resize(m_stackBasePtr);
@@ -919,8 +922,7 @@ void Interpreter::runBodyWithinQueries(std::vector<AddressQueryPair>& queries, s
         for (long long iterEntityIdx = 0; iterEntityIdx < iter->count; ++iterEntityIdx)
         {
             ecs_entity_t ecsEntity = iter->entities[iterEntityIdx];
-            resolveAddress(addr) = mem_utils::CopyMovePtr<data::GenericValue>(
-                flecs::entity(iter->world, ecsEntity));
+            resolveAddress(addr) = flecs::entity(iter->world, ecsEntity);
             runBodyWithinQueries(queries, body, iterId + 1);
 
             m_continuing = false;
@@ -936,8 +938,7 @@ void Interpreter::prepareAndRunSystem(ast::System& node, ecs_iter_t* systemIt)
     for (long long iterEntityIdx = 0; iterEntityIdx < systemIt->count; ++iterEntityIdx)
     {
         ecs_entity_t ecsEntity = systemIt->entities[iterEntityIdx];
-        resolveAddress(addr) = mem_utils::CopyMovePtr<data::GenericValue>(
-            flecs::entity(systemIt->world, ecsEntity));
+        resolveAddress(addr) = flecs::entity(systemIt->world, ecsEntity);
         runBodyWithinQueries(m_nodeQueries[&node], node.body, 0);
         if (m_returning || m_breaking) break;
     }
@@ -946,9 +947,9 @@ void Interpreter::prepareAndRunSystem(ast::System& node, ecs_iter_t* systemIt)
     m_returnedValue.clear();
 }
 
-mem_utils::CopyMovePtr<data::GenericValue>& Interpreter::resolveAddress(const data::Address& address)
+data::GenericValue& Interpreter::resolveAddress(const data::Address& address)
 {
-    unsigned index = address.shift;
+    size_t index = address.shift;
     if (address.relative) index += m_stackBasePtr;
     while (m_stack.size() <= index)
     {

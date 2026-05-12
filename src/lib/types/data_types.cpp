@@ -583,6 +583,11 @@ void ValueSequence::addReferenced(GenericValue& value)
     sequence.emplace_back(ValueBackrefPair{.value = value, .reference = &value});
 }
 
+void ValueSequence::addAddressReferenced(const GenericValue& value, const Address& address)
+{
+    sequence.emplace_back(ValueBackrefPair{.value = value, .reference = address});
+}
+
 GenericValue ValueSequence::spit()
 {
     if (sequence.empty()) return Nil{};

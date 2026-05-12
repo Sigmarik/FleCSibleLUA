@@ -100,7 +100,9 @@ static const std::map<BinaryOpType, std::string> BINARY_OP_TYPE_NAMES {
 struct Address
 {
     bool relative = false;
-    unsigned shift = 0;
+    size_t shift = 0;
+
+    bool operator==(const Address& other) const { return shift == other.shift && relative == other.relative; }
 };
 
 std::string to_string(const Address& value);
@@ -108,7 +110,7 @@ std::string to_string(const Address& value);
 struct LuaFunction
 {
     ast::Function* body = nullptr;
-    std::vector<mem_utils::CopyMovePtr<GenericValue>> capturedValues{};
+    std::vector<GenericValue> capturedValues{};
 };
 
 using LibraryFunction = std::function<void(FluaState&)>;
@@ -154,7 +156,7 @@ std::optional<GenericValue> perform_unary_operation(UnaryOpType op, const Generi
 std::optional<GenericValue> perform_binary_operation(BinaryOpType op,
     const GenericValue& alpha, const GenericValue& beta);
 
-using MaybeFixedValuePtr = std::variant<GenericValue*, cmp_info::GenericComponentPtr>;
+using MaybeFixedValuePtr = std::variant<GenericValue*, Address, cmp_info::GenericComponentPtr>;
 
 std::optional<GenericValue> try_implicitly_convert_component(const EntityComponent& comp);
 bool try_implicitly_write_to_component(const EntityComponent& comp, const GenericValue& value);
@@ -186,6 +188,7 @@ struct ValueSequence
     void add(const GenericValue& value);
     void add(GenericValue&& value);
     void addReferenced(GenericValue& value);
+    void addAddressReferenced(const GenericValue& value, const Address& address);
 
     [[nodiscard]] GenericValue spit();
 };

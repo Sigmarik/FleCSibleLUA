@@ -144,7 +144,7 @@ private:
 
     void prepareAndRunSystem(ast::System& system, ecs_iter_t* systemIt);
 
-    mem_utils::CopyMovePtr<data::GenericValue>& resolveAddress(const data::Address& address);
+    data::GenericValue& resolveAddress(const data::Address& address);
 
     static void system_runner(ecs_iter_t *it);
 
@@ -157,8 +157,8 @@ private:
     static std::map<flecs::entity_t, RegisteredSystemInfo> s_interpreterSystems;
 
     std::map<mem_utils::PointerMappedString, mem_utils::CopyMovePtr<data::GenericValue>> m_globalVariables{};
-    std::vector<mem_utils::CopyMovePtr<data::GenericValue>> m_stack{};
-    unsigned m_stackBasePtr = 0;
+    std::vector<data::GenericValue> m_stack{};
+    size_t m_stackBasePtr = 0;
 
     data::ValueSequence m_returnedValue{};
 
