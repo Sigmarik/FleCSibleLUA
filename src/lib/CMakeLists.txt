@@ -6,6 +6,8 @@ add_library(FlecsibleLua
 		component_map/comp_map_remap.cpp
         types/data_types.cpp
         visitors/dbg.cpp
+		visitors/address_resolver.cpp
+		visitors/interpreter/interpreter.cpp
         grammar/lua_lexemes.cpp
         parser/char_pos.cpp
         library/library.cpp
@@ -16,7 +18,6 @@ add_library(FlecsibleLua
 		library/lua_strings.cpp
 		library/lua_misc.cpp
 		mem_utils/string_container.cpp
-        visitors/interpreter/interpreter.cpp
 )
 
 if (WINDOWS)

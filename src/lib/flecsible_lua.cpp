@@ -8,6 +8,7 @@
 #include "grammar/lua_parser.h"
 #include "visitors/dbg.h"
 #include "library/library.h"
+#include "visitors/address_resolver.h"
 #include "visitors/interpreter/interpreter.h"
 
 namespace flua
@@ -182,6 +183,9 @@ DeployedScript Script::deploy(flecs::world& world, std::ostream& outStream, std:
 {
     if (m_ast == nullptr)
         return {};
+
+    vst::AddressResolver resolver;
+    resolver.process(*m_ast);
 
     vst::AstDebugger dbg(std::cout);
     dbg.process(*m_ast);

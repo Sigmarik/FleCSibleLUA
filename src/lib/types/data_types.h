@@ -97,10 +97,19 @@ static const std::map<BinaryOpType, std::string> BINARY_OP_TYPE_NAMES {
     {BinaryOpType::CmpNeq, "~="},
 };
 
+struct Address
+{
+    bool relative = false;
+    unsigned shift = 0;
+    bool resetBeforeUse = false;
+};
+
+std::string to_string(const Address& value);
+
 struct LuaFunction
 {
     ast::Function* body = nullptr;
-    std::shared_ptr<std::map<mem_utils::PointerMappedString, mem_utils::CopyMovePtr<GenericValue>>> frame{};
+    std::vector<mem_utils::CopyMovePtr<GenericValue>> capturedValues{};
 };
 
 using LibraryFunction = std::function<void(FluaState&)>;

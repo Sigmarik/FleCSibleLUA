@@ -112,6 +112,13 @@ bool to_bool(const GenericValue& value)
     return true;
 }
 
+std::string to_string(const Address& addr)
+{
+    return (addr.relative ? "+" : "") +
+            std::to_string(addr.shift) +
+            (addr.resetBeforeUse ? " (reset before use)" : "");
+}
+
 std::string get_type_name(const GenericValue& value)
 {
     const char* result = nullptr;

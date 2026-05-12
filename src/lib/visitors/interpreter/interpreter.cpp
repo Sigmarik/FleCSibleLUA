@@ -73,10 +73,10 @@ void Interpreter::visit(ast::Function& node)
             if (!frame.transparent) break;
         }
     }
+    // TODO: Capture values used by the function
     m_returnedValue = data::Function{
         data::LuaFunction{
             .body = &node,
-            .frame = std::make_shared<VariableMap>(bakedFrame),
         }
     };
 }
@@ -804,22 +804,22 @@ void Interpreter::runAnyFunction(data::Function& func, std::vector<data::Generic
 
 void Interpreter::runLuaFunction(data::LuaFunction& luaFunction, std::vector<data::GenericValue>& args)
 {
-    NamespaceHolder functionEnvNamespace(m_stack, false);
-
-    m_stack.back().varNameMap = std::move(*luaFunction.frame);
-
-    {
-        NamespaceHolder functionNamespace(m_stack);
-
-        for (size_t idx = 0; idx < luaFunction.body->parameters.size() && idx < args.size(); ++idx)
-        {
-            mem_utils::PointerMappedString& name = luaFunction.body->parameters[idx];
-            m_stack.back().varNameMap[name] = mem_utils::CopyMovePtr<data::GenericValue>(std::move(args[idx]));
-        }
-
-        executeFunction(*luaFunction.body);
-    }
-    *luaFunction.frame = std::move(m_stack.back().varNameMap);
+    // NamespaceHolder functionEnvNamespace(m_stack, false);
+    //
+    // m_stack.back().varNameMap = std::move(*luaFunction.frame);
+    //
+    // {
+    //     NamespaceHolder functionNamespace(m_stack);
+    //
+    //     for (size_t idx = 0; idx < luaFunction.body->parameters.size() && idx < args.size(); ++idx)
+    //     {
+    //         mem_utils::PointerMappedString& name = luaFunction.body->parameters[idx];
+    //         m_stack.back().varNameMap[name] = mem_utils::CopyMovePtr<data::GenericValue>(std::move(args[idx]));
+    //     }
+    //
+    //     executeFunction(*luaFunction.body);
+    // }
+    // *luaFunction.frame = std::move(m_stack.back().varNameMap);
 }
 
 FluaState Interpreter::generatePublicState()

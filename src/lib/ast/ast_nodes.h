@@ -58,6 +58,7 @@ struct Function : INode
 
     std::deque<mem_utils::PointerMappedString> parameters{};
     std::deque<NodePtr> body{};
+    std::vector<data::Address> valuesToCapture{};
 };
 
 struct EcsEntityFilter
@@ -72,6 +73,8 @@ struct System : INode
 
     std::deque<EcsEntityFilter> entities{};
     std::deque<NodePtr> body{};
+
+    std::vector<data::Address> iteratorAddresses{};
 };
 
 struct WhileLoop : INode
@@ -95,6 +98,8 @@ struct ForLoopNumeric : INode
     NodePtr step;
 
     std::deque<NodePtr> body{};
+
+    data::Address iteratorAddress{};
 };
 
 struct ForLoopGeneric : INode
@@ -106,6 +111,8 @@ struct ForLoopGeneric : INode
     NodePtr iterator;
 
     std::deque<NodePtr> body{};
+
+    std::vector<data::Address> iteratorAddresses{};
 };
 
 struct Query : INode
@@ -114,6 +121,8 @@ struct Query : INode
 
     std::deque<EcsEntityFilter> filters{};
     std::deque<NodePtr> body{};
+
+    std::vector<data::Address> iteratorAddresses{};
 };
 
 struct RepeatUntil : INode
@@ -206,15 +215,8 @@ struct Variable : INode
 {
     explicit Variable(const parser::CharacterPos& pos, const std::string& name) : INode(pos), name(name) {}
 
-    struct Address
-    {
-        bool relative = false;
-        unsigned address = 0;
-        bool resetBeforeUse = false;
-    };
-
     mem_utils::PointerMappedString name;
-    std::optional<Address> resolvedAddress;
+    std::optional<data::Address> resolvedAddress;
 };
 
 struct FunctionCall : INode
@@ -240,6 +242,7 @@ struct LocalAssignment : INode
     using INode::INode;
 
     std::deque<mem_utils::PointerMappedString> names;
+    std::vector<data::Address> addresses{};
     std::deque<NodePtr> values{};
 };
 

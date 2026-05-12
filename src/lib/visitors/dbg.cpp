@@ -17,6 +17,11 @@ void AstDebugger::visit(ast::Function& node)
     {
         m_stream << *param << " ";
     }
+    m_stream << "), CAPTURE ( ";
+    for (data::Address& addr : node.valuesToCapture)
+    {
+        m_stream << data::to_string(addr) << " ";
+    }
     m_stream << ") {\n";
     visitList(node.body);
     m_stream << m_indent << "}\n";
@@ -218,10 +223,8 @@ void AstDebugger::visit(ast::Variable& node)
     std::string address = "unresolved";
     if (node.resolvedAddress)
     {
-        const ast::Variable::Address& addr = *node.resolvedAddress;
-        address = (addr.relative ? "+" : "") +
-            std::to_string(addr.address) +
-            (addr.resetBeforeUse ? " (reset before use)" : "");
+        const data::Address& addr = *node.resolvedAddress;
+        address = to_string(addr);
     }
     m_stream << m_indent << "Variable " << *node.name << " (" << address << ")\n";
 }
@@ -242,6 +245,13 @@ void AstDebugger::visit(ast::LocalAssignment& node)
     for (mem_utils::PointerMappedString& name : node.names)
     {
         m_stream << m_indent << *name << "\n";
+    }
+    decreaseIndent();
+    m_stream << m_indent << "with addresses\n";
+    increaseIndent();
+    for (data::Address& addr : node.addresses)
+    {
+        m_stream << m_indent << data::to_string(addr) << "\n";
     }
     decreaseIndent();
     m_stream << m_indent << "of (\n";
