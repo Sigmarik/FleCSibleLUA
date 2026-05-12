@@ -183,8 +183,8 @@ DeployedScript Script::deploy(flecs::world& world, std::ostream& outStream, std:
     if (m_ast == nullptr)
         return {};
 
-    // vst::AstDebugger dbg(std::cout);
-    // dbg.process(*m_ast);
+    vst::AstDebugger dbg(std::cout);
+    dbg.process(*m_ast);
 
     DeployedScript script;
     script.m_interpreter = new vst::Interpreter(outStream, errStream, &world);

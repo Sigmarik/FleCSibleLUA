@@ -206,7 +206,15 @@ struct Variable : INode
 {
     explicit Variable(const parser::CharacterPos& pos, const std::string& name) : INode(pos), name(name) {}
 
+    struct Address
+    {
+        bool relative = false;
+        unsigned address = 0;
+        bool resetBeforeUse = false;
+    };
+
     mem_utils::PointerMappedString name;
+    std::optional<Address> resolvedAddress;
 };
 
 struct FunctionCall : INode

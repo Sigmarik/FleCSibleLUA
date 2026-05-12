@@ -215,7 +215,15 @@ void AstDebugger::visit(ast::MakeTable& node)
 
 void AstDebugger::visit(ast::Variable& node)
 {
-    m_stream << m_indent << "Variable " << *node.name << "\n";
+    std::string address = "unresolved";
+    if (node.resolvedAddress)
+    {
+        const ast::Variable::Address& addr = *node.resolvedAddress;
+        address = (addr.relative ? "+" : "") +
+            std::to_string(addr.address) +
+            (addr.resetBeforeUse ? " (reset before use)" : "");
+    }
+    m_stream << m_indent << "Variable " << *node.name << " (" << address << ")\n";
 }
 
 void AstDebugger::visit(ast::Assignment& node)
