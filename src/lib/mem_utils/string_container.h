@@ -54,7 +54,8 @@ public:
     };
 
 private:
-    StringContainer() = default;
+    StringContainer();
+    ~StringContainer();
 
     struct Cell
     {

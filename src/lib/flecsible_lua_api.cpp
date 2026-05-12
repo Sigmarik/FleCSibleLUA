@@ -21,9 +21,9 @@ data::GenericValue* FluaState::getRaw(const ValueAccessor& accessor) const
         },
         [&](const std::string& name)
         {
-            auto& frame = m_interpreter->m_stack.front();
-            auto found = frame.varNameMap.find(mem_utils::PointerMappedString(name));
-            if (found != frame.varNameMap.end()) value = found->second.get();
+            auto& frame = m_interpreter->m_globalVariables;
+            auto found = frame.find(mem_utils::PointerMappedString(name));
+            if (found != frame.end()) value = found->second.get();
             else value = nullptr;
         }
     };

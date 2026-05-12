@@ -115,8 +115,7 @@ bool to_bool(const GenericValue& value)
 std::string to_string(const Address& addr)
 {
     return (addr.relative ? "+" : "") +
-            std::to_string(addr.shift) +
-            (addr.resetBeforeUse ? " (reset before use)" : "");
+            std::to_string(addr.shift);
 }
 
 std::string get_type_name(const GenericValue& value)

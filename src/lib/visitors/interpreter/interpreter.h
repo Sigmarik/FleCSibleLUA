@@ -133,45 +133,20 @@ private:
     data::GenericValue* getGlobalValueByName(const mem_utils::PointerMappedString& name);
     const data::GenericValue* getGlobalValueByName(const mem_utils::PointerMappedString& name) const;
 
-    struct NameQueryPair
+    struct AddressQueryPair
     {
-        mem_utils::PointerMappedString entityName{};
+        data::Address address{};
         ecs_query_t* query = nullptr;
     };
 
-    void runBodyWithinQueries(std::vector<NameQueryPair>& queries, std::deque<ast::NodePtr>& body,
+    void runBodyWithinQueries(std::vector<AddressQueryPair>& queries, std::deque<ast::NodePtr>& body,
         unsigned iterId);
 
     void prepareAndRunSystem(ast::System& system, ecs_iter_t* systemIt);
 
+    mem_utils::CopyMovePtr<data::GenericValue>& resolveAddress(const data::Address& address);
+
     static void system_runner(ecs_iter_t *it);
-
-    struct Frame
-    {
-        Frame() = default;
-
-        Frame(const Frame&) = delete;
-
-        Frame(Frame&&) = default;
-
-        std::map<mem_utils::PointerMappedString, mem_utils::CopyMovePtr<data::GenericValue> > varNameMap{};
-        bool transparent = false;
-    };
-
-    struct NamespaceHolder
-    {
-        explicit NamespaceHolder(std::vector<Frame>& stack, bool transparent = true)
-            : m_stack(&stack)
-        {
-            m_stack->emplace_back();
-            m_stack->back().transparent = transparent;
-        }
-
-        ~NamespaceHolder() { m_stack->pop_back(); }
-
-    private:
-        std::vector<Frame>* m_stack;
-    };
 
     struct RegisteredSystemInfo
     {
@@ -181,7 +156,9 @@ private:
 
     static std::map<flecs::entity_t, RegisteredSystemInfo> s_interpreterSystems;
 
-    std::vector<Frame> m_stack{};
+    std::map<mem_utils::PointerMappedString, mem_utils::CopyMovePtr<data::GenericValue>> m_globalVariables{};
+    std::vector<mem_utils::CopyMovePtr<data::GenericValue>> m_stack{};
+    unsigned m_stackBasePtr = 0;
 
     data::ValueSequence m_returnedValue{};
 
@@ -202,7 +179,7 @@ private:
 
     std::map<mem_utils::PointerMappedString, ecs_id_t> m_componentIds{};
 
-    using QueryArray = std::vector<NameQueryPair>;
+    using QueryArray = std::vector<AddressQueryPair>;
     std::map<ast::INode*, QueryArray> m_nodeQueries{};
 
     std::set<ecs_entity_t> m_ownedSystems{};

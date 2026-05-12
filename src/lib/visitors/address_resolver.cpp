@@ -25,12 +25,14 @@ void AddressResolver::visit(ast::Function& node)
 
     for (const auto& [key, value] : capturableValues)
     {
-        data::Address localAddr;
-        localAddr.shift = m_currentAddress++;
-        localAddr.relative = true;
-        localAddr.resetBeforeUse = false;
+        data::Address localAddr = resolveLocal(key);
         node.valuesToCapture.emplace_back(value);
         m_stack.back().emplace(key, localAddr);
+    }
+
+    for (const auto& param : node.parameters)
+    {
+        resolveLocal(param);
     }
 
     visitList(node.body);
@@ -177,7 +179,7 @@ void AddressResolver::visit(ast::LocalAssignment& node)
 {
     for (mem_utils::PointerMappedString& name : node.names)
     {
-        resolveLocal(name);
+        node.addresses.emplace_back(resolveLocal(name));
     }
     visitList(node.values);
 }
@@ -207,7 +209,6 @@ void AddressResolver::visitList(std::deque<ast::NodePtr>& nodes)
 data::Address AddressResolver::resolveLocal(const mem_utils::PointerMappedString& name)
 {
     data::Address addr;
-    addr.resetBeforeUse = false;
     addr.shift = m_currentAddress++;
     addr.relative = m_stack.size() > 1;
     auto emplaced = m_stack.back().emplace(name, addr);

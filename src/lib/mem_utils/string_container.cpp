@@ -1,5 +1,8 @@
 #include "string_container.h"
 
+namespace {
+thread_local bool g_containerAlive = false;
+}
 
 flua::mem_utils::StringContainer& flua::mem_utils::StringContainer::GetInstance()
 {
@@ -50,10 +53,13 @@ void flua::mem_utils::StringContainer::Pointer::decreaseSelf()
     if (m_cell->useCount == 0)
     {
         StringContainer& instance = StringContainer::GetInstance();
-        auto found = instance.m_hashes.find(m_cell->object);
+        if (g_containerAlive)
+        {
+            auto found = instance.m_hashes.find(m_cell->object);
+            instance.m_hashes.erase(found);
+            instance.m_cells.erase(m_cell);
+        }
         delete m_cell;
-        instance.m_hashes.erase(found);
-        instance.m_cells.erase(m_cell);
     }
 }
 
@@ -81,4 +87,14 @@ flua::mem_utils::StringContainer::Pointer::Pointer(std::string&& content)
         instance.m_cells[m_cell] = m_cell;
         m_cell->object = std::move(thisContent);
     }
+}
+
+flua::mem_utils::StringContainer::StringContainer()
+{
+    g_containerAlive = true;
+}
+
+flua::mem_utils::StringContainer::~StringContainer()
+{
+    g_containerAlive = false;
 }

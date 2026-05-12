@@ -58,25 +58,15 @@ void Interpreter::visit(ast::Program& node)
 
 void Interpreter::visit(ast::Function& node)
 {
-    using VariableMap = std::map<mem_utils::PointerMappedString, mem_utils::CopyMovePtr<data::GenericValue> >;
-    VariableMap bakedFrame;
-    if (m_stack.size() > 1)
+    std::vector<mem_utils::CopyMovePtr<data::GenericValue>> capturedValues;
+    for (const data::Address& address : node.valuesToCapture)
     {
-        for (auto frameIt = m_stack.rbegin(); frameIt != m_stack.rend(); ++frameIt)
-        {
-            auto& frame = *frameIt;
-            for (auto& [name, value] : frame.varNameMap)
-            {
-                if (bakedFrame.contains(name)) continue;
-                bakedFrame[name] = value;
-            }
-            if (!frame.transparent) break;
-        }
+        capturedValues.push_back(resolveAddress(address));
     }
-    // TODO: Capture values used by the function
     m_returnedValue = data::Function{
         data::LuaFunction{
             .body = &node,
+            .capturedValues = capturedValues,
         }
     };
 }
@@ -89,11 +79,11 @@ void Interpreter::visit(ast::System& node)
     const ast::EcsEntityFilter& entity = node.entities.front();
     ecs_query_desc_t query = makeEcsQueryDesc(entity, node);
 
-    std::vector<NameQueryPair>& queries = m_nodeQueries[&node] =
-                                          std::vector<NameQueryPair>(node.entities.size() - 1, {});
+    std::vector<AddressQueryPair>& queries = m_nodeQueries[&node] =
+                                          std::vector<AddressQueryPair>(node.entities.size() - 1, {});
     for (unsigned entityId = 1; entityId < node.entities.size(); ++entityId)
     {
-        queries[entityId - 1].entityName = node.entities[entityId].entityName;
+        queries[entityId - 1].address = node.iteratorAddresses[entityId];
         queries[entityId - 1].query = makeEcsQuery(node.entities[entityId], node);
     }
 
@@ -139,13 +129,9 @@ void Interpreter::visit(ast::WhileLoop& node)
 
 void Interpreter::visit(ast::ForLoopNumeric& node)
 {
-    NamespaceHolder forNamespace(m_stack);
-
-    Frame& frame = m_stack.back();
-    frame.transparent = true;
     Visitor::visit(node.base);
     data::GenericValue& counter =
-            *(frame.varNameMap[node.name] = mem_utils::CopyMovePtr<data::GenericValue>(m_returnedValue.spit()));
+            *(resolveAddress(node.iteratorAddress) = mem_utils::CopyMovePtr<data::GenericValue>(m_returnedValue.spit()));
     Visitor::visit(node.limit);
     data::GenericValue limit = m_returnedValue.spit();
 
@@ -182,7 +168,6 @@ void Interpreter::visit(ast::ForLoopGeneric& node)
 
     while (true)
     {
-        NamespaceHolder forNamespace(m_stack);
         std::deque<ast::NodePtr> args;
         executeFunction(node, std::get<data::Function>(functor), args);
         if (m_returnedValue.sequence.empty() || std::holds_alternative<data::Nil>(
@@ -191,11 +176,12 @@ void Interpreter::visit(ast::ForLoopGeneric& node)
         for (unsigned id = 0; id < node.names.size(); ++id)
         {
             const mem_utils::PointerMappedString& name = node.names[id];
+            data::Address address = node.iteratorAddresses[id];
             if (id < m_returnedValue.sequence.size())
-                m_stack.back().varNameMap[name] = mem_utils::CopyMovePtr<data::GenericValue>(
+                resolveAddress(address) = mem_utils::CopyMovePtr<data::GenericValue>(
                     std::move(m_returnedValue.sequence[id].value));
             else
-                m_stack.back().varNameMap[name] = mem_utils::CopyMovePtr<data::GenericValue>(data::Nil());
+                resolveAddress(address) = mem_utils::CopyMovePtr<data::GenericValue>(data::Nil());
         }
 
         visitTransparentBlock(node.body);
@@ -210,8 +196,6 @@ void Interpreter::visit(ast::ForLoopGeneric& node)
 
 void Interpreter::visit(ast::Query& node)
 {
-    NamespaceHolder queryNamespace(m_stack);
-
     if (m_nodeQueries.contains(&node))
     {
         runBodyWithinQueries(m_nodeQueries.at(&node), node.body, 0);
@@ -220,11 +204,11 @@ void Interpreter::visit(ast::Query& node)
     if (node.filters.empty())
         throw LuaRuntimeError(node, "Attempt to create a query with no entities");
 
-    std::vector<NameQueryPair>& queries = m_nodeQueries[&node] =
-                                          std::vector<NameQueryPair>(node.filters.size(), {});
+    std::vector<AddressQueryPair>& queries = m_nodeQueries[&node] =
+                                          std::vector<AddressQueryPair>(node.filters.size(), {});
     for (unsigned entityId = 0; entityId < node.filters.size(); ++entityId)
     {
-        queries[entityId].entityName = node.filters[entityId].entityName;
+        queries[entityId].address = node.iteratorAddresses[entityId];
         queries[entityId].query = makeEcsQuery(node.filters[entityId], node);
     }
 
@@ -281,13 +265,29 @@ void Interpreter::visit(ast::FunctionCall& node)
 {
     Visitor::visit(node.function);
 
-    data::GenericValue maybeFunction = m_returnedValue.spit();
-
-    if (!std::holds_alternative<data::Function>(maybeFunction))
+    if (m_returnedValue.sequence.empty())
+    {
         throw LuaRuntimeError(
-            node, "Cannot execute a non-functional object of type " + data::get_type_name(maybeFunction));
+            node, "Cannot execute a non-functional object of type " + data::get_type_name(data::Nil()));
+    }
 
-    data::Function func = std::get<data::Function>(maybeFunction);
+    data::GenericValue maybeFunctionCopy;
+    data::GenericValue* maybeFunction = &maybeFunctionCopy;
+    if (std::holds_alternative<data::GenericValue*>(m_returnedValue.sequence.front().reference))
+    {
+        maybeFunction = std::get<data::GenericValue*>(m_returnedValue.sequence.front().reference);
+    }
+    else
+    {
+        maybeFunctionCopy = m_returnedValue.spit();
+    }
+    m_returnedValue.clear();
+
+    if (!std::holds_alternative<data::Function>(*maybeFunction))
+        throw LuaRuntimeError(
+            node, "Cannot execute a non-functional object of type " + data::get_type_name(*maybeFunction));
+
+    auto& func = std::get<data::Function>(*maybeFunction);
 
     executeFunction(node, func, node.args);
 }
@@ -468,35 +468,27 @@ void Interpreter::visit(ast::MakeTable& node)
 
 void Interpreter::visit(ast::Variable& node)
 {
+    if (node.resolvedAddress)
+    {
+        m_returnedValue.clear();
+        m_returnedValue.addReferenced(*resolveAddress(*node.resolvedAddress));
+        return;
+    }
+
     bool localAssignment = m_inLocalAssignment;
     m_inLocalAssignment = false;
 
     data::GenericValue* foundValue = nullptr;
-    for (auto& frameIt : std::ranges::reverse_view(m_stack))
-    {
-        auto found = frameIt.varNameMap.find(node.name);
-        if (found != frameIt.varNameMap.end())
-        {
-            foundValue = found->second.get();
-            break;
-        }
-        if (!frameIt.transparent)
-        {
-            break;
-        }
-    }
 
-    if (foundValue == nullptr && !localAssignment)
+    if (!localAssignment)
     {
-        auto foundGlobal = m_stack.front().varNameMap.find(node.name);
-        if (foundGlobal != m_stack.front().varNameMap.end()) foundValue = foundGlobal->second.get();
+        auto foundGlobal = m_globalVariables.find(node.name);
+        if (foundGlobal != m_globalVariables.end()) foundValue = foundGlobal->second.get();
     }
 
     if (foundValue == nullptr)
     {
-        std::map<mem_utils::PointerMappedString, mem_utils::CopyMovePtr<data::GenericValue> >& frameToAddTo =
-                localAssignment ? m_stack.back().varNameMap : m_stack.front().varNameMap;
-        foundValue = (frameToAddTo[node.name] =
+        foundValue = (m_globalVariables[node.name] =
                       mem_utils::CopyMovePtr<data::GenericValue>(data::Nil())).get();
     }
 
@@ -580,20 +572,7 @@ void Interpreter::visit(ast::Assignment& node)
 
 void Interpreter::visit(ast::LocalAssignment& node)
 {
-    std::vector<data::GenericValue*> subjects;
     std::vector<data::GenericValue> values;
-    subjects.reserve(node.names.size());
-    for (const mem_utils::PointerMappedString& subject : node.names)
-    {
-        Frame& localFrame = m_stack.back();
-        auto emplacementResult = localFrame.varNameMap.try_emplace(subject);
-        if (!emplacementResult.second)
-        {
-            throw LuaRuntimeError(
-                node, "Attempt to create a local variable \"" + *subject + "\" that already exists");
-        }
-        subjects.emplace_back(emplacementResult.first->second.get());
-    }
 
     for (ast::NodePtr& value : node.values)
     {
@@ -605,9 +584,10 @@ void Interpreter::visit(ast::LocalAssignment& node)
         }
     }
 
-    for (size_t idx = 0; idx < subjects.size(); ++idx)
+    for (size_t idx = 0; idx < node.addresses.size(); ++idx)
     {
-        auto& subject = subjects[idx];
+        auto& subjectAddr = node.addresses[idx];
+        auto& subject = resolveAddress(subjectAddr);
         *subject = idx < values.size() ? std::move(values[idx]) : data::Nil();
     }
 }
@@ -730,8 +710,6 @@ void Interpreter::indexEntityComponent(ast::IndexRequest& node, data::EntityComp
 
 void Interpreter::visitTransparentBlock(std::deque<ast::NodePtr>& nodes)
 {
-    NamespaceHolder blockNamespace(m_stack, true);
-
     for (ast::NodePtr& node : nodes)
     {
         Visitor::visit(node);
@@ -804,22 +782,30 @@ void Interpreter::runAnyFunction(data::Function& func, std::vector<data::Generic
 
 void Interpreter::runLuaFunction(data::LuaFunction& luaFunction, std::vector<data::GenericValue>& args)
 {
-    // NamespaceHolder functionEnvNamespace(m_stack, false);
-    //
-    // m_stack.back().varNameMap = std::move(*luaFunction.frame);
-    //
-    // {
-    //     NamespaceHolder functionNamespace(m_stack);
-    //
-    //     for (size_t idx = 0; idx < luaFunction.body->parameters.size() && idx < args.size(); ++idx)
-    //     {
-    //         mem_utils::PointerMappedString& name = luaFunction.body->parameters[idx];
-    //         m_stack.back().varNameMap[name] = mem_utils::CopyMovePtr<data::GenericValue>(std::move(args[idx]));
-    //     }
-    //
-    //     executeFunction(*luaFunction.body);
-    // }
-    // *luaFunction.frame = std::move(m_stack.back().varNameMap);
+    auto prevStackBase = m_stackBasePtr;
+    m_stackBasePtr = m_stack.size();
+    for (const auto& value : luaFunction.capturedValues)
+    {
+        m_stack.push_back(value);
+    }
+
+    for (size_t idx = 0; idx < luaFunction.body->parameters.size() && idx < args.size(); ++idx)
+    {
+        data::Address addr;
+        addr.relative = true;
+        addr.shift = luaFunction.capturedValues.size() + idx;
+        resolveAddress(addr) = mem_utils::CopyMovePtr<data::GenericValue>(std::move(args[idx]));
+    }
+
+    executeFunction(*luaFunction.body);
+
+    for (unsigned id = 0; id < luaFunction.capturedValues.size(); ++id)
+    {
+        *luaFunction.capturedValues[id] = std::move(*m_stack[m_stackBasePtr + id]);
+    }
+
+    m_stack.resize(m_stackBasePtr);
+    m_stackBasePtr = prevStackBase;
 }
 
 FluaState Interpreter::generatePublicState()
@@ -883,7 +869,7 @@ std::vector<std::string> split_by_dot(const std::string& s)
 data::GenericValue* Interpreter::getGlobalValueByName(const mem_utils::PointerMappedString& name)
 {
     std::vector<std::string> parts = split_by_dot(*name);
-    std::map<mem_utils::PointerMappedString, mem_utils::CopyMovePtr<data::GenericValue> >* mapPtr = &m_stack.front().varNameMap;
+    std::map<mem_utils::PointerMappedString, mem_utils::CopyMovePtr<data::GenericValue> >* mapPtr = &m_globalVariables;
 
     for (unsigned partIdx = 0; partIdx + 1 < parts.size(); ++partIdx)
     {
@@ -899,7 +885,7 @@ data::GenericValue* Interpreter::getGlobalValueByName(const mem_utils::PointerMa
 const data::GenericValue* Interpreter::getGlobalValueByName(const mem_utils::PointerMappedString& name) const
 {
     std::vector<std::string> parts = split_by_dot(*name);
-    const std::map<mem_utils::PointerMappedString, mem_utils::CopyMovePtr<data::GenericValue> >* mapPtr = &m_stack.front().varNameMap;
+    const std::map<mem_utils::PointerMappedString, mem_utils::CopyMovePtr<data::GenericValue> >* mapPtr = &m_globalVariables;
 
     for (unsigned partIdx = 0; partIdx + 1 < parts.size(); ++partIdx)
     {
@@ -915,7 +901,7 @@ const data::GenericValue* Interpreter::getGlobalValueByName(const mem_utils::Poi
     return found->second.get();
 }
 
-void Interpreter::runBodyWithinQueries(std::vector<NameQueryPair>& queries, std::deque<ast::NodePtr>& body,
+void Interpreter::runBodyWithinQueries(std::vector<AddressQueryPair>& queries, std::deque<ast::NodePtr>& body,
                                        unsigned iterId)
 {
     if (iterId >= queries.size())
@@ -929,11 +915,11 @@ void Interpreter::runBodyWithinQueries(std::vector<NameQueryPair>& queries, std:
     ecs::GuardedEcsIterator iter(ecs_query_iter(m_world->c_ptr(), query));
     while (ecs_query_next(&*iter))
     {
-        const mem_utils::PointerMappedString& entityName = queryPair.entityName;
+        const data::Address addr = queryPair.address;
         for (long long iterEntityIdx = 0; iterEntityIdx < iter->count; ++iterEntityIdx)
         {
             ecs_entity_t ecsEntity = iter->entities[iterEntityIdx];
-            m_stack.back().varNameMap[entityName] = mem_utils::CopyMovePtr<data::GenericValue>(
+            resolveAddress(addr) = mem_utils::CopyMovePtr<data::GenericValue>(
                 flecs::entity(iter->world, ecsEntity));
             runBodyWithinQueries(queries, body, iterId + 1);
 
@@ -946,13 +932,11 @@ void Interpreter::runBodyWithinQueries(std::vector<NameQueryPair>& queries, std:
 
 void Interpreter::prepareAndRunSystem(ast::System& node, ecs_iter_t* systemIt)
 {
-    NamespaceHolder systemNamespace(m_stack, false);
-
-    const mem_utils::PointerMappedString& entityName = node.entities.front().entityName;
+    const data::Address addr = node.iteratorAddresses.front();
     for (long long iterEntityIdx = 0; iterEntityIdx < systemIt->count; ++iterEntityIdx)
     {
         ecs_entity_t ecsEntity = systemIt->entities[iterEntityIdx];
-        m_stack.back().varNameMap[entityName] = mem_utils::CopyMovePtr<data::GenericValue>(
+        resolveAddress(addr) = mem_utils::CopyMovePtr<data::GenericValue>(
             flecs::entity(systemIt->world, ecsEntity));
         runBodyWithinQueries(m_nodeQueries[&node], node.body, 0);
         if (m_returning || m_breaking) break;
@@ -960,6 +944,18 @@ void Interpreter::prepareAndRunSystem(ast::System& node, ecs_iter_t* systemIt)
     m_returning = false;
     m_breaking = false;
     m_returnedValue.clear();
+}
+
+mem_utils::CopyMovePtr<data::GenericValue>& Interpreter::resolveAddress(const data::Address& address)
+{
+    unsigned index = address.shift;
+    if (address.relative) index += m_stackBasePtr;
+    if (index >= m_stack.size())
+    {
+        m_stack.resize(index + 1);
+        m_stack[index] = mem_utils::CopyMovePtr<data::GenericValue>(data::Nil());
+    }
+    return m_stack[index];
 }
 
 void Interpreter::system_runner(ecs_iter_t* it)

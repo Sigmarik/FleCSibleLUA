@@ -101,7 +101,6 @@ struct Address
 {
     bool relative = false;
     unsigned shift = 0;
-    bool resetBeforeUse = false;
 };
 
 std::string to_string(const Address& value);
