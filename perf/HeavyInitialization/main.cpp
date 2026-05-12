@@ -20,7 +20,7 @@ int main()
         std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
         long long attemptTime = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
         executionTime = std::min(attemptTime, executionTime);
-        if (attemptId > 0 && attemptId % 100 == 0)
+        if (attemptId > 0 && attemptId % 10 == 0)
         {
             std::cout << "Attempt " << attemptId << "/" << UPDATE_COUNT << ", " << executionTime << " ms" << std::endl;
         }
