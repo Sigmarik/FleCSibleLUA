@@ -236,7 +236,7 @@ void Interpreter::visit(ast::RepeatUntil& node)
         if (m_returning || m_breaking) break;
 
         Visitor::visit(node.condition);
-        if (!data::to_bool(m_returnedValue.spit())) break;
+        if (data::to_bool(m_returnedValue.spit())) break;
     }
 
     m_breaking = false;
