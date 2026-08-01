@@ -321,7 +321,7 @@ void Interpreter::visit(ast::BinaryOperator& node)
     }
     if (node.type == data::BinaryOpType::Or && data::to_bool(leftOperand))
     {
-        m_returnedValue = true;
+        m_returnedValue = leftOperand;
         return;
     }
 

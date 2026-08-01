@@ -427,12 +427,17 @@ std::optional<GenericValue> perform_binary<BinaryOpType::Pow>(const GenericValue
 template <>
 std::optional<GenericValue> perform_binary<BinaryOpType::And>(const GenericValue& alpha, const GenericValue& beta)
 {
-    return to_bool(alpha) && to_bool(beta);
+    if (!to_bool(alpha)) return alpha;
+    if (!to_bool(beta)) return beta;
+    return true;
 }
 template <>
 std::optional<GenericValue> perform_binary<BinaryOpType::Or>(const GenericValue& alpha, const GenericValue& beta)
 {
-    return to_bool(alpha) || to_bool(beta);
+    if (to_bool(alpha)) return alpha;
+    if (to_bool(beta)) return beta;
+
+    return false;
 }
 template <>
 std::optional<GenericValue> perform_binary<BinaryOpType::Xor>(const GenericValue& alpha, const GenericValue& beta)
