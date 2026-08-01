@@ -59,6 +59,7 @@ enum class BinaryOpType
     Add,
     Subtract,
     Multiply,
+    FloorDivide,
     Divide,
 
     Mod,
@@ -82,6 +83,7 @@ static const std::map<BinaryOpType, std::string> BINARY_OP_TYPE_NAMES {
     {BinaryOpType::Add, "+"},
     {BinaryOpType::Subtract, "-"},
     {BinaryOpType::Multiply, "*"},
+    {BinaryOpType::FloorDivide, "//"},
     {BinaryOpType::Divide, "/"},
     {BinaryOpType::Mod, "%"},
     {BinaryOpType::Pow, "^"},

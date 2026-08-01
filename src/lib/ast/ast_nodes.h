@@ -86,6 +86,14 @@ struct WhileLoop : INode
     std::deque<NodePtr> body{};
 };
 
+struct DoBlock : INode
+{
+    explicit DoBlock(const parser::CharacterPos& pos)
+        : INode(pos) {}
+
+    std::deque<NodePtr> body{};
+};
+
 struct ForLoopNumeric : INode
 {
     explicit ForLoopNumeric(const parser::CharacterPos& pos, const std::string& name, NodePtr&& base, NodePtr&& limit,
@@ -269,6 +277,7 @@ namespace
         Function,
         System,
         WhileLoop,
+        DoBlock,
         ForLoopNumeric,
         ForLoopGeneric,
         Query,

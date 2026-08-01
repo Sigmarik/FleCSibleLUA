@@ -62,6 +62,13 @@ void AddressResolver::visit(ast::WhileLoop& node)
     m_stack.pop_back();
 }
 
+void AddressResolver::visit(ast::DoBlock& node)
+{
+    m_stack.emplace_back();
+    visitList(node.body);
+    m_stack.pop_back();
+}
+
 void AddressResolver::visit(ast::ForLoopNumeric& node)
 {
     m_stack.emplace_back();

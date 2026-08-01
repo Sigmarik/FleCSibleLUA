@@ -389,6 +389,15 @@ std::optional<GenericValue> perform_binary<BinaryOpType::Multiply>(const Generic
 }
 
 template <>
+std::optional<GenericValue> perform_binary<BinaryOpType::FloorDivide>(const GenericValue& alpha, const GenericValue& beta)
+{
+    return perform_floaty(alpha, beta, [](double alp, double bet)
+    {
+        return std::floor(alp / bet);
+    });
+}
+
+template <>
 std::optional<GenericValue> perform_binary<BinaryOpType::Divide>(const GenericValue& alpha, const GenericValue& beta)
 {
     return perform_floaty(alpha, beta, [](double alp, double bet)
@@ -516,6 +525,7 @@ std::optional<GenericValue> perform_binary_operation(BinaryOpType op, const Gene
         case BinaryOpType::Add:         return perform_binary<BinaryOpType::Add>(alpha, beta);
         case BinaryOpType::Subtract:    return perform_binary<BinaryOpType::Subtract>(alpha, beta);
         case BinaryOpType::Multiply:    return perform_binary<BinaryOpType::Multiply>(alpha, beta);
+        case BinaryOpType::FloorDivide: return perform_binary<BinaryOpType::FloorDivide>(alpha, beta);
         case BinaryOpType::Divide:      return perform_binary<BinaryOpType::Divide>(alpha, beta);
         case BinaryOpType::Mod:         return perform_binary<BinaryOpType::Mod>(alpha, beta);
         case BinaryOpType::Pow:         return perform_binary<BinaryOpType::Pow>(alpha, beta);

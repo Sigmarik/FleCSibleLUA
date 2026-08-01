@@ -315,6 +315,21 @@ struct BlockBody : parser::Grammar
     }
 };
 
+struct DoBlock : parser::Grammar
+<
+    DoBlock, ast::DoBlock,
+
+    parser::Sequence<parser::Lex<lualex::Do>, Block, parser::Lex<lualex::End>>
+>
+{
+    static ast::DoBlock visit(lualex::Do lex, std::deque<ast::NodePtr>& body, lualex::End)
+    {
+        ast::DoBlock loop(lex.startingPos);
+        loop.body = std::move(body);
+        return loop;
+    }
+};
+
 struct Action : parser::Grammar
 <
     Action, ast::NodePtr,
@@ -330,7 +345,8 @@ struct Action : parser::Grammar
     parser::Sequence<Function>,
     parser::Sequence<LocalAssignment>,
     parser::Sequence<Break>,
-    parser::Sequence<Continue>
+    parser::Sequence<Continue>,
+    parser::Sequence<DoBlock>
 >
 {
     template <class T>
@@ -375,6 +391,7 @@ template <> constexpr data::BinaryOpType lex2bin_v<lualex::CmpLt> = data::Binary
 template <> constexpr data::BinaryOpType lex2bin_v<lualex::Plus> = data::BinaryOpType::Add;
 template <> constexpr data::BinaryOpType lex2bin_v<lualex::Minus> = data::BinaryOpType::Subtract;
 template <> constexpr data::BinaryOpType lex2bin_v<lualex::Multiply> = data::BinaryOpType::Multiply;
+template <> constexpr data::BinaryOpType lex2bin_v<lualex::FloorDivide> = data::BinaryOpType::FloorDivide;
 template <> constexpr data::BinaryOpType lex2bin_v<lualex::Divide> = data::BinaryOpType::Divide;
 template <> constexpr data::BinaryOpType lex2bin_v<lualex::Mod> = data::BinaryOpType::Mod;
 template <> constexpr data::BinaryOpType lex2bin_v<lualex::Pow> = data::BinaryOpType::Pow;
@@ -464,6 +481,7 @@ struct ExprMultiplication : OperatorLike
 
     parser::Sequence<ExprPower>,
     parser::Sequence<ExprMultiplication, parser::Lex<lualex::Multiply>, ExprPower>,
+    parser::Sequence<ExprMultiplication, parser::Lex<lualex::FloorDivide>, ExprPower>,
     parser::Sequence<ExprMultiplication, parser::Lex<lualex::Divide>, ExprPower>,
     parser::Sequence<ExprMultiplication, parser::Lex<lualex::Mod>, ExprPower>
 >

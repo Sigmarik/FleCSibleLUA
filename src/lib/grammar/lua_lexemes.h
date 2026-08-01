@@ -29,6 +29,7 @@ using Assignment = parser::DefiniteLexeme<"=", "'='">;
 using Plus = parser::DefiniteLexeme<"+", "'+'">;
 using Minus = parser::DefiniteLexeme<"-", "'-'">;
 using Multiply = parser::DefiniteLexeme<"*", "'*'">;
+using FloorDivide = parser::DefiniteLexeme<"//", "'//'">;
 using Divide = parser::DefiniteLexeme<"/", "'/'">;
 using Mod = parser::DefiniteLexeme<"%", "'%'">;
 using Pow = parser::DefiniteLexeme<"^", "'^'">;
@@ -139,6 +140,7 @@ using LuaLexer = parser::Lexer<
     Plus,
     Minus,
     Multiply,
+    FloorDivide,
     Divide,
     Mod,
     Pow,

@@ -127,6 +127,13 @@ void Interpreter::visit(ast::WhileLoop& node)
     if (!m_returning) m_returnedValue.clear();
 }
 
+void Interpreter::visit(ast::DoBlock& node)
+{
+    visitTransparentBlock(node.body);
+
+    if (!m_returning) m_returnedValue.clear();
+}
+
 void Interpreter::visit(ast::ForLoopNumeric& node)
 {
     Visitor::visit(node.base);

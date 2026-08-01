@@ -55,6 +55,13 @@ void AstDebugger::visit(ast::WhileLoop& node)
     m_stream << m_indent << "}\n";
 }
 
+void AstDebugger::visit(ast::DoBlock& node)
+{
+    m_stream << m_indent << "Do block {\n";
+    visitList(node.body);
+    m_stream << m_indent << "}\n";
+}
+
 void AstDebugger::visit(ast::ForLoopNumeric& node)
 {
     m_stream << m_indent << "For " << *node.name << " from\n";
