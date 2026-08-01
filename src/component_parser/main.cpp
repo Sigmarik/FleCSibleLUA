@@ -409,20 +409,26 @@ int main(int argc, char** argv)
             continue;
         }
 
-        if (unsigned numErrors = clang_getNumDiagnostics(translationUnit)) {
+        if (unsigned numDiagnostics = clang_getNumDiagnostics(translationUnit)) {
             unsigned displayOptions = clang_defaultDiagnosticDisplayOptions();
+            bool hasError = false;
 
-            for (unsigned errIdx = 0; errIdx < numErrors; ++errIdx) {
-                CXDiagnostic diag = clang_getDiagnostic(translationUnit, errIdx);
+            for (unsigned idx = 0; idx < numDiagnostics; ++idx) {
+                CXDiagnostic diag = clang_getDiagnostic(translationUnit, idx);
+                CXDiagnosticSeverity severity = clang_getDiagnosticSeverity(diag);
+
                 CXString str = clang_formatDiagnostic(diag, displayOptions);
-
                 std::cerr << clang_getCString(str) << "\n";
-
                 clang_disposeString(str);
+
+                if (severity == CXDiagnostic_Error || severity == CXDiagnostic_Fatal)
+                    hasError = true;
+
                 clang_disposeDiagnostic(diag);
             }
 
-            return EXIT_FAILURE;
+            if (hasError)
+                return EXIT_FAILURE;
         }
 
         CXCursor rootCursor = clang_getTranslationUnitCursor(translationUnit);
