@@ -5,12 +5,16 @@
 # <generator> <output.cpp> <inputs...> with WORKING_DIRECTORY set to the caller's binary dir.
 # The generated file is added to the target's sources and the target depends on the generation step.
 
-function(target_flua_components tgt gen)
+function(target_flua_components tgt)
     if(NOT TARGET ${tgt})
         message(FATAL_ERROR "target_flua_components: target '${tgt}' does not exist")
     endif()
-    if(ARGC LESS 3)
-        message(FATAL_ERROR "target_flua_components requires at least: <target> <generator> <inputs...>")
+    if(ARGC LESS 2)
+        message(FATAL_ERROR "target_flua_components requires at least: <target> <inputs...>")
+    endif()
+
+    if (NOT DEFINED FLUA_GENERATOR)
+        message(FATAL_ERROR "FLUA_GENERATOR variable is not set. Please set it to the path of the generator executable or a CMake target.")
     endif()
 
     # Capture the caller's binary dir at function invocation time
@@ -39,11 +43,11 @@ function(target_flua_components tgt gen)
     set(_out_file "${_out_dir}/${tgt}_flua_components.cpp")
 
     # Determine generator invocation: CMake target or external path
-    if(TARGET ${gen})
-        set(_gen_cmd "$<TARGET_FILE:${gen}>")
-        set(_extra_dep ${gen})
+    if(TARGET ${FLUA_GENERATOR})
+        set(_gen_cmd "$<TARGET_FILE:${FLUA_GENERATOR}>")
+        set(_extra_dep ${FLUA_GENERATOR})
     else()
-        set(_gen_cmd "${gen}")
+        set(_gen_cmd "${FLUA_GENERATOR}")
         set(_extra_dep "")
     endif()
 
