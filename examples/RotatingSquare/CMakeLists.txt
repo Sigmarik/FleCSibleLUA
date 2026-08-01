@@ -46,7 +46,7 @@ target_include_directories(RotatingSquare
 	PRIVATE ${CMAKE_INCLUDE_PATH}
 )
 
-target_flua_components(RotatingSquare FluaComponentParser components.h)
+target_flua_components(RotatingSquare components.h)
 
 target_compile_definitions(RotatingSquare PRIVATE SFML_STATIC)
 

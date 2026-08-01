@@ -145,8 +145,10 @@ You will need three files to integrate FLua into your project:
 # Include flua.cmake to have access to `target_flua_components` 
 include(flua.cmake)
 
+set(FLUA_GENERATOR ${PATH_TO_PROJECT_TOOLS}/FluaComponentParserExecutable)
+
 # Tell FLua where your components are defined
-target_flua_components(YourProject ${PATH_TO_PROJECT_TOOLS}/FluaComponentParser.exe
+target_flua_components(YourProject
         components1.h components2.h ...)
 
 target_link_libraries(YourProject PRIVATE ${PATH_TO_PROJECT_LIBRARIES}/FlecsibleLua.lib)

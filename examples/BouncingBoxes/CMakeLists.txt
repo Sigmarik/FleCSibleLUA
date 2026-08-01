@@ -46,7 +46,7 @@ target_include_directories(BouncingBoxes
 	PRIVATE ${CMAKE_INCLUDE_PATH}
 )
 
-target_flua_components(BouncingBoxes FluaComponentParser components.h)
+target_flua_components(BouncingBoxes components.h)
 
 target_compile_definitions(BouncingBoxes PRIVATE SFML_STATIC)
 
