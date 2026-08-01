@@ -228,7 +228,7 @@ void format(FluaState& state)
             size_t formatSpan = std::strspn(inputCh, "-0123456789.");
             std::string fmtBuf(formatSpan + 2, '\0');
             fmtBuf[0] = '%';
-            std::strncpy(&fmtBuf.front() + 1, inputCh, formatSpan);
+            strncpy_s(&fmtBuf.front() + 1, formatSpan + 1, inputCh, formatSpan);
             inputCh += formatSpan;
             fmtBuf.back() = *inputCh;
             std::string fmtOut(120, '\0');
