@@ -13,6 +13,7 @@ const std::unordered_map<std::string, LibraryElement> STANDARD_LIBRARY
 {
     {"print", print},
     {"assert", lua_assert},
+    {"pairs", pairs},
     {"ipairs", ipairs},
 
     {"ecs.find_entity", ecs::find_entity},
