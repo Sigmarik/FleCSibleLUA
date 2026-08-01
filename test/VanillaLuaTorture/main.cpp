@@ -20,6 +20,9 @@ int main()
         if (!scriptFile.is_regular_file())
             continue;
 
+        if (scriptFile.path().extension() != ".lua")
+            continue;
+
         std::stringstream testOut;
         std::stringstream testErr;
         teestream outStream(std::cout, testOut);

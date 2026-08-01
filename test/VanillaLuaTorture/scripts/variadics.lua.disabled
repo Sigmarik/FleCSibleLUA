@@ -1,0 +1,43 @@
+do
+    local function var_sum(...)
+        local args = {...}
+        local s = 0
+        for i = 1, #args do
+            s = s + args[i]
+        end
+        return s
+    end
+    if var_sum(1, 2, 3, 4) == 10 then print("PASS: variadic function") else print("FAIL: variadic function") end
+end
+
+-- ============================================
+-- 12. Tail Calls (simple check: deep recursion that shouldn't overflow)
+-- Not a definitive test but indicates tail-call optimization might work.
+-- We'll do a simple tail-recursive loop.
+do
+    local function sum_tail(n, acc)
+        if n <= 0 then return acc end
+        return sum_tail(n - 1, acc + n)   -- tail call
+    end
+    local ok, res = pcall(sum_tail, 1000, 0)
+    if ok and res == 500500 then
+        print("PASS: tail call (deep recursion)")
+    else
+        -- Not a failure if tail call isn't optimized, but may cause stack overflow.
+        -- We'll just print a PASS if it runs, otherwise the error will mark FAIL.
+        if ok then
+            print("FAIL: tail call result mismatch")
+        else
+            print("FAIL: tail call caused error (possible stack overflow)")
+        end
+    end
+end
+
+-- ============================================
+-- 13. Chunk / do-end blocks, semicolons optional
+-- Already used. Add a small test for empty statement.
+do
+    ;;; -- should be harmless
+    local a = 1;;; local b = 2
+    if a == 1 and b == 2 then print("PASS: empty statements") else print("FAIL: empty statements") end
+end

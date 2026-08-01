@@ -36,3 +36,4 @@ set(FLUA_GENERATOR FluaComponentParser)
 
 add_subdirectory(examples)
 add_subdirectory(perf)
+add_subdirectory(test)
