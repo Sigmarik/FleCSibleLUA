@@ -14,6 +14,17 @@ do
     if x == 1 and y == 2 and z == 3 then print("PASS: multiple returns") else print("FAIL: multiple returns") end
 end
 
+-- simple captures (upvalue presence test)
+do
+    local function outer()
+        local x = 10
+        local f = function() print(x) end
+        x = 20
+        return f
+    end
+    if outer()() == 20 then print("PASS: simple captures") else print("FAIL: simple captures") end
+end
+
 -- recursion
 do
     local function factorial(n)
