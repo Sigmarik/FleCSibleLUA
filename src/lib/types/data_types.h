@@ -99,20 +99,26 @@ static const std::map<BinaryOpType, std::string> BINARY_OP_TYPE_NAMES {
     {BinaryOpType::CmpNeq, "~="},
 };
 
-struct Address
+struct StackAddress
 {
     bool relative = false;
     size_t shift = 0;
 
-    bool operator==(const Address& other) const { return shift == other.shift && relative == other.relative; }
+    bool operator==(const StackAddress& other) const { return shift == other.shift && relative == other.relative; }
 };
 
+using UpvalueIndex = size_t;
+struct Upvalue;
+
+using Address = std::variant<StackAddress, UpvalueIndex>;
+
+std::string to_string(const StackAddress& value);
 std::string to_string(const Address& value);
 
 struct LuaFunction
 {
     ast::Function* body = nullptr;
-    std::vector<GenericValue> capturedValues{};
+    std::vector<std::shared_ptr<Upvalue>> upvalues{};
 };
 
 using LibraryFunction = std::function<void(FluaState&)>;
@@ -148,6 +154,12 @@ class GenericValue : public
 {
     using std::variant<Nil, bool, double, mem_utils::PointerMappedString, Table,
         Entity, EntityComponent, Function, Vec2, Vec3, Vec4>::variant;
+};
+
+struct Upvalue
+{
+    size_t globalStackAddress = 0;
+    std::optional<GenericValue> closedValue{};
 };
 
 std::string get_type_name(const GenericValue& value);

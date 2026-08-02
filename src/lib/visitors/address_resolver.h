@@ -45,7 +45,9 @@ private:
     bool m_canDefineGlobals = false;
 
     unsigned m_currentAddress = 0;
-    std::vector<std::map<mem_utils::PointerMappedString, data::Address>> m_stack{{}};
+    std::vector<std::map<mem_utils::PointerMappedString, data::StackAddress>> m_stack{{}};
+
+    std::map<mem_utils::PointerMappedString, data::UpvalueIndex> m_thisFunctionsUpvalues{};
 };
 
 }

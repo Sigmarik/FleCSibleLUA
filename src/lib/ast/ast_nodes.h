@@ -224,7 +224,7 @@ struct Variable : INode
     explicit Variable(const parser::CharacterPos& pos, const std::string& name) : INode(pos), name(name) {}
 
     mem_utils::PointerMappedString name;
-    std::optional<data::Address> resolvedAddress;
+    std::optional<data::Address> resolvedAddress{};
 };
 
 struct FunctionCall : INode

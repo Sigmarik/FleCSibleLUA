@@ -145,7 +145,18 @@ private:
 
     void prepareAndRunSystem(ast::System& system, ecs_iter_t* systemIt);
 
+    size_t stackIndexFromAddress(const data::StackAddress& address) const;
+
+    data::GenericValue& resolveAddress(const data::StackAddress& address);
+    data::GenericValue& resolveAddress(data::UpvalueIndex address);
     data::GenericValue& resolveAddress(const data::Address& address);
+
+    void closeClearedUpvalues(size_t newStackSize);
+
+    std::shared_ptr<data::Upvalue> createUpvalue(const data::Address& address);
+
+    std::vector<std::weak_ptr<data::Upvalue>> m_openUpvalueStack{};
+    data::LuaFunction* m_currentlyRunningLuaFunction = nullptr;
 
     static void system_runner(ecs_iter_t *it);
 

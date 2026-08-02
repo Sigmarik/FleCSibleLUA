@@ -112,7 +112,7 @@ bool to_bool(const GenericValue& value)
     return true;
 }
 
-std::string to_string(const Address& addr)
+std::string to_string(const StackAddress& addr)
 {
     return (addr.relative ? "+" : "") +
             std::to_string(addr.shift);

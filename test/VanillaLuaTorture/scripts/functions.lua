@@ -18,7 +18,7 @@ end
 do
     local function outer()
         local x = 10
-        local f = function() print(x) end
+        local f = function() return x end
         x = 20
         return f
     end

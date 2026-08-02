@@ -23,12 +23,13 @@ void AddressResolver::visit(ast::Function& node)
     m_currentAddress = 0;
     m_stack.emplace_back();
 
+    std::map<mem_utils::PointerMappedString, data::UpvalueIndex> thisFunctionsMap;
     for (const auto& [key, value] : capturableValues)
     {
-        data::Address localAddr = resolveLocal(key);
         node.valuesToCapture.emplace_back(value);
-        m_stack.back().emplace(key, localAddr);
+        thisFunctionsMap.emplace(key, thisFunctionsMap.size());
     }
+    std::swap(thisFunctionsMap, m_thisFunctionsUpvalues);
 
     for (const auto& param : node.parameters)
     {
@@ -38,6 +39,8 @@ void AddressResolver::visit(ast::Function& node)
     visitList(node.body);
     m_stack.pop_back();
     m_currentAddress = oldAddress;
+
+    m_thisFunctionsUpvalues = std::move(thisFunctionsMap);
 }
 
 void AddressResolver::visit(ast::System& node)
@@ -218,7 +221,7 @@ void AddressResolver::visitList(std::deque<ast::NodePtr>& nodes)
 
 data::Address AddressResolver::resolveLocal(const mem_utils::PointerMappedString& name)
 {
-    data::Address addr;
+    data::StackAddress addr;
     addr.shift = m_currentAddress++;
     addr.relative = m_stack.size() > 1;
     auto emplaced = m_stack.back().emplace(name, addr);
@@ -227,6 +230,9 @@ data::Address AddressResolver::resolveLocal(const mem_utils::PointerMappedString
 
 std::optional<data::Address> AddressResolver::resolveUnknown(const mem_utils::PointerMappedString& name)
 {
+    auto upvalue = m_thisFunctionsUpvalues.find(name);
+    if (upvalue != m_thisFunctionsUpvalues.end()) return upvalue->second;
+
     for (auto it = m_stack.rbegin(); it != m_stack.rend(); ++it)
     {
         auto found = it->find(name);

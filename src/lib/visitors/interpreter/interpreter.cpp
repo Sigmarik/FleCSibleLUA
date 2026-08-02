@@ -58,15 +58,15 @@ void Interpreter::visit(ast::Program& node)
 
 void Interpreter::visit(ast::Function& node)
 {
-    std::vector<data::GenericValue> capturedValues;
-    for (const data::Address& address : node.valuesToCapture)
+    std::vector<std::shared_ptr<data::Upvalue>> capturedValues;
+    for (const auto& address : node.valuesToCapture)
     {
-        capturedValues.push_back(resolveAddress(address));
+        capturedValues.push_back(createUpvalue(address));
     }
     m_returnedValue = data::Function{
         data::LuaFunction{
             .body = &node,
-            .capturedValues = capturedValues,
+            .upvalues = std::move(capturedValues),
         }
     };
 }
@@ -794,28 +794,24 @@ void Interpreter::runLuaFunction(data::LuaFunction& luaFunction, std::vector<dat
 {
     auto prevStackBase = m_stackBasePtr;
     m_stackBasePtr = m_stack.size();
-    for (auto& value : luaFunction.capturedValues)
-    {
-        m_stack.emplace_back(std::move(value));
-    }
+
+    data::LuaFunction* oldLuaFunctionPtr = m_currentlyRunningLuaFunction;
+    m_currentlyRunningLuaFunction = &luaFunction;
 
     for (size_t idx = 0; idx < luaFunction.body->parameters.size() && idx < args.size(); ++idx)
     {
-        data::Address addr;
+        data::StackAddress addr;
         addr.relative = true;
-        addr.shift = luaFunction.capturedValues.size() + idx;
+        addr.shift = idx;
         resolveAddress(addr) = std::move(args[idx]);
     }
 
     executeFunction(*luaFunction.body);
 
-    for (unsigned id = 0; id < luaFunction.capturedValues.size(); ++id)
-    {
-        luaFunction.capturedValues[id] = std::move(m_stack[m_stackBasePtr + id]);
-    }
-
+    closeClearedUpvalues(prevStackBase);
     if (m_stack.size() > m_stackBasePtr * 2) m_stack.resize(m_stackBasePtr);
     m_stackBasePtr = prevStackBase;
+    m_currentlyRunningLuaFunction = oldLuaFunctionPtr;
 }
 
 FluaState Interpreter::generatePublicState()
@@ -957,15 +953,83 @@ void Interpreter::prepareAndRunSystem(ast::System& node, ecs_iter_t* systemIt)
     m_stackBasePtr = oldStackBase;
 }
 
-data::GenericValue& Interpreter::resolveAddress(const data::Address& address)
+size_t Interpreter::stackIndexFromAddress(const data::StackAddress& address) const
 {
     size_t index = address.shift;
     if (address.relative) index += m_stackBasePtr;
+    return index;
+}
+
+data::GenericValue& Interpreter::resolveAddress(const data::StackAddress& address)
+{
+    size_t index = stackIndexFromAddress(address);
     while (m_stack.size() <= index)
     {
         m_stack.emplace_back(data::Nil());
     }
     return m_stack[index];
+}
+
+data::GenericValue& Interpreter::resolveAddress(data::UpvalueIndex address)
+{
+    assert(m_currentlyRunningLuaFunction && "Cannot resolve upvalue outside of a Lua function");
+    assert(address < m_currentlyRunningLuaFunction->upvalues.size() && "Upvalue index outside of the allowed range");
+
+    auto& upvalue = *m_currentlyRunningLuaFunction->upvalues[address];
+    if (upvalue.closedValue.has_value()) return *upvalue.closedValue;
+
+    assert(upvalue.globalStackAddress < m_stack.size() && "Open upvalue points to an invalid stack address");
+    return m_stack[upvalue.globalStackAddress];
+}
+
+data::GenericValue& Interpreter::resolveAddress(const data::Address& address)
+{
+    data::GenericValue* result = nullptr;
+
+    auto overloads = meta::Overloads{
+        [&](const data::StackAddress& addr) { result = &resolveAddress(addr); },
+        [&](data::UpvalueIndex idx) { result = &resolveAddress(idx); },
+    };
+
+    std::visit(overloads, address);
+
+    return *result;
+}
+
+void Interpreter::closeClearedUpvalues(size_t newStackSize)
+{
+    while (!m_openUpvalueStack.empty())
+    {
+        const auto& back = m_openUpvalueStack.back();
+        if (!back.expired() && back.lock()->globalStackAddress < newStackSize) break;
+
+        m_openUpvalueStack.pop_back();
+    }
+}
+
+std::shared_ptr<data::Upvalue> Interpreter::createUpvalue(const data::Address& address)
+{
+    if (std::holds_alternative<data::StackAddress>(address))
+    {
+        const auto& asStack = std::get<data::StackAddress>(address);
+        auto upvalue = std::make_shared<data::Upvalue>();
+        upvalue->globalStackAddress = stackIndexFromAddress(asStack);
+        m_openUpvalueStack.emplace_back(upvalue);
+        return upvalue;
+    }
+    if (std::holds_alternative<data::UpvalueIndex>(address))
+    {
+        data::UpvalueIndex index = std::get<data::UpvalueIndex>(address);
+
+        assert(m_currentlyRunningLuaFunction && "Cannot resolve upvalue outside of a Lua function");
+        assert(index < m_currentlyRunningLuaFunction->upvalues.size() && "Upvalue index outside of the allowed range");
+
+        std::shared_ptr<data::Upvalue> upvalue = m_currentlyRunningLuaFunction->upvalues[index];
+        m_openUpvalueStack.emplace_back(upvalue);
+        return upvalue;
+    }
+
+    return {};
 }
 
 void Interpreter::system_runner(ecs_iter_t* it)
