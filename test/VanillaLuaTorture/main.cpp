@@ -43,6 +43,7 @@ int main()
     if (failedTests.empty())
     {
         std::cout << "[SYSTEM] All tests PASSED" << std::endl;
+        return EXIT_SUCCESS;
     }
     else
     {
@@ -51,5 +52,6 @@ int main()
         {
             std::cout << "[SYSTEM]   " << failedTest << std::endl;
         }
+        return EXIT_FAILURE;
     }
 }

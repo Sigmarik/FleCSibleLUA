@@ -14,7 +14,7 @@ do
     if x == 1 and y == 2 and z == 3 then print("PASS: multiple returns") else print("FAIL: multiple returns") end
 end
 
--- simple captures (upvalue presence test)
+-- simple captures
 do
     local function outer()
         local x = 10
